@@ -163,7 +163,7 @@ struct IncidentDetailView: View {
         actionConfirmation = nil
         isActioning = true
 
-        Swift.Task {
+        _Concurrency.Task {
             await viewModel.triggerAction(action, for: incident)
             await MainActor.run {
                 isActioning = false
@@ -174,28 +174,5 @@ struct IncidentDetailView: View {
                 }
             }
         }
-    }
-}
-
-#Preview {
-    let ws = WebSocketService()
-    let vm = IncidentListViewModel(webSocket: ws)
-    NavigationStack {
-        IncidentDetailView(
-            incident: Incident(
-                id: "i1",
-                agentId: "a1",
-                agentName: "Deploy Agent",
-                severity: .critical,
-                title: "Deployment failed in production",
-                description: "The latest deploy to production failed due to a health check timeout.",
-                status: .open,
-                createdAt: Date().addingTimeInterval(-600),
-                updatedAt: Date().addingTimeInterval(-300),
-                actions: [.askRootCause, .proposeFix, .acknowledge]
-            ),
-            viewModel: vm
-        )
-        .environment(ws)
     }
 }

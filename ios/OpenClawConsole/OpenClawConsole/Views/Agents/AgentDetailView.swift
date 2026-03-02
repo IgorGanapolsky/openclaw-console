@@ -122,23 +122,3 @@ struct AgentDetailView: View {
         }
     }
 }
-
-#Preview {
-    let ws = WebSocketService()
-    NavigationStack {
-        AgentDetailView(
-            agent: Agent(
-                id: "1",
-                name: "Deploy Agent",
-                description: "Handles production deployments and rollbacks.",
-                status: .online,
-                workspace: "production",
-                tags: ["deploy", "aws"],
-                lastActive: Date(),
-                activeTasks: 2,
-                pendingApprovals: 1
-            )
-        )
-        .environment(ws)
-    }
-}

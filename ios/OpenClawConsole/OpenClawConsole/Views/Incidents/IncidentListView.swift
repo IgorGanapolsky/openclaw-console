@@ -128,10 +128,3 @@ private struct IncidentRow: View {
         .padding(.vertical, 4)
     }
 }
-
-#Preview {
-    NavigationStack {
-        IncidentListView(viewModel: IncidentListViewModel(webSocket: WebSocketService()))
-            .environment(WebSocketService())
-    }
-}

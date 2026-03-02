@@ -24,9 +24,9 @@ struct TimeAgoText: View {
             .onAppear { update() }
             // Refresh every minute
             .task {
-                while !Swift.Task.isCancelled {
+                while !_Concurrency.Task.isCancelled {
                     update()
-                    try? await Swift.Task.sleep(nanoseconds: 60_000_000_000)
+                    try? await _Concurrency.Task.sleep(nanoseconds: 60_000_000_000)
                 }
             }
             .accessibilityLabel(accessibilityDate)
@@ -42,13 +42,4 @@ struct TimeAgoText: View {
         f.timeStyle = .short
         return f.string(from: date)
     }
-}
-
-#Preview {
-    VStack(alignment: .leading, spacing: 8) {
-        TimeAgoText(date: Date().addingTimeInterval(-60))
-        TimeAgoText(date: Date().addingTimeInterval(-3600))
-        TimeAgoText(date: Date().addingTimeInterval(-86400))
-    }
-    .padding()
 }

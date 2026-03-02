@@ -93,7 +93,7 @@ struct ChatView: View {
                 let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { return }
                 inputText = ""
-                Swift.Task { await vm.sendMessage(text) }
+                _Concurrency.Task { await vm.sendMessage(text) }
             } label: {
                 if vm.isSending {
                     ProgressView()
@@ -209,12 +209,5 @@ final class ChatViewModel {
                 }
             }
             .store(in: &cancellables)
-    }
-}
-
-#Preview {
-    NavigationStack {
-        ChatView(agentId: "a1", taskId: nil)
-            .environment(WebSocketService())
     }
 }

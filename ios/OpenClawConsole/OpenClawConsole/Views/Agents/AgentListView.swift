@@ -149,10 +149,3 @@ private struct AgentRow: View {
         .padding(.vertical, 4)
     }
 }
-
-#Preview {
-    NavigationStack {
-        AgentListView(viewModel: AgentListViewModel(webSocket: WebSocketService()))
-            .environment(WebSocketService())
-    }
-}

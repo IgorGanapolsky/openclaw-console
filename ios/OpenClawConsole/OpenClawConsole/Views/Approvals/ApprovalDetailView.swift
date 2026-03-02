@@ -77,7 +77,7 @@ struct ApprovalDetailView: View {
         }
         .confirmationDialog("Deny Approval", isPresented: $showDenyConfirmation, titleVisibility: .visible) {
             Button("Deny Action", role: .destructive) {
-                Swift.Task { await performDeny() }
+                _Concurrency.Task { await performDeny() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -219,7 +219,7 @@ struct ApprovalDetailView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 10) {
-            Button(action: { Swift.Task { await performApprove() } }) {
+            Button(action: { _Concurrency.Task { await performApprove() } }) {
                 Label {
                     Text("Approve")
                         .font(.headline)
@@ -249,7 +249,7 @@ struct ApprovalDetailView: View {
         do {
             try await approvalViewModel.approve(approval: approval)
             decided = true
-            try? await Swift.Task.sleep(nanoseconds: 500_000_000)
+            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000)
             dismiss()
         } catch let error as BiometricError {
             errorMessage = error.errorDescription
@@ -263,7 +263,7 @@ struct ApprovalDetailView: View {
         do {
             try await approvalViewModel.deny(approval: approval)
             decided = true
-            try? await Swift.Task.sleep(nanoseconds: 300_000_000)
+            try? await _Concurrency.Task.sleep(nanoseconds: 300_000_000)
             dismiss()
         } catch {
             errorMessage = (error as? OpenClawError)?.errorDescription ?? error.localizedDescription
@@ -277,32 +277,5 @@ struct ApprovalDetailView: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
             .textCase(.uppercase)
-    }
-}
-
-#Preview {
-    let ws = WebSocketService()
-    let vm = ApprovalViewModel(webSocket: ws)
-    NavigationStack {
-        ApprovalDetailView(
-            approval: ApprovalRequest(
-                id: "apr-1",
-                agentId: "a1",
-                agentName: "Deploy Agent",
-                actionType: .shellCommand,
-                title: "Run database migration",
-                description: "Apply pending schema migrations to production PostgreSQL.",
-                command: "npm run db:migrate --env=production",
-                context: ApprovalContext(
-                    service: "api-service",
-                    environment: "production",
-                    repository: "org/backend",
-                    riskLevel: .critical
-                ),
-                createdAt: Date().addingTimeInterval(-120),
-                expiresAt: Date().addingTimeInterval(180)
-            )
-        )
-        .environment(vm)
     }
 }
