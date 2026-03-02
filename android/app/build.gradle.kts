@@ -84,8 +84,8 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    // Kotlinx Serialization (1.8.1 is the latest version compatible with Kotlin 2.1.x)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")

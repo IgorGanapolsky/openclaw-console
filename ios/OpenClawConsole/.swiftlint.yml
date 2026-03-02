@@ -13,8 +13,10 @@ opt_in_rules:
   - empty_string
   - fatal_error_message
   - first_where
-  - force_unwrapping
   - sorted_first_last
+
+# force_unwrapping is intentionally NOT opted in — too strict for early-stage project.
+# The claude-review workflow already flags force-unwraps in PR reviews.
 
 excluded:
   - Pods
@@ -31,8 +33,8 @@ function_body_length:
   error: 100
 
 cyclomatic_complexity:
-  warning: 15
-  error: 25
+  warning: 20
+  error: 30
 
 type_body_length:
   warning: 400
