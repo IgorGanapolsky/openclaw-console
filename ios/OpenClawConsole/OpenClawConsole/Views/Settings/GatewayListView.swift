@@ -131,7 +131,7 @@ private struct GatewayRow: View {
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
-                Swift.Task { await gatewayManager.testConnection(gateway: gateway) }
+                _Concurrency.Task { await gatewayManager.testConnection(gateway: gateway) }
             } label: {
                 Label("Test", systemImage: "antenna.radiowaves.left.and.right")
             }
@@ -144,7 +144,7 @@ private struct GatewayRow: View {
                 Label("Set as Active", systemImage: "checkmark.circle")
             }
             Button {
-                Swift.Task { await gatewayManager.testConnection(gateway: gateway) }
+                _Concurrency.Task { await gatewayManager.testConnection(gateway: gateway) }
             } label: {
                 Label("Test Connection", systemImage: "antenna.radiowaves.left.and.right")
             }
@@ -159,12 +159,5 @@ private struct GatewayRow: View {
             }
         }
         .frame(minHeight: 44)
-    }
-}
-
-#Preview {
-    NavigationStack {
-        GatewayListView()
-            .environment(GatewayManager())
     }
 }

@@ -118,7 +118,7 @@ enum InboundEventType: String {
 /// Decoded server message with strongly-typed payload
 enum InboundEvent {
     case agentUpdate(AgentStatusUpdate)
-    case taskUpdate(TaskUpdate)
+    case taskUpdate(OCTaskUpdate)
     case taskStep(TaskStep)
     case incidentNew(Incident)
     case incidentUpdate(IncidentUpdate)

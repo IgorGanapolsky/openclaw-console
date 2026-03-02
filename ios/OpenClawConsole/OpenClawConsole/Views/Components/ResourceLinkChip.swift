@@ -48,12 +48,3 @@ struct ResourceLinksRow: View {
         }
     }
 }
-
-#Preview {
-    ResourceLinksRow(links: [
-        ResourceLink(label: "PR #42", url: "https://github.com", type: .githubPR),
-        ResourceLink(label: "CI Run", url: "https://github.com/actions", type: .githubRun),
-        ResourceLink(label: "Dashboard", url: "https://grafana.example.com", type: .dashboard)
-    ])
-    .padding()
-}

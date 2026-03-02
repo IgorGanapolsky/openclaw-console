@@ -77,7 +77,7 @@ struct TaskDetailView: View {
             } description: {
                 Text(error)
             } actions: {
-                Button("Retry") { Swift.Task { await vm.fetchTask() } }
+                Button("Retry") { _Concurrency.Task { await vm.fetchTask() } }
                     .buttonStyle(.bordered)
             }
         } else {
@@ -140,11 +140,11 @@ struct TaskDetailView: View {
             Button {
                 let text = chatInput
                 chatInput = ""
-                Swift.Task { await vm.sendMessage(text) }
+                _Concurrency.Task { await vm.sendMessage(text) }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 28))
-                    .foregroundStyle(chatInput.isEmpty ? .secondary : .blue)
+                    .foregroundColor(chatInput.isEmpty ? .secondary : .blue)
             }
             .disabled(chatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                       || vm.isSendingMessage)
@@ -208,12 +208,5 @@ private struct TaskStepRow: View {
         case .error: return .red
         case .info: return .indigo
         }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        TaskDetailView(agentId: "a1", taskId: "t1")
-            .environment(WebSocketService())
     }
 }

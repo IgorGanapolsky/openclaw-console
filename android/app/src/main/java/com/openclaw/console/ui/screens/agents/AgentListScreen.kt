@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.screens.agents
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,12 +7,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,6 +18,7 @@ import com.openclaw.console.data.model.Agent
 import com.openclaw.console.data.model.AgentStatus
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,14 +36,7 @@ fun AgentListScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val pullToRefreshState = rememberPullToRefreshState()
-
-    if (pullToRefreshState.isRefreshing) {
-        LaunchedEffect(Unit) {
-            viewModel.refresh()
-            pullToRefreshState.endRefresh()
-        }
-    }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -67,11 +55,16 @@ fun AgentListScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh()
+                isRefreshing = false
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .nestedScroll(pullToRefreshState.nestedScrollConnection)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Connection status banner
@@ -169,10 +162,6 @@ fun AgentListScreen(
                 }
             }
 
-            PullToRefreshBox(
-                state = pullToRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
         }
     }
 }

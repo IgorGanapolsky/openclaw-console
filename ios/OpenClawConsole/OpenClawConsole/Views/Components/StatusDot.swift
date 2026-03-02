@@ -73,15 +73,3 @@ struct ConnectionStatusDot: View {
         }
     }
 }
-
-#Preview {
-    HStack(spacing: 12) {
-        StatusDot(status: .online)
-        StatusDot(status: .busy)
-        StatusDot(status: .offline)
-        ConnectionStatusDot(status: .connected)
-        ConnectionStatusDot(status: .checking)
-        ConnectionStatusDot(status: .failed("timeout"))
-    }
-    .padding()
-}

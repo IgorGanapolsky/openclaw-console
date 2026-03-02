@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.screens.settings
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.GatewayConnection
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
