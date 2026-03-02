@@ -6,7 +6,7 @@ This is a brownfield repair project, not a greenfield build. Substantial native 
 
 ## Phases
 
-- [ ] **Phase 1: CI Pipeline Repair** - Fix all blocking CI failures so the pipeline runs green end-to-end on develop
+- [x] **Phase 1: CI Pipeline Repair** - Fix all blocking CI failures so the pipeline runs green end-to-end on develop (completed 2026-03-02)
 - [ ] **Phase 2: Code Signing and Distribution** - Configure Fastlane match, keystore, and distribution lanes so signed builds reach Firebase and TestFlight automatically
 - [ ] **Phase 3: Device Testing Validation** - Confirm signed builds install and the biometric approval workflow works on real physical hardware
 - [ ] **Phase 4: Distribution Hardening** - Add certificate monitoring, release notes, build metadata validation, and status notifications for a sustainable beta loop
@@ -27,9 +27,9 @@ This is a brownfield repair project, not a greenfield build. Substantial native 
 
 Plans:
 - [x] 01-01-PLAN.md — Regenerate npm lockfile with Node 20 (CI-01)
-- [ ] 01-02-PLAN.md — Android toolchain upgrade + versionCode injection (CI-03, CI-06)
-- [ ] 01-03-PLAN.md — iOS runner upgrade to macos-15 + Fastfile setup_ci + iOS build number (CI-02, CI-04, CI-06)
-- [ ] 01-04-PLAN.md — Firebase auth migration to service account (CI-05)
+- [x] 01-02-PLAN.md — Android toolchain upgrade + versionCode injection (CI-03, CI-06)
+- [x] 01-03-PLAN.md — iOS runner upgrade to macos-15 + Fastfile setup_ci + iOS build number (CI-02, CI-04, CI-06)
+- [x] 01-04-PLAN.md — Firebase auth migration to service account (CI-05)
 
 ### Phase 2: Code Signing and Distribution
 **Goal**: Signed testing builds reach Firebase App Distribution and TestFlight automatically on every green develop build — testers can install the app without any manual developer intervention
@@ -41,7 +41,13 @@ Plans:
   3. All required GitHub Secrets (MATCH_GIT_URL, MATCH_PASSWORD, APPSTORE_KEY_ID, APPSTORE_PRIVATE_KEY, APPSTORE_ISSUER_ID, ANDROID_KEYSTORE_BASE64, FIREBASE_APP_ID) are present and valid
   4. A signed iOS IPA appears in TestFlight App Store Connect within 15 minutes of a green develop push
   5. A signed Android APK appears in Firebase App Distribution tester group within 15 minutes of a green develop push
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [x] 02-01-PLAN.md — Android launcher icons + signingConfigs block (SIGN-01, SIGN-05 prereq)
+- [ ] 02-02-PLAN.md — Android keystore backup + GitHub Secrets (SIGN-01, SIGN-03)
+- [ ] 02-03-PLAN.md — iOS match cert repo + all iOS secrets (SIGN-02, SIGN-03)
+- [ ] 02-04-PLAN.md — apksigner verification + end-to-end distribution trigger (SIGN-04, SIGN-05)
 
 ### Phase 3: Device Testing Validation
 **Goal**: The biometric agent approval workflow is confirmed working on real physical hardware — not just simulators — so the core product value proposition is validated before beta expansion
@@ -73,7 +79,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. CI Pipeline Repair | 1/4 | In progress | - |
-| 2. Code Signing and Distribution | 0/TBD | Not started | - |
+| 1. CI Pipeline Repair | 4/4 | Complete    | 2026-03-02 |
+| 2. Code Signing and Distribution | 1/4 | In progress | - |
 | 3. Device Testing Validation | 0/TBD | Not started | - |
 | 4. Distribution Hardening | 0/TBD | Not started | - |

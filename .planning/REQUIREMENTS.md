@@ -10,11 +10,11 @@ Requirements for unblocking testing builds and validating core biometric approva
 ### CI Pipeline Repair
 
 - [x] **CI-01**: npm lockfile corruption fixed - skills-test CI job passes consistently
-- [ ] **CI-02**: iOS workflows upgraded to macOS-15 + Xcode 16.4 (Apple SDK mandate)
-- [ ] **CI-03**: Android toolchain upgraded (AGP 8.7.x + Kotlin 2.1.x + Compose BOM 2025.12.00)
-- [ ] **CI-04**: iOS Fastfile includes setup_ci call to prevent keychain unlock hangs
-- [ ] **CI-05**: Firebase auth migrated from deprecated FIREBASE_TOKEN to service account
-- [ ] **CI-06**: Build numbers auto-increment from GITHUB_RUN_NUMBER for store submissions
+- [x] **CI-02**: iOS workflows upgraded to macOS-15 + Xcode 16.4 (Apple SDK mandate)
+- [x] **CI-03**: Android toolchain upgraded (AGP 8.7.x + Kotlin 2.1.x + Compose BOM 2025.12.00)
+- [x] **CI-04**: iOS Fastfile includes setup_ci call to prevent keychain unlock hangs
+- [x] **CI-05**: Firebase auth migrated from deprecated FIREBASE_TOKEN to service account
+- [x] **CI-06**: Build numbers auto-increment from GITHUB_RUN_NUMBER for store submissions
 
 ### Code Signing & Distribution
 
@@ -75,11 +75,11 @@ Coverage validated during roadmap creation (2026-03-02).
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CI-01 | Phase 1 - CI Pipeline Repair | Complete |
-| CI-02 | Phase 1 - CI Pipeline Repair | Pending |
-| CI-03 | Phase 1 - CI Pipeline Repair | Pending |
-| CI-04 | Phase 1 - CI Pipeline Repair | Pending |
-| CI-05 | Phase 1 - CI Pipeline Repair | Pending |
-| CI-06 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-02 | Phase 1 - CI Pipeline Repair | Complete |
+| CI-03 | Phase 1 - CI Pipeline Repair | Complete |
+| CI-04 | Phase 1 - CI Pipeline Repair | Complete |
+| CI-05 | Phase 1 - CI Pipeline Repair | Complete |
+| CI-06 | Phase 1 - CI Pipeline Repair | Complete |
 | SIGN-01 | Phase 2 - Code Signing and Distribution | Pending |
 | SIGN-02 | Phase 2 - Code Signing and Distribution | Pending |
 | SIGN-03 | Phase 2 - Code Signing and Distribution | Pending |
@@ -102,4 +102,4 @@ Coverage validated during roadmap creation (2026-03-02).
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 — CI-01 marked complete after plan 01-01 execution*
+*Last updated: 2026-03-02 — CI-03 and CI-06 marked complete after plan 01-02 execution*
