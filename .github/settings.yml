@@ -8,7 +8,7 @@ repository:
   has_projects: true
   has_wiki: true
   has_downloads: true
-  default_branch: main
+  default_branch: develop
   allow_squash_merge: true
   allow_merge_commit: false
   allow_rebase_merge: false
@@ -21,6 +21,34 @@ branches:
     protection:
       required_status_checks:
         strict: true
+        # Production mirror - only accepts release/hotfix merges
+        contexts:
+          - "Skills Tests"
+          - "Architecture Lint Kotlin"
+          - "Architecture Lint Swift"
+          - "Android Build Check"
+          - "iOS Build Check"
+          - "Secrets Scan"
+      enforce_admins: true
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+        require_last_push_approval: false
+      required_conversation_resolution: true
+      restrictions:
+        # Only release and hotfix branches can merge to main
+        users: []
+        teams: []
+        apps: []
+      allow_force_pushes: false
+      allow_deletions: false
+
+  - name: develop
+    protection:
+      required_status_checks:
+        strict: true
+        # Integration branch - all feature work merges here first
         contexts:
           - "Skills Tests"
           - "Architecture Lint Kotlin"
@@ -39,23 +67,8 @@ branches:
       allow_force_pushes: false
       allow_deletions: false
 
-  - name: develop
-    protection:
-      required_status_checks:
-        strict: true
-        contexts:
-          - "Skills Tests"
-          - "Architecture Lint Kotlin"
-          - "Architecture Lint Swift"
-      enforce_admins: true
-      required_pull_request_reviews:
-        required_approving_review_count: 0
-        dismiss_stale_reviews: true
-        require_code_owner_reviews: false
-      required_conversation_resolution: true
-      restrictions: null
-
 labels:
+  # Standard labels
   - name: "breaking-change"
     color: "d73a4a"
     description: "Introduces a breaking change"
@@ -83,6 +96,62 @@ labels:
   - name: "dependencies"
     color: "0366d6"
     description: "Updates to dependencies"
+
+  # Platform-specific labels
+  - name: "android"
+    color: "3ddc84"
+    description: "Android platform specific"
+  - name: "ios"
+    color: "007aff"
+    description: "iOS platform specific"
+  - name: "skills"
+    color: "f7df1e"
+    description: "TypeScript skills gateway"
+
+  # OpenClaw-specific labels
+  - name: "approval-flow"
+    color: "ff6b35"
+    description: "Related to biometric approval features"
+  - name: "biometric"
+    color: "ff6b35"
+    description: "Biometric authentication features"
+  - name: "gateway"
+    color: "6f42c1"
+    description: "WebSocket gateway connection"
+  - name: "agent-orchestration"
+    color: "28a745"
+    description: "Agent management and orchestration"
+
+  # Priority and workflow labels
+  - name: "priority:high"
+    color: "d73a4a"
+    description: "High priority issue"
+  - name: "priority:medium"
+    color: "fbca04"
+    description: "Medium priority issue"
+  - name: "priority:low"
+    color: "0e8a16"
+    description: "Low priority issue"
+  - name: "blocker"
+    color: "b60205"
+    description: "Blocks release or major functionality"
+  - name: "triage"
+    color: "ededed"
+    description: "Needs initial triage and investigation"
+
+  # Automation labels
+  - name: "automation"
+    color: "1f77b4"
+    description: "Created or managed by automation"
+  - name: "metrics"
+    color: "1f77b4"
+    description: "Project metrics and analytics"
+  - name: "status-board"
+    color: "1f77b4"
+    description: "Status dashboard and reporting"
+  - name: "pinned"
+    color: "2ea44f"
+    description: "Important pinned issue"
 
 collaborators:
   - username: IgorGanapolsky

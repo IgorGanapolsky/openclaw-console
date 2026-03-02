@@ -61,9 +61,101 @@ cd android && ./gradlew assembleDebug
 cd openclaw-skills && npm ci && npm start
 ```
 
+## Architecture & Protocols
+
+### Communication Protocol
+- **WebSocket**: WSS connection to gateway on port 18789 (TLS required in production)
+- **Message Format**: JSON with `type`, `payload`, and optional `requestId`
+- **Authentication**: Bearer token via Authorization header or `auth` message
+- **Heartbeat**: Ping/pong keepalive every 30 seconds
+
+### Security Requirements
+- **Biometric Authentication**: All approval flows MUST require Face ID/Touch ID/Fingerprint
+- **Certificate Pinning**: Production builds pin gateway TLS certificates
+- **Encrypted Storage**: Android uses EncryptedSharedPreferences, iOS uses Keychain
+- **No Bypass Modes**: Zero hardcoded approval bypasses in production code
+
+### Development Guidelines
+- **Git Flow**: Feature branches off `develop`, release branches to `main`
+- **Atomic Commits**: One logical change per commit, conventional format
+- **Architecture Bans**: No AndroidViewModel, collectAsState(), Handler(Looper), force casts without justification
+- **Pre-commit Hooks**: Secret scanning, architecture compliance, linting enforced
+
+### Testing Strategy
+- **Unit Tests**: ViewModels, business logic, protocol parsing (100% coverage)
+- **Integration Tests**: Gateway connections, authentication flows
+- **E2E Tests**: Maestro flows for critical user journeys (launch, connect, approve)
+- **Device Tests**: CI runs on Android emulator + iOS simulator
+
+### Business Metrics
+- **North Star**: Daily Active Approvers (DAA) - users approving ≥1 action/day
+- **Revenue Goal**: $100/day via $10-20/month Pro subscriptions
+- **Target Market**: Solo developers, DevOps, operators running self-hosted OpenClaw
+- **Value Proposition**: Escape social messaging chaos, native mobile control plane
+
+## File Structure Reference
+
+```
+openclaw-console/
+├── android/                    # Android app (Kotlin/Compose)
+│   ├── app/src/main/java/      # Main source code
+│   └── app/build.gradle.kts    # Build configuration
+├── ios/OpenClawConsole/        # iOS app (Swift/SwiftUI)
+│   ├── OpenClawConsole/        # App source code
+│   └── OpenClawConsole.xcodeproj/ # Xcode project
+├── openclaw-skills/            # TypeScript skills gateway
+│   ├── src/                    # Gateway source code
+│   ├── src/skills/             # Individual skill modules
+│   └── package.json            # Node.js dependencies
+├── docs/                       # Architecture documentation
+│   ├── architecture.md         # System design overview
+│   ├── protocol.md            # WebSocket protocol spec
+│   └── openclaw-setup.md      # Gateway setup guide
+├── .maestro/                   # E2E test flows
+│   ├── smoke-test-android.yaml # Android smoke test
+│   └── smoke-test-ios.yaml     # iOS smoke test
+├── .github/workflows/          # CI/CD pipelines
+│   ├── ci.yml                 # Main CI (builds, tests, linting)
+│   ├── device-tests.yml       # Emulator/simulator tests
+│   └── native-release.yml     # App store releases
+├── scripts/                    # Automation scripts
+│   ├── pre-commit             # Git pre-commit hooks
+│   └── preflight-release.sh   # Pre-release validation
+└── marketing/                  # Growth and ASO data
+    ├── keywords/               # App store keywords
+    └── analytics/              # Growth metrics
+```
+
+## Development Commands
+
+### Complete Build Verification
+```bash
+make verify                     # Run all tests and builds
+```
+
+### Platform-Specific Development
+```bash
+# Android
+cd android && ./gradlew testDebugUnitTest assembleDebug
+make run-android-emulator       # Launch on emulator
+
+# iOS
+cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
+make run-ios-sim               # Launch on simulator
+
+# Skills Gateway
+cd openclaw-skills && npm ci && npm run dev  # Starts on localhost:18789
+```
+
+### Release Preparation
+```bash
+./scripts/preflight-release.sh --platform both --layer 2
+```
+
 ## Links
 
 - Repository: https://github.com/IgorGanapolsky/openclaw-console
 - Privacy Policy: https://github.com/IgorGanapolsky/openclaw-console/blob/main/PRIVACY_POLICY.md
 - Issues: https://github.com/IgorGanapolsky/openclaw-console/issues
+- Project Status: Check pinned status issue for current metrics and health
 - License: MIT

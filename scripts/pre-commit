@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# Pre-commit hook for OpenClaw Console: secrets + security + architecture compliance
+# Enforces mobile security best practices and OpenClaw-specific patterns
+set -euo pipefail
+
+ERRORS=0
+WARNINGS=0
+
+err() { echo "❌ $1"; ERRORS=$((ERRORS + 1)); }
+warn() { echo "⚠️  $1"; WARNINGS=$((WARNINGS + 1)); }
+
+# ── Secret scanning (gitleaks) ──────────────────────────────────────
+if command -v gitleaks > /dev/null 2>&1; then
+  if ! gitleaks git --pre-commit --staged --no-banner 2>/dev/null; then
+    echo ""
+    err "SECRETS DETECTED in staged files! Commit blocked."
+    echo "   Remove secrets and use environment variables or gitignored local files."
+    exit 1
+  fi
+else
+  STAGED_DIFF=$(git diff --cached --diff-filter=ACM)
+  if echo "$STAGED_DIFF" | grep -qEi '(ghp_|gho_|github_pat_|sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|password\s*=\s*["\x27][^"\x27]{8,}|api[_-]?key\s*[=:]\s*["\x27][^"\x27]{10,})'; then
+    err "Possible secret detected in staged changes!"
+    echo "   Install gitleaks for better detection: brew install gitleaks"
+  fi
+fi
+
+STAGED_KT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.kt$' || true)
+STAGED_SWIFT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$' || true)
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js)$' || true)
+STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM || true)
+
+# ═══════════════════════════════════════════════════════════════════
+# OPENCLAW SECURITY PATTERNS
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Biometric Authentication Requirements ──────────────────────────
+if [ -n "$STAGED_KT" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+
+    # Ban approval flows without biometric verification
+    if grep -n 'approveAction\|executeApproval\|confirmAction' "$file" | grep -v '//' > /dev/null 2>&1; then
+      if ! grep -n 'BiometricPrompt\|biometricAuth\|authenticate' "$file" > /dev/null 2>&1; then
+        err "$file: Approval flow missing biometric authentication"
+      fi
+    fi
+
+    # Ban hardcoded approval bypasses
+    if grep -n 'bypassBiometric\|skipAuth\|autoApprove.*=.*true' "$file" | grep -v '// test-only\|// debug-only' > /dev/null 2>&1; then
+      err "$file: Hardcoded approval bypass detected - remove or mark test-only"
+    fi
+
+    # Require encrypted storage for sensitive data
+    if grep -n 'SharedPreferences\|PreferenceManager' "$file" | grep -v '//' > /dev/null 2>&1; then
+      if echo "$file" | grep -qE '(Agent|Auth|Token|Credential)'; then
+        if ! grep -n 'EncryptedSharedPreferences' "$file" > /dev/null 2>&1; then
+          err "$file: Uses SharedPreferences for sensitive data - use EncryptedSharedPreferences"
+        fi
+      fi
+    fi
+
+  done <<< "$STAGED_KT"
+fi
+
+if [ -n "$STAGED_SWIFT" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+
+    # Ban approval flows without biometric verification
+    if grep -n 'approveAction\|executeApproval\|confirmAction' "$file" | grep -v '//' > /dev/null 2>&1; then
+      if ! grep -n 'LocalAuthentication\|LABiometryType\|evaluatePolicy' "$file" > /dev/null 2>&1; then
+        err "$file: Approval flow missing biometric authentication"
+      fi
+    fi
+
+    # Ban hardcoded approval bypasses
+    if grep -n 'bypassBiometric\|skipAuth\|autoApprove.*=.*true' "$file" | grep -v '// test-only\|// debug-only' > /dev/null 2>&1; then
+      err "$file: Hardcoded approval bypass detected - remove or mark test-only"
+    fi
+
+    # Require Keychain for sensitive data storage
+    if grep -n 'UserDefaults' "$file" | grep -v '//' > /dev/null 2>&1; then
+      if echo "$file" | grep -qE '(Agent|Auth|Token|Credential)'; then
+        if ! grep -n 'Keychain' "$file" > /dev/null 2>&1; then
+          warn "$file: Uses UserDefaults for potentially sensitive data - consider Keychain"
+        fi
+      fi
+    fi
+
+  done <<< "$STAGED_SWIFT"
+fi
+
+# ── Gateway Connection Security ────────────────────────────────────
+if [ -n "$STAGED_TS" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+
+    # Ban HTTP in production gateway connections
+    if grep -n 'ws://' "$file" | grep -v '// local-dev-only\|localhost' > /dev/null 2>&1; then
+      err "$file: Uses insecure WebSocket (ws://) - must use wss:// for production"
+    fi
+
+    if grep -n 'http://' "$file" | grep -v '// local-dev-only\|localhost' > /dev/null 2>&1; then
+      warn "$file: Uses HTTP - prefer HTTPS for production"
+    fi
+
+    # Ban credentials in connection strings
+    if grep -n 'password\|token' "$file" | grep -q 'ws\|http' > /dev/null 2>&1; then
+      err "$file: Credentials detected in connection string - use headers or query params"
+    fi
+
+  done <<< "$STAGED_TS"
+fi
+
+# ═══════════════════════════════════════════════════════════════════
+# ARCHITECTURE BAN CHECKS
+# ═══════════════════════════════════════════════════════════════════
+
+# ── Android Kotlin ─────────────────────────────────────────────────
+if [ -n "$STAGED_KT" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+
+    # Ban AndroidViewModel (prefer dependency injection)
+    if grep -n 'AndroidViewModel' "$file" | grep -v '// allow-android-viewmodel' > /dev/null 2>&1; then
+      err "$file: Uses AndroidViewModel - migrate to ViewModel with injected dependencies"
+    fi
+
+    # Ban collectAsState() (prefer lifecycle-aware variant)
+    if grep -n '\.collectAsState()' "$file" > /dev/null 2>&1; then
+      err "$file: Uses .collectAsState() - use .collectAsStateWithLifecycle() instead"
+    fi
+
+    # Ban Handler(Looper) (prefer coroutines)
+    if grep -n 'Handler(Looper' "$file" | grep -v '// allow-handler' > /dev/null 2>&1; then
+      err "$file: Uses Handler(Looper) - use coroutines with delay() instead"
+    fi
+
+    # Ban unsafe HTTP clients
+    if grep -n 'OkHttpClient()' "$file" | grep -v 'certificatePinner\|hostnameVerifier' > /dev/null 2>&1; then
+      warn "$file: Default OkHttpClient - consider certificate pinning for production"
+    fi
+
+  done <<< "$STAGED_KT"
+
+  # Run ktlint if available
+  if command -v ktlint > /dev/null 2>&1; then
+    if [ -n "$STAGED_KT" ]; then
+      echo "$STAGED_KT" | xargs ktlint --reporter=plain 2>/dev/null || ERRORS=$((ERRORS + 1))
+    fi
+  fi
+fi
+
+# ── iOS Swift ──────────────────────────────────────────────────────
+if [ -n "$STAGED_SWIFT" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+
+    # Ban print() in production code (prefer Logger)
+    if echo "$file" | grep -qvE '(Tests|Preview)'; then
+      if grep -n 'print(' "$file" | grep -v '// allow-print' > /dev/null 2>&1; then
+        warn "$file: Uses print() - prefer Logger from os.log"
+      fi
+    fi
+
+    # Ban deprecated networking APIs
+    if grep -n 'NSURLSession.*dataTask\|NSURLConnection' "$file" > /dev/null 2>&1; then
+      warn "$file: Uses legacy networking - prefer async URLSession.data()"
+    fi
+
+    # Ban unsafe URL loading
+    if grep -n 'URLRequest.*init.*url:' "$file" | grep -v 'cachePolicy\|timeoutInterval' > /dev/null 2>&1; then
+      warn "$file: Default URLRequest - consider setting cache policy and timeout"
+    fi
+
+  done <<< "$STAGED_SWIFT"
+
+  # Run SwiftLint if available
+  if command -v swiftlint > /dev/null 2>&1; then
+    if [ -n "$STAGED_SWIFT" ]; then
+      echo "$STAGED_SWIFT" | xargs swiftlint lint --strict --quiet 2>/dev/null || ERRORS=$((ERRORS + 1))
+    fi
+  fi
+fi
+
+# ── TypeScript/JavaScript ──────────────────────────────────────────
+if [ -n "$STAGED_TS" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+
+    # Ban console.log in production skills
+    if echo "$file" | grep -qv 'test\|spec\|\.d\.ts'; then
+      if grep -n 'console\.log\|console\.debug' "$file" | grep -v '// debug-only' > /dev/null 2>&1; then
+        warn "$file: Uses console.log - prefer proper logging in production"
+      fi
+    fi
+
+    # Ban eval() and similar dangerous patterns
+    if grep -n 'eval(\|Function(\|setTimeout.*string' "$file" > /dev/null 2>&1; then
+      err "$file: Uses dangerous eval/Function - security risk"
+    fi
+
+  done <<< "$STAGED_TS"
+
+  # Run ESLint/TSLint if available
+  if command -v eslint > /dev/null 2>&1; then
+    if [ -n "$STAGED_TS" ]; then
+      echo "$STAGED_TS" | xargs eslint --quiet 2>/dev/null || WARNINGS=$((WARNINGS + 1))
+    fi
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════
+# OPENCLAW PROTOCOL COMPLIANCE
+# ═══════════════════════════════════════════════════════════════════
+
+# Ban hardcoded gateway endpoints (should be configurable)
+for file in $STAGED_KT $STAGED_SWIFT $STAGED_TS; do
+  if [ -n "$file" ] && [ -f "$file" ]; then
+    if grep -n 'ws://.*:.*\|wss://.*openclaw' "$file" 2>/dev/null | grep -v 'localhost\|example\|//' > /dev/null 2>&1; then
+      warn "$file: Hardcoded gateway endpoint - make configurable"
+    fi
+  fi
+done
+
+# Ensure proper error handling in WebSocket connections
+if [ -n "$STAGED_TS" ]; then
+  while IFS= read -r file; do
+    [ -f "$file" ] || continue
+    if grep -q 'WebSocket\|ws\.' "$file" > /dev/null 2>&1; then
+      if ! grep -q 'onerror\|onclose\|error.*handler' "$file" > /dev/null 2>&1; then
+        warn "$file: WebSocket usage missing error handling"
+      fi
+    fi
+  done <<< "$STAGED_TS"
+fi
+
+# ═══════════════════════════════════════════════════════════════════
+# RESULT
+# ═══════════════════════════════════════════════════════════════════
+
+if [ "$ERRORS" -gt 0 ]; then
+  echo ""
+  echo "Pre-commit: $ERRORS error(s), $WARNINGS warning(s). Fix errors before committing."
+  echo "To bypass (emergency only): git commit --no-verify"
+  exit 1
+fi
+
+if [ "$WARNINGS" -gt 0 ]; then
+  echo "Pre-commit: $WARNINGS warning(s) (non-blocking)."
+fi
+
+echo "✅ Pre-commit checks passed!"
