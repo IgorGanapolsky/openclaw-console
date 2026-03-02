@@ -5,7 +5,7 @@ on:
     paths:
       - 'openclaw-skills/**'
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'openclaw-skills/**'
 
