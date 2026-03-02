@@ -3,16 +3,37 @@ default_platform(:ios)
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
+    setup_ci if ENV["CI"] == "true"
+
+    api_key = nil
+    if ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"]
+      api_key = app_store_connect_api_key(
+        key_id: ENV["APPSTORE_KEY_ID"],
+        issuer_id: ENV["APPSTORE_ISSUER_ID"],
+        key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPSTORE_KEY_ID']}.p8")
+      )
+    end
+
     increment_build_number(
       build_number: latest_testflight_build_number + 1
     )
-    build_app(scheme: "OpenClawConsole")
-    upload_to_testflight
+    build_app(
+      scheme: "OpenClawConsole",
+      export_method: "app-store",
+      xcargs: "-allowProvisioningUpdates"
+    )
+    upload_to_testflight(api_key: api_key)
   end
 
   desc "Setup certificates and profiles via match"
   lane :setup do
-    match(type: "appstore")
+    setup_ci if ENV["CI"] == "true"
+
+    if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
+      match(type: "appstore")
+    else
+      UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
+    end
   end
 
   desc "Distribute to Firebase App Distribution"
