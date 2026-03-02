@@ -1,5 +1,9 @@
 package com.openclaw.console.ui.screens.incidents
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,7 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -82,7 +86,7 @@ fun IncidentListScreen(
                             label = {
                                 val label = when (filter) {
                                     IncidentFilter.ALL -> {
-                                        val openCount = uiState.incidents.count {
+                                        val openCount = appViewModel.incidentRepository.value?.incidents ?: emptyList().count {
                                             it.status == IncidentStatus.OPEN
                                         }
                                         if (openCount > 0) "All ($openCount)" else "All"
@@ -152,7 +156,7 @@ fun IncidentListScreen(
                 }
             }
 
-            PullToRefreshContainer(
+            PullToRefreshBox(
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter)
             )

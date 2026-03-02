@@ -1,5 +1,9 @@
 package com.openclaw.console.ui.screens.tasks
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -106,7 +110,7 @@ fun TaskDetailScreen(
                 }
             }
             else -> {
-                val task = uiState.task ?: return@Button
+                val task = uiState.task ?: return@IconButton
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
