@@ -1,0 +1,27 @@
+{
+  "model": "claude-sonnet-4-20250514",
+  "maxTokens": 16384,
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Bash(git *)",
+      "Bash(make *)",
+      "Bash(cd *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(swift *)",
+      "Bash(xcodebuild *)",
+      "Bash(./gradlew *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(gh *)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(sudo *)"
+    ]
+  }
+}
