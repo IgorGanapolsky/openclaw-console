@@ -41,9 +41,9 @@ final class WebSocketService: NSObject {
 
     private var reconnectAttempt: Int = 0
     private let maxBackoffSeconds: Double = 30.0
-    private var reconnectTask: Task<Void, Never>?
-    private var pingTask: Task<Void, Never>?
-    private var receiveTask: Task<Void, Never>?
+    @ObservationIgnored private var reconnectTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var pingTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var receiveTask: _Concurrency.Task<Void, Never>?
 
     private var shouldReconnect: Bool = false
 
@@ -94,7 +94,7 @@ final class WebSocketService: NSObject {
         webSocketTask = urlSession?.webSocketTask(with: url)
         webSocketTask?.resume()
 
-        receiveTask = Task { [weak self] in
+        receiveTask = _Concurrency.Task { [weak self] in
             await self?.receiveLoop()
         }
 
@@ -104,7 +104,7 @@ final class WebSocketService: NSObject {
     // MARK: - Receive Loop
 
     private func receiveLoop() async {
-        while let task = webSocketTask, !Task.isCancelled {
+        while let task = webSocketTask, !_Concurrency.Task.isCancelled {
             do {
                 let message = try await task.receive()
                 switch message {
@@ -118,7 +118,7 @@ final class WebSocketService: NSObject {
                     break
                 }
             } catch {
-                if shouldReconnect && !Task.isCancelled {
+                if shouldReconnect && !_Concurrency.Task.isCancelled {
                     await handleDisconnect(error: error)
                 }
                 break
@@ -221,10 +221,10 @@ final class WebSocketService: NSObject {
 
     private func startPingLoop() {
         pingTask?.cancel()
-        pingTask = Task { [weak self] in
-            while let self, !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 30_000_000_000) // 30s
-                guard !Task.isCancelled else { break }
+        pingTask = _Concurrency.Task { [weak self] in
+            while let self, !_Concurrency.Task.isCancelled {
+                try? await _Concurrency.Task.sleep(nanoseconds: 30_000_000_000) // 30s
+                guard !_Concurrency.Task.isCancelled else { break }
                 self.webSocketTask?.sendPing { _ in }
             }
         }
@@ -240,7 +240,7 @@ final class WebSocketService: NSObject {
         let backoff = min(pow(2.0, Double(reconnectAttempt)), maxBackoffSeconds)
         reconnectAttempt += 1
 
-        try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
+        try? await _Concurrency.Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
 
         guard shouldReconnect else { return }
         performConnect()
@@ -272,7 +272,7 @@ extension WebSocketService: URLSessionWebSocketDelegate {
                     didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
                     reason: Data?) {
         guard shouldReconnect else { return }
-        Task { [weak self] in
+        _Concurrency.Task { [weak self] in
             await self?.handleDisconnect(
                 error: NSError(domain: "WebSocket",
                                code: closeCode.rawValue,

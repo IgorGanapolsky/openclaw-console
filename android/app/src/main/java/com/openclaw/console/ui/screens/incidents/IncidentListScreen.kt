@@ -6,13 +6,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,7 +21,7 @@ import com.openclaw.console.data.model.IncidentStatus
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.material.ExperimentalMaterialApi::class)
 @Composable
 fun IncidentListScreen(
     appViewModel: AppViewModel,
@@ -36,12 +36,16 @@ fun IncidentListScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val pullRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isRefreshing,
+        onRefresh = { isRefreshing = true }
+    )
 
-    if (pullRefreshState.isRefreshing) {
-        LaunchedEffect(Unit) {
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
             viewModel.refresh()
-            pullRefreshState.endRefresh()
+            isRefreshing = false
         }
     }
 
@@ -64,7 +68,7 @@ fun IncidentListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .nestedScroll(pullRefreshState.nestedScrollConnection)
+                .pullRefresh(pullRefreshState)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ConnectionStatusBanner(state = connectionState)
@@ -153,7 +157,8 @@ fun IncidentListScreen(
                 }
             }
 
-            PullToRefreshContainer(
+            PullRefreshIndicator(
+                refreshing = isRefreshing,
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter)
             )
