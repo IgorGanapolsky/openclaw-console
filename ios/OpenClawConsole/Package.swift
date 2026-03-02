@@ -22,9 +22,7 @@ let package = Package(
         .executableTarget(
             name: "OpenClawConsole",
             path: "OpenClawConsole",
-            resources: [
-                // Info.plist managed by Xcode-SPM integration
-            ],
+            exclude: ["Info.plist"],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
             ]
