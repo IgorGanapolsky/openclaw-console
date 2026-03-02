@@ -31,13 +31,6 @@ Deliver the definitive native mobile console for [OpenClaw](https://github.com/o
 | **Safe Approvals** | Approve dangerous actions (deploys, shell commands, config changes) with biometric verification |
 | **Minimal Chat** | Send quick instructions to agents, attached to tasks |
 
-## Screenshots
-
-<!-- TODO: Add screenshots after first build -->
-| Agents | Tasks | Incidents | Approvals |
-|--------|-------|-----------|-----------|
-| ![Agents](docs/screenshots/agents.png) | ![Tasks](docs/screenshots/tasks.png) | ![Incidents](docs/screenshots/incidents.png) | ![Approvals](docs/screenshots/approvals.png) |
-
 ## Who It's For
 
 - **Solo dev-founders / indie hackers** who run OpenClaw on a VPS to automate GitHub, deployments, and SaaS ops
