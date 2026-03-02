@@ -1,0 +1,77 @@
+name: iOS Release Context
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "iOS marketing version (leave blank to auto-detect)"
+        required: false
+        type: string
+      strict_remote:
+        description: "Fail if ASC remote checks are not fully successful"
+        required: true
+        type: boolean
+        default: true
+      fail_on_sla:
+        description: "Fail when unresolved low-star SLA breaches are present"
+        required: true
+        type: boolean
+        default: false
+  schedule:
+    - cron: "23 */6 * * *"
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyjwt==2.11.0 cryptography==46.0.5 requests==2.32.5
+
+      - name: Build release context snapshot
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          ASC_REVIEWS_SLACK_WEBHOOK: ${{ secrets.ASC_REVIEWS_SLACK_WEBHOOK }}
+          INPUT_VERSION: ${{ inputs.version }}
+          STRICT_REMOTE: ${{ inputs.strict_remote }}
+          FAIL_ON_SLA: ${{ inputs.fail_on_sla }}
+        run: |
+          set -euo pipefail
+          CMD=(python scripts/release_ops.py check_readiness \
+            --platform ios \
+            --locale en-US \
+            --context-out /tmp/release-context.json \
+            --review-limit 200 \
+            --sla-hours 24)
+
+          if [[ -n "${INPUT_VERSION:-}" ]]; then
+            CMD+=(--version "$INPUT_VERSION")
+          fi
+
+          if [[ "${STRICT_REMOTE:-true}" == "true" ]]; then
+            CMD+=(--strict-remote)
+          fi
+
+          if [[ "${FAIL_ON_SLA:-false}" == "true" ]]; then
+            CMD+=(--fail-on-sla)
+          fi
+
+          "${CMD[@]}"
+
+      - name: Upload release context artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-context
+          path: /tmp/release-context.json

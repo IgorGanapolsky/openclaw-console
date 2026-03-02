@@ -1,0 +1,27 @@
+{
+  "arms": {
+    "candidate": {
+      "cost_per_success_usd": null,
+      "mean_duration_ms": null,
+      "runs": 0,
+      "success_rate": null,
+      "successes": 0,
+      "total_cost_usd": 0
+    },
+    "control": {
+      "cost_per_success_usd": null,
+      "mean_duration_ms": null,
+      "runs": 0,
+      "success_rate": null,
+      "successes": 0,
+      "total_cost_usd": 0
+    }
+  },
+  "budget_cap_usd": 10.0,
+  "budget_remaining_usd": 10.0,
+  "budget_spent_usd": 0,
+  "complete": false,
+  "decision": "insufficient_data",
+  "total_runs": 0,
+  "window_days": 14
+}

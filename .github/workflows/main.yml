@@ -1,0 +1,218 @@
+name: Project Automation
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Run metrics every 6 hours (reduced from 30 min)
+  issues:
+    types: [opened, labeled, unlabeled, assigned, unassigned]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  project-sync:
+    name: Project Sync
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      PROJECTS_V2_OWNER: IgorGanapolsky
+      PROJECTS_V2_NUMBER: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const projectOwner = process.env.PROJECTS_V2_OWNER || owner;
+            const projectNumber = parseInt(process.env.PROJECTS_V2_NUMBER || '1', 10);
+
+            // Helpers
+            function median(nums) {
+              if (!nums.length) return 0;
+              const s = [...nums].sort((a,b)=>a-b);
+              const mid = Math.floor(s.length/2);
+              return s.length % 2 ? s[mid] : (s[mid-1]+s[mid])/2;
+            }
+            function fmtDuration(ms) {
+              const sec = Math.floor(ms/1000);
+              if (sec < 60) return `${sec}s`;
+              const min = Math.floor(sec/60);
+              if (min < 60) return `${min}m`;
+              const hr = Math.floor(min/60);
+              if (hr < 24) return `${hr}h`;
+              const day = Math.floor(hr/24);
+              if (day < 30) return `${day}d`;
+              const mo = Math.floor(day/30);
+              if (mo < 12) return `${mo}mo`;
+              const yr = Math.floor(mo/12);
+              return `${yr}y`;
+            }
+
+            // Fetch Projects v2 swimlane counts (Status field) via GraphQL
+            async function fetchProjectsV2Swimlanes(login, number) {
+              const header = await github.graphql(`
+                query($login: String!, $number: Int!) {
+                  user(login: $login) {
+                    projectV2(number: $number) {
+                      id
+                      title
+                      fields(first: 50) {
+                        nodes {
+                          __typename
+                          ... on ProjectV2SingleSelectField { id name options { id name } }
+                          ... on ProjectV2IterationField { id name }
+                          ... on ProjectV2Field { id name }
+                        }
+                      }
+                    }
+                  }
+                }
+              `, { login, number });
+
+              const project = header?.user?.projectV2;
+              if (!project) return null;
+
+              const statusField = (project.fields.nodes || []).find(f =>
+                (f.__typename === 'ProjectV2SingleSelectField') && /status|state/i.test(f.name)
+              ) || (project.fields.nodes || []).find(f => f.__typename === 'ProjectV2SingleSelectField');
+
+              const statusFieldName = statusField?.name || 'Status';
+              const counts = { todo: 0, inProgress: 0, review: 0, done: 0, other: 0 };
+
+              let hasNextPage = true;
+              let after = null;
+              while (hasNextPage) {
+                const page = await github.graphql(`
+                  query($id: ID!, $statusName: String!, $after: String) {
+                    node(id: $id) {
+                      ... on ProjectV2 {
+                        items(first: 100, after: $after) {
+                          pageInfo { hasNextPage endCursor }
+                          nodes {
+                            fieldValueByName(name: $statusName) {
+                              __typename
+                              ... on ProjectV2ItemFieldSingleSelectValue { name }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `, { id: project.id, statusName: statusFieldName, after });
+
+                const items = page?.node?.items;
+                if (!items) break;
+
+                for (const it of items.nodes) {
+                  const val = it.fieldValueByName?.name?.toLowerCase?.() || 'unknown';
+                  if (/^to\s*do|backlog|todo$/.test(val)) counts.todo++;
+                  else if (/in\s*progress|doing|active/.test(val)) counts.inProgress++;
+                  else if (/review|qa|ready\s*for\s*review/.test(val)) counts.review++;
+                  else if (/done|closed|complete/.test(val)) counts.done++;
+                  else counts.other++;
+                }
+
+                hasNextPage = items.pageInfo.hasNextPage;
+                after = items.pageInfo.endCursor;
+              }
+
+              return { counts, statusFieldName, projectTitle: project.title };
+            }
+
+            const STATUS_ISSUE = 81;
+            const allOpenIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const issues = allOpenIssues.filter(i => !i.pull_request && i.number !== STATUS_ISSUE);
+            const openPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const closedPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'closed', per_page: 100
+            });
+
+            const now = new Date();
+            const last7 = new Date(now.getTime() - 7*24*60*60*1000);
+            const last30 = new Date(now.getTime() - 30*24*60*60*1000);
+
+            // Metrics
+            const issueCount = issues.length;
+            const inProgress = issues.filter(i => (i.assignees?.length || 0) > 0).length;
+            const prCount = openPRs.length;
+            const bugCount = issues.filter(i => i.labels?.some(l => /\bbug\b/i.test(l.name))).length;
+            const featureCount = issues.filter(i => i.labels?.some(l => /(enhancement|feature)/i.test(l.name))).length;
+
+            const activeIssues7 = issues.filter(i => new Date(i.updated_at) >= last7).length;
+            const activePRs7 = openPRs.filter(pr => new Date(pr.updated_at) >= last7).length;
+            const activityCount = activeIssues7 + activePRs7;
+            const totalWork = issueCount + prCount;
+            const activityRate = totalWork ? Math.round((activityCount / totalWork) * 100) : 0;
+
+            const mergedLast30 = closedPRs.filter(pr => pr.merged_at && new Date(pr.merged_at) >= last30);
+            const throughput = mergedLast30.length;
+            const leadTimes = mergedLast30.map(pr => new Date(pr.merged_at) - new Date(pr.created_at));
+            const medianLead = median(leadTimes);
+
+            const issueHealth = issueCount > 15 ? '🔴 High' : issueCount > 7 ? '🟡 Medium' : '🟢 Good';
+            const prHealth = prCount > 7 ? '🔴 High' : prCount > 3 ? '🟡 Medium' : '🟢 Good';
+            const bugHealth = bugCount > 5 ? '🔴 Critical' : bugCount > 2 ? '🟡 Moderate' : '🟢 Low';
+            const progressRate = issueCount ? Math.round((inProgress / issueCount) * 100) : 0;
+            const progressHealth = progressRate >= 40 ? '🟢 Good' : progressRate >= 20 ? '🟡 Fair' : '🔴 Needs Attention';
+            const activityHealth = activityRate >= 50 ? '🟢 High' : activityRate >= 25 ? '🟡 Moderate' : '🔴 Low';
+
+            const recs = [];
+            if (issueCount > 15) recs.push('⚠️ High open issue count. Prioritize triage and resolution.');
+            if (bugCount > 5) recs.push('🐛 Multiple bugs detected. Focus on stabilization.');
+            if (progressRate < 30 && issueCount > 0) recs.push('📈 Low active work rate. Assign/advance more issues.');
+            if (activityRate < 25 && totalWork > 0) recs.push('💡 Low activity. Encourage smaller, frequent PRs.');
+            if (!recs.length) recs.push('✅ Healthy project indicators. Maintain current velocity.');
+
+            const priorities = issues
+              .filter(i => i.labels?.some(l => /^priority:/i.test(l.name)))
+              .slice(0, 5)
+              .map(i => `- ${i.title} (#${i.number})`);
+
+            const fmtDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'medium' });
+
+            // Projects v2 swimlanes (if available)
+            let pv2Section = '';
+            try {
+              const pv2 = await fetchProjectsV2Swimlanes(projectOwner, projectNumber);
+              if (pv2) {
+                const { counts, statusFieldName, projectTitle } = pv2;
+                pv2Section = `\n## 🗂️ Project Board (Projects v2: ${projectTitle})\n\nStatus field: ${statusFieldName}\n\n| To Do | In Progress | Review | Done | Other |\n|---:|---:|---:|---:|---:|\n| ${counts.todo} | ${counts.inProgress} | ${counts.review} | ${counts.done} | ${counts.other} |\n`;
+              }
+            } catch (e) {
+              pv2Section = `\n> Projects v2 data unavailable (${String(e).slice(0,140)}).`;
+            }
+
+            const body = `# 📊 OpenClaw Console Project Status\n\n*Last updated: ${fmtDate}*\n\n## 📈 Current Metrics\n\n| Metric | Count | Status |\n| --- | ---: | --- |\n| 📋 Open Issues | ${issueCount} | ${issueHealth} |\n| 🔧 Open PRs | ${prCount} | ${prHealth} |\n| 🏃 In Progress | ${inProgress} | ${progressRate}% of issues |\n| 🐛 Bugs | ${bugCount} | ${bugHealth} |\n| ✨ Features | ${featureCount} | ${featureCount} planned |\n\n## 🚀 Delivery (last 30 days)\n- Merged PRs: ${throughput}\n- Median PR lead time: ${fmtDuration(medianLead)}\n\n## 📊 Activity (last 7 days)\n- Active items updated: ${activityCount}\n- Activity rate: ${activityRate}% (${activityHealth})\n${pv2Section}\n${priorities.length ? '## 🔝 Top Priorities\n' + priorities.join('\n') + '\n' : ''}\n\n## 🎯 Recommendations\n${recs.map(r => `- ${r}`).join('\n')}\n\n---\n\nAutomation: every 6 hours + on repo events. Manual refresh via workflow dispatch.`;
+
+            // Ensure the status issue exists; create if missing, then update
+            try {
+              await github.rest.issues.get({ owner, repo, issue_number: STATUS_ISSUE });
+            } catch (e) {
+              await github.rest.issues.create({
+                owner, repo,
+                title: '📊 OpenClaw Console Project Status',
+                body: 'Initializing status…',
+                labels: ['automation', 'metrics', 'status-board']
+              });
+            }
+
+            await github.rest.issues.update({ owner, repo, issue_number: STATUS_ISSUE, body });
+
+            // For new issues, handle labeling too
+            if (context.eventName === 'issues' && context.payload.action === 'opened') {
+              const title = context.payload.issue.title.toLowerCase();
+              const labels = [];
+              if (title.includes('bug') || title.includes('error')) labels.push('type: bug', 'triage');
+              else if (title.includes('feature') || title.includes('request')) labels.push('type: enhancement');
+              if (labels.length) {
+                await github.rest.issues.addLabels({ owner, repo, issue_number: context.payload.issue.number, labels });
+              }
+            }

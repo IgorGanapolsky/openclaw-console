@@ -1,0 +1,122 @@
+name: Daily Growth Publishing
+
+on:
+  schedule:
+    - cron: '15 13 * * *' # Daily at 13:15 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-growth-publishing
+  cancel-in-progress: false
+
+jobs:
+  publish-and-build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests==2.32.5 requests-oauthlib==2.0.0 markdown==3.9
+
+      - name: Generate + publish + collect + build site
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_AUTHOR_URN: ${{ secrets.LINKEDIN_AUTHOR_URN }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          GA4_MEASUREMENT_ID: ${{ secrets.GA4_MEASUREMENT_ID }}
+          PLAUSIBLE_DOMAIN: ${{ secrets.PLAUSIBLE_DOMAIN }}
+          PLAUSIBLE_SCRIPT_URL: ${{ secrets.PLAUSIBLE_SCRIPT_URL }}
+          APP_STORE_URL: ${{ secrets.APP_STORE_URL }}
+          PLAY_STORE_URL: ${{ secrets.PLAY_STORE_URL }}
+          IOS_REVIEW_URL: ${{ secrets.IOS_REVIEW_URL }}
+          ANDROID_REVIEW_URL: ${{ secrets.ANDROID_REVIEW_URL }}
+          BLOG_BASE_URL: ${{ secrets.BLOG_BASE_URL }}
+          AI_BOT_LOG_PATH: ${{ secrets.AI_BOT_LOG_PATH }}
+          AB_PILOT_MAX_COST_USD: "10"
+          AB_CONTROL_COST_USD: "0.00"
+          AB_CANDIDATE_COST_USD: "0.25"
+        run: |
+          python scripts/growth_content_pipeline.py \
+            --repo-root . \
+            --output-root marketing \
+            keyword-plan
+
+          python scripts/growth_content_pipeline.py \
+            --repo-root . \
+            --output-root marketing \
+            run-daily \
+            --ab-pilot
+
+      - name: Commit generated assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add marketing/posts marketing/diagrams marketing/data marketing/site marketing/keywords
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(growth): daily content, publishing logs, and pages build"
+          BRANCH="auto/growth-publishing-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base develop --head "$BRANCH" --title "chore(growth): daily content and publishing update" --body "Automated daily growth content, publishing logs, and pages build" --label "automation" || true
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/develop'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/develop'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: marketing/site
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/develop'
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Upload growth artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-daily-artifacts
+          path: |
+            marketing/data/posts.jsonl
+            marketing/data/publications.jsonl
+            marketing/data/engagement.jsonl
+            marketing/data/engagement-latest.md
+            marketing/data/publish_ab_pilot_runs.jsonl
+            marketing/data/publish_ab_pilot_summary.json
+            marketing/data/publish_ab_pilot_report.md
+            marketing/data/bot_traffic_summary.json
+            marketing/data/bot_traffic_summary.md
+            marketing/keywords/keyword_backlog.json
+            marketing/keywords/keyword_backlog.csv
+            marketing/keywords/keyword_backlog.md

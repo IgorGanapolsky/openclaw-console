@@ -1,0 +1,37 @@
+{
+  "en-US": {
+    "language": "English (US)",
+    "android_title": true,
+    "android_short_desc": true,
+    "ios_name": true,
+    "ios_subtitle": true
+  },
+  "ja": {
+    "language": "Japanese",
+    "android_title": true,
+    "android_short_desc": true,
+    "ios_name": true,
+    "ios_subtitle": true
+  },
+  "de-DE": {
+    "language": "German",
+    "android_title": true,
+    "android_short_desc": true,
+    "ios_name": true,
+    "ios_subtitle": true
+  },
+  "ko": {
+    "language": "Korean",
+    "android_title": true,
+    "android_short_desc": true,
+    "ios_name": true,
+    "ios_subtitle": true
+  },
+  "pt-BR": {
+    "language": "Portuguese (Brazil)",
+    "android_title": true,
+    "android_short_desc": true,
+    "ios_name": true,
+    "ios_subtitle": true
+  }
+}

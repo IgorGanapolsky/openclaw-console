@@ -1,0 +1,22 @@
+{
+  "name": "random-timer-playwright-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:browsers": "playwright install --with-deps chromium",
+    "auth:save": "node scripts/save-auth-state.mjs",
+    "auth:sync-secrets": "node scripts/sync-console-auth-secrets.mjs",
+    "test:console:agent-browser": "node scripts/verify-store-console-agent-browser.mjs",
+    "lint:generated": "node scripts/check-test-quality.mjs",
+    "test:local": "playwright test specs/local --project=local-checks",
+    "test:local:strict": "STRICT_STORE_READINESS=1 playwright test specs/local --project=local-checks",
+    "test:console": "playwright test specs/store --project=store-console",
+    "test": "playwright test",
+    "verify": "npm run lint:generated && npm run test:local",
+    "verify:strict": "npm run lint:generated && npm run test:local:strict"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.1",
+    "typescript": "^5.9.3"
+  }
+}

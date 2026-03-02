@@ -1,0 +1,188 @@
+name: Weekly Shared Runner
+
+on:
+  workflow_call:
+    inputs:
+      fetch_depth:
+        description: "Checkout depth (use 0 for full history)."
+        required: false
+        type: string
+        default: "1"
+      python_version:
+        description: "Python version to use."
+        required: false
+        type: string
+        default: "3.11"
+      pip_packages:
+        description: "Optional pip packages to install."
+        required: false
+        type: string
+        default: ""
+      run_command:
+        description: "Main shell command(s) to execute."
+        required: true
+        type: string
+      commit_paths:
+        description: "Optional newline-delimited paths to git add/commit."
+        required: false
+        type: string
+        default: ""
+      commit_message:
+        description: "Commit message when commit_paths is provided."
+        required: false
+        type: string
+        default: ""
+      publish_wiki:
+        description: "Publish wiki/ directory using github-wiki-action."
+        required: false
+        type: boolean
+        default: false
+      wiki_path:
+        description: "Wiki content path when publish_wiki is true."
+        required: false
+        type: string
+        default: "wiki/"
+      issue_title:
+        description: "Optional issue title to create from file."
+        required: false
+        type: string
+        default: ""
+      issue_content_path:
+        description: "Optional issue content file path."
+        required: false
+        type: string
+        default: ""
+      issue_labels:
+        description: "Optional newline-delimited issue labels."
+        required: false
+        type: string
+        default: ""
+      artifact_name:
+        description: "Optional artifact name."
+        required: false
+        type: string
+        default: ""
+      artifact_path:
+        description: "Optional newline-delimited artifact paths."
+        required: false
+        type: string
+        default: ""
+      artifact_retention_days:
+        description: "Artifact retention days."
+        required: false
+        type: string
+        default: "14"
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      GEMINI_API_KEY:
+        required: false
+      POSTHOG_PERSONAL_API_KEY:
+        required: false
+      POSTHOG_PROJECT_ID:
+        required: false
+      PROJECT_PAT:
+        required: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ fromJSON(inputs.fetch_depth) }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies
+        if: inputs.pip_packages != ''
+        env:
+          PIP_PACKAGES: ${{ inputs.pip_packages }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          import shlex
+          import subprocess
+
+          packages = os.environ.get("PIP_PACKAGES", "").strip()
+          if not packages:
+              raise SystemExit(0)
+          subprocess.run(["pip", "install", *shlex.split(packages)], check=True)
+          PY
+
+      - name: Run task
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+          PROJECT_PAT: ${{ secrets.PROJECT_PAT }}
+          RUN_COMMAND: ${{ inputs.run_command }}
+        run: |
+          set -euo pipefail
+          task_script="$(mktemp)"
+          trap 'rm -f "$task_script"' EXIT
+          printf '%s\n' "$RUN_COMMAND" > "$task_script"
+          bash "$task_script"
+
+      - name: Commit updates
+        if: inputs.commit_paths != '' && inputs.commit_message != ''
+        env:
+          COMMIT_PATHS: ${{ inputs.commit_paths }}
+          COMMIT_MESSAGE: ${{ inputs.commit_message }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          printf '%s\n' "$COMMIT_PATHS" | while IFS= read -r path; do
+            if [ -n "$path" ]; then
+              git add "$path"
+            fi
+          done
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "$COMMIT_MESSAGE"
+          git push
+
+      - name: Publish wiki pages
+        if: inputs.publish_wiki
+        uses: Andrew-Chen-Wang/github-wiki-action@50650fccf3a10f741995523cf9708c53cec8912a # v4
+        with:
+          strategy: init
+          path: ${{ inputs.wiki_path }}
+          token: ${{ secrets.PROJECT_PAT }}
+
+      - name: Create issue from report
+        if: inputs.issue_title != '' && inputs.issue_content_path != ''
+        uses: peter-evans/create-issue-from-file@433e51abf769039ee20ba1293a088ca19d573b7f # v4
+        with:
+          title: ${{ inputs.issue_title }}
+          content-filepath: ${{ inputs.issue_content_path }}
+          labels: ${{ inputs.issue_labels }}
+
+      - name: Upload artifact
+        if: always() && inputs.artifact_name != '' && inputs.artifact_path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ inputs.artifact_path }}
+          retention-days: ${{ fromJSON(inputs.artifact_retention_days) }}

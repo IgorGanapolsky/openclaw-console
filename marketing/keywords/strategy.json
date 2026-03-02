@@ -1,0 +1,90 @@
+{
+  "niche": "mobile timer app for tactical and reaction training",
+  "monetization": "app installs, retention, and app store reviews",
+  "audience": "athletes, tactical trainers, coaches, and users who need unpredictable interval drills",
+  "seed_keywords": [
+    "reaction training",
+    "interval timer",
+    "tactical timer",
+    "random timer",
+    "focus drills",
+    "combat conditioning",
+    "boxing drills",
+    "home workout timer",
+    "sparring prep",
+    "mental readiness"
+  ],
+  "modifiers": [
+    "best",
+    "vs",
+    "under 20",
+    "review",
+    "app",
+    "for beginners",
+    "free",
+    "no ads"
+  ],
+  "reddit_keyword_targeting": {
+    "high_intent": [
+      "reaction time training",
+      "random interval timer",
+      "boxing timer app",
+      "MMA training timer",
+      "unpredictable timer",
+      "HIIT timer app",
+      "workout timer random",
+      "stress inoculation training",
+      "combat conditioning",
+      "sparring timer",
+      "round timer boxing",
+      "EMOM timer",
+      "CrossFit timer app",
+      "tactical training tools",
+      "reaction drill timer"
+    ],
+    "discovery": [
+      "boxing training tools",
+      "MMA workout gear",
+      "home gym timer",
+      "CrossFit accessories",
+      "martial arts training",
+      "self defense training",
+      "combat sports equipment",
+      "fighter workout",
+      "BJJ training tools",
+      "Muay Thai training"
+    ]
+  },
+  "reddit_pro_trends_tracking": [
+    "boxing timer",
+    "reaction training",
+    "interval timer app",
+    "HIIT timer",
+    "random timer",
+    "combat training",
+    "MMA training",
+    "CrossFit timer",
+    "tactical training",
+    "workout app"
+  ],
+  "subreddit_targeting": {
+    "tier_1_combat": {
+      "subreddits": ["r/boxing", "r/MMA", "r/bjj", "r/MuayThai", "r/amateur_boxing", "r/martialarts"],
+      "estimated_reach": "2.5M+ combined subscribers",
+      "intent_level": "high",
+      "messaging": "combat identity — 'train reaction under stress'"
+    },
+    "tier_2_fitness": {
+      "subreddits": ["r/HIIT", "r/CrossFit", "r/bodyweightfitness", "r/homegym", "r/Fitness", "r/kettlebell"],
+      "estimated_reach": "15M+ combined subscribers",
+      "intent_level": "medium",
+      "messaging": "functional training — 'stop watching the clock'"
+    },
+    "tier_3_tactical": {
+      "subreddits": ["r/tacticaltraining", "r/ProtectAndServe", "r/Military", "r/CCW", "r/CompetitionShooting"],
+      "estimated_reach": "1.5M+ combined subscribers",
+      "intent_level": "highest",
+      "messaging": "stress inoculation — 'train against uncertain triggers'"
+    }
+  }
+}

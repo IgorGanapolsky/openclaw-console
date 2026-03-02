@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-02-23T15:18:01Z",
+  "pipeline_artifacts": {
+    "required": [
+      "marketing/data/store_downloads.json",
+      "marketing/data/engagement.jsonl",
+      "marketing/data/attribution-report.md",
+      "marketing/keywords/posthog_feedback.json",
+      "marketing/data/content_feedback.json"
+    ],
+    "missing": [
+      "marketing/data/store_downloads.json",
+      "marketing/data/engagement.jsonl"
+    ],
+    "healthy": false
+  },
+  "marketing_blog": {
+    "devto": {
+      "available": true,
+      "window_days": 30,
+      "articles": 21,
+      "totals": {
+        "reactions": 13,
+        "comments": 1,
+        "page_views": 129
+      },
+      "latest_article": "https://dev.to/igorganapolsky/calculator-reaction-training-what-we-learned-building-random-tactical-timer-2883"
+    }
+  },
+  "posthog": {
+    "query_available": true,
+    "project_id_present": true,
+    "api_key_present": true,
+    "auth_test_status": 200,
+    "key_type_inference": "Personal API key validates against HogQL query endpoint."
+  },
+  "ios_reviews": {
+    "generatedAt": "2026-02-23T05:12:36+00:00",
+    "bundleId": "com.igorganapolsky.randomtimer",
+    "appId": "6758355312",
+    "totalReviews": 0,
+    "averageRating": 0.0,
+    "ratings": {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0
+    },
+    "slaHours": 24,
+    "unresolvedLowStarCount": 0,
+    "slaBreachCount": 0,
+    "slaBreaches": [],
+    "topUnresolved": []
+  },
+  "paid_ads": {
+    "configured_statuses": {
+      "apple_search_ads": "draft",
+      "google_uac": "draft"
+    },
+    "live_status_verified": true,
+    "live_status_reason": "Authenticated Apple Ads dashboard check completed; account currently shows zero campaigns."
+  },
+  "apple_ads_live_check": {
+    "authenticated": true,
+    "dashboard_url": "https://app-ads.apple.com/cm/app/20617940/report",
+    "finding": "You do not have any campaigns",
+    "evidence": "tests/playwright/test-results/searchads-live-check.png"
+  },
+  "posthog_query_verification": {
+    "project_id": "299775",
+    "key_tested_prefix": "phx_",
+    "query_status": 200,
+    "diagnostic": "HogQL query succeeded for project 299775."
+  }
+}

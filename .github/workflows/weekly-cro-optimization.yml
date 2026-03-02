@@ -1,0 +1,76 @@
+name: Weekly CRO Optimization
+
+on:
+  schedule:
+    - cron: '0 11 * * 2' # Every Tuesday at 11:00 UTC
+  workflow_dispatch:
+    inputs:
+      skip_experiments:
+        description: "Skip creating new experiments"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cro-optimization
+  cancel-in-progress: false
+
+jobs:
+  optimize-conversion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run CRO optimization
+        env:
+          SKIP_EXPERIMENTS: ${{ inputs.skip_experiments || 'false' }}
+        run: |
+          set -euo pipefail
+          CMD=(python scripts/cro_optimization.py
+            --repo-root .
+            --report-out marketing/data/cro_report.md)
+
+          if [[ "$SKIP_EXPERIMENTS" == "true" ]]; then
+            CMD+=(--no-experiments)
+          fi
+
+          "${CMD[@]}"
+
+      - name: Commit CRO updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add android/fastlane/metadata/ ios/OpenClawConsole/fastlane/metadata/ marketing/data/cro_*.json marketing/data/cro_report.md marketing/data/localization_status.json
+          if git diff --cached --quiet; then
+            echo "No CRO changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(cro): weekly conversion optimization and localization sync"
+          BRANCH="auto/cro-optimization-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base develop --head "$BRANCH" --title "chore(cro): weekly conversion optimization" --body "Automated weekly CRO optimization and localization sync" --label "automation" || true
+
+      - name: Upload CRO report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cro-report
+          path: |
+            marketing/data/cro_report.md
+            marketing/data/cro_experiments.json
+            marketing/data/localization_status.json

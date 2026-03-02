@@ -1,0 +1,75 @@
+name: Weekly Paid Acquisition Refresh
+
+on:
+  schedule:
+    - cron: '0 12 * * 4' # Every Thursday at 12:00 UTC
+  workflow_dispatch:
+    inputs:
+      daily_budget:
+        description: "Override daily budget (USD)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: paid-acquisition
+  cancel-in-progress: false
+
+jobs:
+  refresh-campaigns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run paid acquisition pipeline
+        env:
+          DAILY_BUDGET: ${{ inputs.daily_budget }}
+        run: |
+          set -euo pipefail
+          CMD=(python scripts/paid_acquisition_seed.py
+            --repo-root .
+            --report-out marketing/data/paid_acquisition_report.md)
+
+          if [[ -n "${DAILY_BUDGET:-}" ]]; then
+            CMD+=(--daily-budget "$DAILY_BUDGET")
+          fi
+
+          "${CMD[@]}"
+
+      - name: Commit campaign updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add marketing/data/paid_campaigns.json marketing/data/paid_acquisition_report.md
+          if git diff --cached --quiet; then
+            echo "No campaign changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(ads): weekly campaign keyword and budget refresh"
+          BRANCH="auto/paid-acquisition-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base develop --head "$BRANCH" --title "chore(paid): weekly campaign keyword and budget refresh" --body "Automated weekly paid acquisition campaign refresh" --label "automation" || true
+
+      - name: Upload acquisition report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paid-acquisition-report
+          path: |
+            marketing/data/paid_acquisition_report.md
+            marketing/data/paid_campaigns.json

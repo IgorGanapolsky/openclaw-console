@@ -1,0 +1,90 @@
+# Project Configuration
+name: OpenClaw Console
+description: Native iOS and Android console for supervising OpenClaw agents
+
+# Issue Management
+issues:
+  labels:
+    priorities:
+      - name: "priority: high"
+        color: "d73a4a"
+        description: "Urgent or critical issues"
+      - name: "priority: medium"
+        color: "fbca04"
+        description: "Important but not critical"
+      - name: "priority: low"
+        color: "0e8a16"
+        description: "Nice to have"
+
+    types:
+      - name: "type: bug"
+        color: "d73a4a"
+        description: "Something isn't working"
+      - name: "type: security"
+        color: "d93f0b"
+        description: "Security related issue"
+      - name: "type: feature"
+        color: "0075ca"
+        description: "New feature request"
+      - name: "type: performance"
+        color: "0e8a16"
+        description: "Performance improvement"
+      - name: "type: ux"
+        color: "5319e7"
+        description: "User experience improvement"
+
+    status:
+      - name: "status: unassigned"
+        color: "ededed"
+        description: "No assignee yet"
+      - name: "status: in-progress"
+        color: "0052cc"
+        description: "Being worked on"
+      - name: "status: blocked"
+        color: "d73a4a"
+        description: "Blocked by another issue"
+
+    age:
+      - name: "age: fresh"
+        color: "0e8a16"
+        description: "Recently opened"
+      - name: "age: stale"
+        color: "fbca04"
+        description: "No activity for 24+ hours"
+
+# SLA Configuration
+sla:
+  high: 24 # hours
+  medium: 72 # hours
+  low: 168 # hours
+
+# Project Board Configuration
+project_board:
+  columns:
+    - name: "To Do"
+      automation:
+        on_create: true
+        on_reopen: true
+    - name: "In Progress"
+      automation:
+        on_assign: true
+    - name: "Done"
+      automation:
+        on_close: true
+
+# Automation Configuration
+automation:
+  pr_review:
+    enabled: true
+    require_approval: true
+    auto_merge: false
+    required_checks:
+      - "CI/validate"
+      - "CodeRabbit/security"
+      - "SonarCloud"
+
+  issue_triage:
+    enabled: true
+    auto_label: true
+    auto_assign: false
+    sync_interval: 10 # minutes

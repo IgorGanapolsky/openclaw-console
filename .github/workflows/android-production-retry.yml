@@ -1,0 +1,75 @@
+name: Android Production Retry
+
+on:
+  schedule:
+    - cron: "30 14 * * *"
+  workflow_dispatch:
+    inputs:
+      force_retry:
+        description: "Force retry even if no open blocker issue"
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
+        required: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      should_retry: ${{ steps.gate.outputs.should_retry }}
+      reason: ${{ steps.gate.outputs.reason }}
+    steps:
+      - name: Check if retry is required
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN != '' && secrets.ADMIN_TOKEN || github.token }}
+          ISSUE_TITLE: Android production publish blocked by Play FAILED_PRECONDITION
+          FORCE_RETRY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.force_retry || 'false' }}
+        run: |
+          if [ "$FORCE_RETRY" = "true" ]; then
+            echo "should_retry=true" >> "$GITHUB_OUTPUT"
+            echo "reason=manual_force_retry" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ISSUE_NUMBER="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number,title --jq '.[] | select(.title == env.ISSUE_TITLE) | .number' | head -1)"
+          if [ -n "$ISSUE_NUMBER" ]; then
+            echo "should_retry=true" >> "$GITHUB_OUTPUT"
+            echo "reason=open_blocker_issue_$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_retry=false" >> "$GITHUB_OUTPUT"
+            echo "reason=no_open_blocker_issue" >> "$GITHUB_OUTPUT"
+          fi
+
+  dispatch-production-retry:
+    needs: [gate]
+    if: ${{ needs.gate.outputs.should_retry == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Dispatch Native App Release (Android production)
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN != '' && secrets.ADMIN_TOKEN || github.token }}
+        run: |
+          gh workflow run native-release.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref develop \
+            -f platform=android \
+            -f android_track=production \
+            -f submit_review=false
+          echo "✅ Dispatched native-release.yml (android production). reason=${{ needs.gate.outputs.reason }}"
+
+  skip:
+    needs: [gate]
+    if: ${{ needs.gate.outputs.should_retry != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip retry
+        run: echo "Skipping production retry. reason=${{ needs.gate.outputs.reason }}"

@@ -1,0 +1,82 @@
+{
+  "generated_at": "2026-02-26T18:28:59+00:00",
+  "source": "apple_ads_api",
+  "status": "ok",
+  "status_reason": "",
+  "window_days": 30,
+  "adam_id": 6758355312,
+  "campaign_count": 1,
+  "active_campaign_count": 1,
+  "campaigns": [
+    {
+      "id": 2143440089,
+      "name": "Random Tactical Timer - Search v1",
+      "status": "ENABLED",
+      "serving_status": "RUNNING",
+      "daily_budget_usd": 10.0,
+      "impressions": 624,
+      "taps": 11,
+      "spend_usd": 10.0,
+      "installs": 3,
+      "tap_installs": 3
+    }
+  ],
+  "metrics_30d": {
+    "impressions": 624,
+    "taps": 11,
+    "spend_usd": 10.0,
+    "installs": 3,
+    "avg_cpt_usd": 0.9091,
+    "tap_install_cpi_usd": 3.3333,
+    "ttr": 0.017628,
+    "tap_install_rate": 0.272727
+  },
+  "finding": "API reports 1 campaign(s), 1 active; 30d taps 11, spend $10.00, installs 3.",
+  "snapshots": [
+    {
+      "timestamp": "2026-02-24T17:36:17+00:00",
+      "campaign_count": 1,
+      "active_campaign_count": 1,
+      "impressions": 0,
+      "taps": 0,
+      "spend_usd": 0.0,
+      "installs": 0
+    },
+    {
+      "timestamp": "2026-02-24T17:38:31+00:00",
+      "campaign_count": 1,
+      "active_campaign_count": 1,
+      "impressions": 0,
+      "taps": 0,
+      "spend_usd": 0.0,
+      "installs": 0
+    },
+    {
+      "timestamp": "2026-02-26T17:23:27+00:00",
+      "campaign_count": 1,
+      "active_campaign_count": 1,
+      "impressions": 624,
+      "taps": 11,
+      "spend_usd": 10.0,
+      "installs": 3
+    },
+    {
+      "timestamp": "2026-02-26T17:58:43+00:00",
+      "campaign_count": 1,
+      "active_campaign_count": 1,
+      "impressions": 624,
+      "taps": 11,
+      "spend_usd": 10.0,
+      "installs": 3
+    },
+    {
+      "timestamp": "2026-02-26T18:28:59+00:00",
+      "campaign_count": 1,
+      "active_campaign_count": 1,
+      "impressions": 624,
+      "taps": 11,
+      "spend_usd": 10.0,
+      "installs": 3
+    }
+  ]
+}

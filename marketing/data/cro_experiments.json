@@ -1,0 +1,97 @@
+{
+  "experiments": [
+    {
+      "id": "0e3ecd8f",
+      "type": "title_ab_test",
+      "platform": "android",
+      "created": "2026-02-20T21:08:07.534250+00:00",
+      "status": "proposed",
+      "variants": [
+        {
+          "id": "control",
+          "title": "Random Tactical Timer"
+        },
+        {
+          "id": "variant_a",
+          "title": "Random Timer - HIIT & Drills"
+        },
+        {
+          "id": "variant_b",
+          "title": "Tactical Timer - Random Intervals"
+        },
+        {
+          "id": "variant_c",
+          "title": "Random Workout Timer"
+        }
+      ],
+      "metric": "conversion_rate",
+      "duration_days": 14,
+      "notes": "Test title variants focusing on different keyword strategies"
+    },
+    {
+      "id": "a36bd72e",
+      "type": "short_description_ab_test",
+      "platform": "android",
+      "created": "2026-02-20T21:08:07.534267+00:00",
+      "status": "proposed",
+      "variants": [
+        {
+          "id": "control",
+          "text": "Random timer for HIIT, drills & party games. Set a range \u2014 boom."
+        },
+        {
+          "id": "variant_a",
+          "text": "Surprise timer for workouts, games & drills. Never know when it fires!"
+        },
+        {
+          "id": "variant_b",
+          "text": "Unpredictable interval timer for HIIT, boxing & reaction training."
+        }
+      ],
+      "metric": "conversion_rate",
+      "duration_days": 14
+    },
+    {
+      "id": "9187ebb1",
+      "type": "screenshot_ab_test",
+      "platform": "both",
+      "created": "2026-02-20T21:08:07.534272+00:00",
+      "status": "proposed",
+      "variants": [
+        {
+          "id": "control",
+          "order": [
+            "hero_timer",
+            "alarm_screen",
+            "settings",
+            "loop_mode"
+          ],
+          "description": "Current order: timer > alarm > settings > loop"
+        },
+        {
+          "id": "variant_a",
+          "order": [
+            "hero_alarm",
+            "loop_mode",
+            "hero_timer",
+            "settings"
+          ],
+          "description": "Lead with alarm impact > loop > timer > settings"
+        },
+        {
+          "id": "variant_b",
+          "order": [
+            "use_case_hiit",
+            "hero_timer",
+            "alarm_screen",
+            "loop_mode"
+          ],
+          "description": "Lead with use case > timer > alarm > loop"
+        }
+      ],
+      "metric": "conversion_rate",
+      "duration_days": 21
+    }
+  ],
+  "active_variants": {}
+}

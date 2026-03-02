@@ -1,0 +1,96 @@
+---
+# CI/CD Configuration for OpenClaw Console (2025)
+
+# Project Configuration
+project:
+  name: OpenClaw Console
+  type: mobile
+  platform: native-ios-android
+  status_issue: 81
+  project_board: 3
+
+# Branch Protection
+branches:
+  main:
+    protection:
+      required_reviews: 1
+      dismiss_stale_reviews: true
+      require_up_to_date: true
+      status_checks:
+        - "Main Pipeline / Validate"
+        - "Main Pipeline / Security"
+        - "SonarCloud Code Analysis"
+        - "CodeQL Analysis"
+  develop:
+    protection:
+      required_reviews: 1
+      dismiss_stale_reviews: true
+      status_checks:
+        - "Main Pipeline / Validate"
+
+# Automation Settings
+automation:
+  metrics_update_interval: 30 # minutes
+  sla:
+    bug_response_time: 48 # hours
+    pr_review_time: 24 # hours
+    security_fix_time: 72 # hours
+  auto_merge:
+    enabled: true
+    conditions:
+      - status_checks_pass
+      - approved_review
+      - no_conflicts
+
+# Quality Gates
+quality:
+  test_coverage:
+    minimum: 80
+    critical: 70
+  sonar:
+    reliability_rating: A
+    security_rating: A
+    maintainability_rating: B
+  performance:
+    lighthouse_score: 90
+    bundle_size_limit: 5MB
+
+# Notifications
+notifications:
+  slack:
+    channel: "#openclaw-console-ci"
+    alerts:
+      - build_failure
+      - security_critical
+      - sla_breach
+  email:
+    recipients:
+      - team-leads
+      - security-team
+    alerts:
+      - security_critical
+      - production_deploy
+
+# Dependencies
+dependencies:
+  auto_merge: true
+  update_schedule: "weekly"
+  ignored_updates:
+    - match:
+        dependency_name: "react-native"
+        version_requirement: ">=0.72.0"
+    - match:
+        dependency_name: "@types/*"
+        update_type: "version-update:semver-patch"
+
+# Security
+security:
+  secret_scanning: true
+  dependency_review: true
+  code_scanning:
+    schedule: "daily"
+    alerts:
+      critical: true
+      high: true
+      medium: false
+      low: false

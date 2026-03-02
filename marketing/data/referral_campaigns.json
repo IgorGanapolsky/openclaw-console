@@ -1,0 +1,132 @@
+{
+  "campaigns": [],
+  "reddit_posts": [
+    {
+      "subreddit": "r/HIIT",
+      "audience": "HIIT enthusiasts",
+      "title": "I built a free timer app with truly random rest intervals for HIIT",
+      "body": "I got frustrated with traditional interval timers because I always knew exactly when the rest period would end \u2014 so I'd unconsciously pace myself.\n\nI built Random Tactical Timer to fix this. You set a min and max time, and it picks a random duration each interval. You genuinely can't predict when the alarm fires.\n\nBeen using it for 6 months for my own HIIT sessions and the difference is real \u2014 my heart rate stays higher because I can't mentally \"prepare\" for the next interval.\n\nFree, no ads, no tracking. Would love feedback from this community.",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748211+00:00",
+      "id": "b7234d70"
+    },
+    {
+      "subreddit": "r/CrossFit",
+      "audience": "CrossFit athletes",
+      "title": "Random interval timer for unpredictable EMOM/AMRAP workouts",
+      "body": "Built an app that fires an alarm at a random time within your set range. Basically makes every EMOM unpredictable.\n\nSet 45s-90s and you never know when the next round starts. Forces you to stay ready instead of watching the clock.\n\nFree app, no ads. Been using it for WODs and it's a game changer for mental toughness.",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748254+00:00",
+      "id": "325cb589"
+    },
+    {
+      "subreddit": "r/tacticaltraining",
+      "audience": "tactical/military trainers",
+      "title": "Free random timer app for reaction time drills",
+      "body": "Built a timer app where you set a range and it fires at a random time within that range. Great for reaction time drills.\n\nNo ads, no tracking, no subscriptions. Available on iOS and Android.\n\nWould love feedback from this community!",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748263+00:00",
+      "id": "9ea1a51a"
+    },
+    {
+      "subreddit": "r/bodyweightfitness",
+      "audience": "home workout community",
+      "title": "Free random timer app for tabata random intervals",
+      "body": "Built a timer app where you set a range and it fires at a random time within that range. Great for tabata random intervals.\n\nNo ads, no tracking, no subscriptions. Available on iOS and Android.\n\nWould love feedback from this community!",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748269+00:00",
+      "id": "e2a4c08c"
+    },
+    {
+      "subreddit": "r/boxing",
+      "audience": "boxers and combat sport athletes",
+      "title": "Random round timer for boxing drills \u2014 simulates real fight unpredictability",
+      "body": "In a real fight, you don't know when the bell rings. Built an app that makes your training rounds unpredictable.\n\nSet 2-3 minute rounds and the bell goes off randomly within that range. Way better for building genuine reaction time vs watching a countdown.\n\nFree, no ads. Would love to hear from other fighters/trainers.",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748274+00:00",
+      "id": "96d1d1ea"
+    },
+    {
+      "subreddit": "r/androidapps",
+      "audience": "Android app enthusiasts",
+      "title": "Free random timer app for open-source timer app",
+      "body": "Built a timer app where you set a range and it fires at a random time within that range. Great for open-source timer app.\n\nNo ads, no tracking, no subscriptions. Available on iOS and Android.\n\nWould love feedback from this community!",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748279+00:00",
+      "id": "8f866073"
+    },
+    {
+      "subreddit": "r/iOSProgramming",
+      "audience": "iOS developers",
+      "title": "Free random timer app for SwiftUI timer architecture",
+      "body": "Built a timer app where you set a range and it fires at a random time within that range. Great for SwiftUI timer architecture.\n\nNo ads, no tracking, no subscriptions. Available on iOS and Android.\n\nWould love feedback from this community!",
+      "status": "draft",
+      "created": "2026-02-20T21:27:37.748291+00:00",
+      "id": "e914d5d6"
+    }
+  ],
+  "product_hunt": {
+    "tagline": "Random timer for HIIT, drills & party games \u2014 you never know when it fires",
+    "description": "Random Tactical Timer picks a random moment within your chosen time range to fire an alarm.\n\nSet a minimum and maximum duration, press start, and go about your activity. You never know exactly when it goes off \u2014 keeping you sharp, alert, and engaged.\n\nPerfect for:\n- HIIT & Tabata with unpredictable rest periods\n- Reaction training for martial arts & boxing\n- Party games like Musical Chairs & Hot Potato\n- Pomodoro sessions with random breaks\n\nNo ads. No tracking. No subscriptions. Just set your range and go.",
+    "topics": [
+      "Productivity",
+      "Health & Fitness",
+      "Developer Tools"
+    ],
+    "maker_comment": "Hey PH! I built this because every timer app lets you predict exactly when it ends. That defeats the purpose for reaction training and surprise-based games. This one keeps you guessing.",
+    "status": "draft",
+    "scheduled_date": null,
+    "created": "2026-02-20T21:27:37.748301+00:00",
+    "pre_launch_checklist": [
+      {
+        "task": "Prepare 3-5 screenshots for PH gallery",
+        "done": false
+      },
+      {
+        "task": "Record 30s demo GIF",
+        "done": false
+      },
+      {
+        "task": "Notify supporters 48h before launch",
+        "done": false
+      },
+      {
+        "task": "Prepare maker comment",
+        "done": true
+      },
+      {
+        "task": "Schedule for Tuesday 00:01 PST",
+        "done": false
+      }
+    ]
+  },
+  "blog_outreach": [
+    {
+      "target": "fitness_blogs",
+      "subject": "Free random interval timer for HIIT coaches",
+      "angle": "How random rest intervals improve athletic performance",
+      "cta": "Try Random Tactical Timer (free, no ads)",
+      "status": "draft",
+      "email_template": "Hi [Name],\n\nI came across your content on how random rest intervals improve athletic performance and thought you might find this useful.\n\nI built Random Tactical Timer \u2014 a free app (iOS + Android) that fires an alarm at a random time within a range you set. How random rest intervals improve athletic performance.\n\nIt's completely free with no ads, tracking, or subscriptions. Just thought it might be worth mentioning to your audience.\n\nHappy to provide any details or screenshots if you're interested.\n\nBest,\nIgor",
+      "created": "2026-02-20T21:27:37.748310+00:00"
+    },
+    {
+      "target": "coaching_blogs",
+      "subject": "Tool for unpredictable drill timing",
+      "angle": "Why coaches should use random timers in training",
+      "cta": "Random Tactical Timer - free app for coaches",
+      "status": "draft",
+      "email_template": "Hi [Name],\n\nI came across your content on why coaches should use random timers in training and thought you might find this useful.\n\nI built Random Tactical Timer \u2014 a free app (iOS + Android) that fires an alarm at a random time within a range you set. Why coaches should use random timers in training.\n\nIt's completely free with no ads, tracking, or subscriptions. Just thought it might be worth mentioning to your audience.\n\nHappy to provide any details or screenshots if you're interested.\n\nBest,\nIgor",
+      "created": "2026-02-20T21:27:37.748314+00:00"
+    },
+    {
+      "target": "productivity_blogs",
+      "subject": "Random break timer for deep work",
+      "angle": "The science of unpredictable breaks for focus",
+      "cta": "Try the random Pomodoro approach",
+      "status": "draft",
+      "email_template": "Hi [Name],\n\nI came across your content on the science of unpredictable breaks for focus and thought you might find this useful.\n\nI built Random Tactical Timer \u2014 a free app (iOS + Android) that fires an alarm at a random time within a range you set. The science of unpredictable breaks for focus.\n\nIt's completely free with no ads, tracking, or subscriptions. Just thought it might be worth mentioning to your audience.\n\nHappy to provide any details or screenshots if you're interested.\n\nBest,\nIgor",
+      "created": "2026-02-20T21:27:37.748318+00:00"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+name: Weekly ASO Keyword Rotation
+
+on:
+  schedule:
+    - cron: '0 10 * * 1' # Every Monday at 10:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview changes without applying"
+        required: false
+        type: boolean
+        default: false
+      max_replacements:
+        description: "Max keywords to replace per cycle"
+        required: false
+        type: string
+        default: "3"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: aso-keyword-rotation
+  cancel-in-progress: false
+
+jobs:
+  rotate-keywords:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch latest attribution feedback
+        run: |
+          # Pull latest feedback data committed by Sunday's attribution workflow
+          git pull --ff-only origin "${GITHUB_REF_NAME}" || true
+          if [ -f marketing/keywords/posthog_feedback.json ]; then
+            echo "PostHog attribution feedback found — using real install data"
+          else
+            echo "No PostHog feedback — falling back to simulated rankings"
+          fi
+
+      - name: Run ASO keyword rotation
+        env:
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          MAX_REPLACEMENTS: ${{ inputs.max_replacements || '3' }}
+        run: |
+          set -euo pipefail
+          CMD=(python scripts/aso_keyword_rotation.py
+            --repo-root .
+            --max-replacements "$MAX_REPLACEMENTS"
+            --report-out marketing/data/aso_rotation_report.md)
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            CMD+=(--dry-run)
+          fi
+
+          "${CMD[@]}"
+
+      - name: Commit keyword updates
+        if: inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add ios/OpenClawConsole/fastlane/metadata/ android/fastlane/metadata/ marketing/keywords/ marketing/data/aso_rotation_report.md
+          if git diff --cached --quiet; then
+            echo "No keyword changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(aso): weekly keyword rotation"
+          BRANCH="auto/aso-rotation-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base develop --head "$BRANCH" --title "chore(aso): weekly keyword rotation" --body "Automated weekly ASO keyword rotation" --label "automation" || true
+
+      - name: Upload rotation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aso-rotation-report
+          path: marketing/data/aso_rotation_report.md

@@ -1,0 +1,242 @@
+name: iOS Submit For Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "iOS marketing version to submit (defaults to Info.plist CFBundleShortVersionString)"
+        required: false
+        type: string
+      locale:
+        description: "App Store locale to validate/submit"
+        required: true
+        type: string
+        default: "en-US"
+      dry_run:
+        description: "Preflight + metadata upload only (do not submit)"
+        required: true
+        type: boolean
+        default: false
+      wait:
+        description: "Poll App Store version state after submission"
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: ios-submit-review-${{ github.ref_name }}-${{ inputs.version || 'auto' }}-${{ inputs.locale }}
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    runs-on: macos-15
+    environment: production
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail fast on required App Store secrets
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          for name in APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "❌ Missing required secret: $name"
+              exit 1
+            fi
+          done
+
+      - name: Preflight release checks (iOS)
+        run: bash scripts/preflight-release.sh --platform ios --layer 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install pyjwt==2.11.0 cryptography==46.0.5 requests==2.32.5
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ios/OpenClawConsole
+
+      - name: Install Fastlane
+        run: gem install fastlane
+        working-directory: ios/OpenClawConsole
+
+      - name: Write App Store Connect key (Fastlane convention)
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          echo "$APPSTORE_PRIVATE_KEY" > /tmp/appstore_key.p8
+
+      - name: Resolve iOS version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            if ! echo "$INPUT_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "❌ Invalid version input (expected X.Y.Z): $INPUT_VERSION"
+              exit 1
+            fi
+            echo "ios_version=$INPUT_VERSION" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          IOS_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' ios/OpenClawConsole/OpenClawConsole/Info.plist || true)
+          if [ -z "$IOS_VERSION" ]; then
+            echo "❌ Could not determine iOS version from ios/OpenClawConsole/OpenClawConsole/Info.plist"
+            exit 1
+          fi
+          echo "ios_version=$IOS_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve editable App Store version
+        id: asc_version
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
+          PREFERRED_VERSION: ${{ steps.version.outputs.ios_version }}
+        run: |
+          python scripts/asc_resolve_version.py \
+            --preferred-version "$PREFERRED_VERSION" \
+            --create-if-needed \
+            --auto-next-patch \
+            --json-out /tmp/asc_version.json
+          SELECTED_VERSION=$(python -c 'import json; print(json.load(open("/tmp/asc_version.json"))["selected_version"])')
+          echo "selected_version=$SELECTED_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using editable App Store version: $SELECTED_VERSION"
+
+      - name: Verify TestFlight build is VALID
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
+          IOS_VERSION: ${{ steps.asc_version.outputs.selected_version }}
+        run: |
+          if ! echo "$IOS_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid iOS version (expected X.Y.Z): $IOS_VERSION"
+            exit 1
+          fi
+          python scripts/verify_release.py \
+            --platform ios \
+            --version "$IOS_VERSION" \
+            --wait \
+            --timeout 1200
+
+      - name: Upload App Store metadata + screenshots
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          IOS_VERSION: ${{ steps.asc_version.outputs.selected_version }}
+        run: |
+          if ! echo "$IOS_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid iOS version (expected X.Y.Z): $IOS_VERSION"
+            exit 1
+          fi
+          fastlane metadata version:"$IOS_VERSION"
+        working-directory: ios/OpenClawConsole
+
+      - name: Verify App Store submission readiness (hard gate)
+        if: ${{ inputs.dry_run == false }}
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
+          LOCALE: ${{ inputs.locale }}
+          IOS_VERSION: ${{ steps.asc_version.outputs.selected_version }}
+        run: |
+          if ! echo "$LOCALE" | grep -Eq '^[A-Za-z]{2}(-[A-Za-z]{2})?$'; then
+            echo "❌ Invalid locale input (expected e.g. en-US): $LOCALE"
+            exit 1
+          fi
+          if ! echo "$IOS_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid iOS version (expected X.Y.Z): $IOS_VERSION"
+            exit 1
+          fi
+          python scripts/asc_verify_ready.py \
+            --version "$IOS_VERSION" \
+            --locale "$LOCALE" \
+            --json /tmp/asc_ready.json
+
+      - name: Enforce delegation contract (submit gate)
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          python scripts/delegation_contract.py \
+            --operation ios_submit_for_review \
+            --asc-ready-json /tmp/asc_ready.json \
+            --intent true \
+            --json-out /tmp/delegation_contract.json \
+            --enforce
+
+      - name: Submit for review
+        if: ${{ inputs.dry_run == false }}
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
+          LOCALE: ${{ inputs.locale }}
+          WAIT_FOR_STATE: ${{ inputs.wait }}
+          IOS_VERSION: ${{ steps.asc_version.outputs.selected_version }}
+        run: |
+          if ! echo "$LOCALE" | grep -Eq '^[A-Za-z]{2}(-[A-Za-z]{2})?$'; then
+            echo "❌ Invalid locale input (expected e.g. en-US): $LOCALE"
+            exit 1
+          fi
+          if ! echo "$IOS_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid iOS version (expected X.Y.Z): $IOS_VERSION"
+            exit 1
+          fi
+          # Read current ASC state first so reruns are safe/idempotent.
+          STATE_JSON="$(python scripts/asc_poll_version_state.py --version "$IOS_VERSION" --json)"
+          echo "ASC state (pre-submit): $STATE_JSON"
+          STATE="$(python -c 'import json,sys; print(json.loads(sys.argv[1])["state"])' "$STATE_JSON")"
+
+          if [[ "$STATE" == "WAITING_FOR_REVIEW" || "$STATE" == "IN_REVIEW" || "$STATE" == "PENDING_DEVELOPER_RELEASE" || "$STATE" == "READY_FOR_SALE" ]]; then
+            echo "Already submitted ($STATE); skipping submit_review."
+          else
+            # Use our ASC preflight script for hard validation, then submit via Fastlane deliver.
+            python scripts/asc_submit_for_review.py --version "$IOS_VERSION" --locale "$LOCALE" --dry-run
+
+            cd ios/OpenClawConsole
+            fastlane submit_review version:"$IOS_VERSION"
+            cd ..
+          fi
+
+          if [[ "$WAIT_FOR_STATE" == "true" ]]; then
+            python scripts/asc_poll_version_state.py --version "$IOS_VERSION" --wait --timeout 1800 --poll-interval 20
+          else
+            python scripts/asc_poll_version_state.py --version "$IOS_VERSION"
+          fi
+
+      - name: Upload version resolution report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asc-version-resolution
+          path: /tmp/asc_version.json
+
+      - name: Upload submission readiness artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-submit-readiness
+          path: |
+            /tmp/asc_ready.json
+            /tmp/delegation_contract.json
+          if-no-files-found: ignore
+
+      - name: Cleanup key
+        if: always()
+        run: rm -f ~/.appstoreconnect/private_keys/AuthKey_*.p8 /tmp/appstore_key.p8 /tmp/asc_version.json /tmp/asc_ready.json /tmp/delegation_contract.json

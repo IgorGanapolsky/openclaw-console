@@ -1,0 +1,78 @@
+name: Android 17 Canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_level:
+        description: Android API level for canary compile/target
+        required: false
+        default: "37"
+        type: string
+  schedule:
+    - cron: "25 11 * * 1" # Weekly Monday check
+
+concurrency:
+  group: android17-canary-${{ github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  android17-canary:
+    name: Android Canary (API ${{ inputs.api_level || '37' }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install canary Android platform packages
+        env:
+          API_LEVEL: ${{ inputs.api_level || '37' }}
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-${API_LEVEL}" "build-tools;35.0.0"
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Create dummy google-services.json for CI
+        run: |
+          cat > app/google-services.json << 'GSEOF'
+          {
+            "project_info": { "project_number": "000000000000", "project_id": "openclaw-console-ci", "storage_bucket": "openclaw-console-ci.appspot.com" },
+            "client": [{ "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "com.openclaw.console" } }, "api_key": [{ "current_key": "CI_PLACEHOLDER" }] }],
+            "configuration_version": "1"
+          }
+          GSEOF
+
+      - name: Build + tests against canary compileSdk/targetSdk
+        env:
+          API_LEVEL: ${{ inputs.api_level || '37' }}
+        run: |
+          ./gradlew \
+            testDebugUnitTest \
+            assembleDebug \
+            -PciCompileSdk="${API_LEVEL}" \
+            -PciTargetSdk="${API_LEVEL}" \
+            --no-daemon
+
+      - name: Upload canary test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android17-canary-artifacts
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest
+            android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn

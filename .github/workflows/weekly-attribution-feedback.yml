@@ -1,0 +1,92 @@
+name: Weekly Attribution Feedback Loop
+
+on:
+  schedule:
+    - cron: '0 8 * * 0' # Every Sunday at 08:00 UTC (before Monday ASO rotation)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Lookback window in days"
+        required: false
+        type: string
+        default: "30"
+      dry_run:
+        description: "Preview without writing feedback files"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: attribution-feedback
+  cancel-in-progress: false
+
+jobs:
+  attribution-feedback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests==2.32.5
+
+      - name: Run attribution feedback pipeline
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+          DAYS: ${{ inputs.days || '30' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          CMD=(python scripts/attribution_feedback.py
+            --repo-root .
+            --days "$DAYS")
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            CMD+=(--dry-run)
+          fi
+
+          "${CMD[@]}"
+
+      - name: Create PR with feedback data
+        if: inputs.dry_run != true
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ github.token }}
+          commit-message: "chore(analytics): weekly attribution feedback from PostHog"
+          title: "chore(analytics): weekly attribution feedback update"
+          body: |
+            Automated weekly attribution feedback refresh from PostHog.
+
+            Updated files:
+            - `marketing/keywords/posthog_feedback.json`
+            - `marketing/data/content_feedback.json`
+            - `marketing/data/attribution-report.md`
+          branch: auto/weekly-attribution-feedback
+          branch-suffix: timestamp
+          base: develop
+          add-paths: |
+            marketing/keywords/posthog_feedback.json
+            marketing/data/content_feedback.json
+            marketing/data/attribution-report.md
+          labels: |
+            automation
+
+      - name: Upload attribution report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: attribution-report
+          path: marketing/data/attribution-report.md
+          if-no-files-found: ignore

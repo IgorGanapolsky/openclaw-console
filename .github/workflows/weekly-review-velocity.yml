@@ -1,0 +1,67 @@
+name: Weekly Review Velocity Tracking
+
+on:
+  schedule:
+    - cron: '0 9 * * 3' # Every Wednesday at 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: review-velocity
+  cancel-in-progress: false
+
+jobs:
+  track-reviews:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests==2.32.5 pyjwt==2.11.0 cryptography==46.0.5
+
+      - name: Run review velocity tracker
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          python scripts/review_velocity_tracker.py \
+            --repo-root . \
+            --report-out marketing/data/review_velocity_report.md
+
+      - name: Commit velocity data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add marketing/data/review_velocity.json marketing/data/review_velocity_report.md
+          if git diff --cached --quiet; then
+            echo "No velocity changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(reviews): weekly velocity snapshot"
+          BRANCH="auto/review-velocity-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base develop --head "$BRANCH" --title "chore(reviews): weekly review velocity snapshot" --body "Automated weekly review velocity tracking snapshot" --label "automation" || true
+
+      - name: Upload velocity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-velocity-report
+          path: |
+            marketing/data/review_velocity_report.md
+            marketing/data/review_velocity.json

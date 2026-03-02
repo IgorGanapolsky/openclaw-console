@@ -1,0 +1,57 @@
+name: Projects v2 Permissions Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Projects v2 token access
+        uses: actions/github-script@v7
+        env:
+          PROJECTS_V2_OWNER: IgorGanapolsky
+          PROJECTS_V2_NUMBER: 1
+        with:
+          github-token: ${{ secrets.PROJECT_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const login = process.env.PROJECTS_V2_OWNER || owner;
+            const number = parseInt(process.env.PROJECTS_V2_NUMBER || '1', 10);
+
+            const results = [];
+
+            // Basic auth test
+            try {
+              const me = await github.graphql('{ viewer { login } }');
+              results.push(`Viewer: ${me.viewer.login}`);
+            } catch (e) {
+              results.push(`Viewer query failed: ${String(e).slice(0,200)}`);
+            }
+
+            try {
+              const header = await github.graphql(`
+                query($login: String!, $number: Int!) {
+                  user(login: $login) {
+                    projectV2(number: $number) { id title }
+                  }
+                }
+              `, { login, number });
+              const ok = header?.user?.projectV2?.id ? 'OK' : 'MISSING';
+              results.push(`ProjectV2 access: ${ok}`);
+            } catch (e) {
+              results.push(`ProjectV2 query error: ${String(e).slice(0,300)}`);
+            }
+
+            // Post results to the status issue if it exists
+            const STATUS_ISSUE = 81;
+            const body = `### 🔐 Projects v2 permission check\n\n${results.map(r => `- ${r}`).join('\n')}`;
+            try {
+              await github.rest.issues.createComment({ owner, repo, issue_number: STATUS_ISSUE, body });
+            } catch (e) {
+              core.info(`Could not comment on issue #${STATUS_ISSUE}: ${String(e).slice(0,200)}`);
+            }

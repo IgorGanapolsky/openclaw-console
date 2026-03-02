@@ -1,0 +1,88 @@
+name: Store Console Verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 13 * * *"
+
+jobs:
+  verify:
+    name: Read-Only Console Verification
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: tests/playwright
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: tests/playwright/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare auth state files
+        id: auth
+        env:
+          ASC_STORAGE_STATE_JSON: ${{ secrets.ASC_STORAGE_STATE_JSON }}
+          PLAY_STORAGE_STATE_JSON: ${{ secrets.PLAY_STORAGE_STATE_JSON }}
+        run: |
+          ASC_PATH=""
+          PLAY_PATH=""
+
+          if [ -n "$ASC_STORAGE_STATE_JSON" ]; then
+            ASC_PATH="$RUNNER_TEMP/asc-storage-state.json"
+            printf '%s' "$ASC_STORAGE_STATE_JSON" > "$ASC_PATH"
+            echo "Prepared App Store Connect auth state"
+          else
+            echo "::error::ASC_STORAGE_STATE_JSON not set."
+          fi
+
+          if [ -n "$PLAY_STORAGE_STATE_JSON" ]; then
+            PLAY_PATH="$RUNNER_TEMP/play-storage-state.json"
+            printf '%s' "$PLAY_STORAGE_STATE_JSON" > "$PLAY_PATH"
+            echo "Prepared Play Console auth state"
+          else
+            echo "::error::PLAY_STORAGE_STATE_JSON not set."
+          fi
+
+          if [ -z "$ASC_PATH" ] || [ -z "$PLAY_PATH" ]; then
+            echo "::error::Store console verification requires both ASC_STORAGE_STATE_JSON and PLAY_STORAGE_STATE_JSON."
+            exit 1
+          fi
+
+          echo "asc_path=$ASC_PATH" >> "$GITHUB_OUTPUT"
+          echo "play_path=$PLAY_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Run read-only console checks
+        env:
+          ASC_STORAGE_STATE_PATH: ${{ steps.auth.outputs.asc_path }}
+          PLAY_STORAGE_STATE_PATH: ${{ steps.auth.outputs.play_path }}
+          ASC_EXPECTED_STATE_TEXT: Prepare for Submission
+        run: npm run test:console
+
+      - name: Run read-only console checks (agent-browser)
+        env:
+          ASC_STORAGE_STATE_PATH: ${{ steps.auth.outputs.asc_path }}
+          PLAY_STORAGE_STATE_PATH: ${{ steps.auth.outputs.play_path }}
+          ASC_EXPECTED_STATE_TEXT: Prepare for Submission
+        run: npm run test:console:agent-browser
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-console-verification-artifacts
+          path: |
+            tests/playwright/playwright-report
+            tests/playwright/test-results

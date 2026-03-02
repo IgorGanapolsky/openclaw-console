@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-03-01T08:05:32+00:00",
+  "onboarding_funnel": {
+    "first_open": 0,
+    "first_timer_configured": 0,
+    "first_timer_completed": 0,
+    "open_to_configured_rate": 0,
+    "configured_to_completed_rate": 0,
+    "open_to_completed_rate": 0,
+    "window_days": 30
+  },
+  "top_campaigns_by_activation": []
+}

@@ -1,0 +1,103 @@
+name: iOS Reviews Ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Autopilot mode (observe logs only, enforce can block)"
+        required: true
+        type: choice
+        options:
+          - observe
+          - enforce
+        default: observe
+      fail_on_sla:
+        description: "Fail workflow when low-star response SLA breaches are present"
+        required: true
+        type: boolean
+        default: false
+      fail_on_blocking:
+        description: "Fail when policy marks decision as blocking"
+        required: true
+        type: boolean
+        default: false
+      limit:
+        description: "Max review rows to scan"
+        required: false
+        type: string
+        default: "200"
+      sla_hours:
+        description: "SLA threshold in hours for 1-3 star reviews"
+        required: false
+        type: string
+        default: "24"
+  schedule:
+    - cron: "17 */6 * * *"
+
+jobs:
+  monitor-reviews:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyjwt==2.11.0 cryptography==46.0.5 requests==2.32.5
+
+      - name: Run ASC reviews monitor
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          ASC_REVIEWS_SLACK_WEBHOOK: ${{ secrets.ASC_REVIEWS_SLACK_WEBHOOK }}
+          MODE_INPUT: ${{ inputs.mode }}
+          FAIL_ON_SLA: ${{ inputs.fail_on_sla }}
+          FAIL_ON_BLOCKING: ${{ inputs.fail_on_blocking }}
+          LIMIT_INPUT: ${{ inputs.limit }}
+          SLA_HOURS_INPUT: ${{ inputs.sla_hours }}
+        run: |
+          set -euo pipefail
+          LIMIT="${LIMIT_INPUT:-200}"
+          SLA_HOURS="${SLA_HOURS_INPUT:-24}"
+          MODE="${MODE_INPUT:-observe}"
+
+          CMD=(python scripts/release_ops.py --repo-root . review_autopilot \
+            --limit "$LIMIT" \
+            --sla-hours "$SLA_HOURS" \
+            --mode "$MODE" \
+            --history-jsonl /tmp/asc-reviews-history.jsonl \
+            --reviews-json-out /tmp/asc-reviews-ops.json \
+            --reviews-markdown-out /tmp/asc-reviews-ops.md \
+            --anomaly-json-out /tmp/asc-reviews-anomaly.json \
+            --anomaly-markdown-out /tmp/asc-reviews-anomaly.md \
+            --policy-json-out /tmp/asc-reviews-policy.json \
+            --policy-markdown-out /tmp/asc-reviews-policy.md)
+
+          if [[ "${FAIL_ON_SLA:-false}" == "true" ]]; then
+            CMD+=(--fail-on-sla)
+          fi
+
+          if [[ "${FAIL_ON_BLOCKING:-false}" == "true" ]]; then
+            CMD+=(--fail-on-blocking)
+          fi
+
+          "${CMD[@]}"
+
+      - name: Upload reviews ops artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asc-reviews-ops
+          path: |
+            /tmp/asc-reviews-ops.json
+            /tmp/asc-reviews-ops.md
+            /tmp/asc-reviews-anomaly.json
+            /tmp/asc-reviews-anomaly.md
+            /tmp/asc-reviews-policy.json
+            /tmp/asc-reviews-policy.md
+            /tmp/asc-reviews-history.jsonl

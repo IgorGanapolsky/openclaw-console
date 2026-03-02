@@ -1,0 +1,233 @@
+# OpenClaw Console Issue Management Configuration (2025)
+
+# Issue Categories
+categories:
+  bug:
+    labels: ["type: bug", "triage"]
+    assignees:
+      - team: bug-triage
+    sla: 48h # Response time SLA
+    priority_labels:
+      - "priority: critical"
+      - "priority: high"
+      - "priority: medium"
+      - "priority: low"
+    auto_close:
+      days: 30
+      comment: true
+
+  feature:
+    labels: ["type: enhancement"]
+    assignees:
+      - team: product
+    voting: true
+    status_labels:
+      - "status: planning"
+      - "status: in-progress"
+      - "status: needs-review"
+      - "status: completed"
+
+  security:
+    labels: ["type: security"]
+    assignees:
+      - team: security
+    sla: 24h
+    private: true
+    auto_label:
+      severity:
+        - critical
+        - high
+        - medium
+        - low
+
+# Automation Rules
+automation:
+  new_issues:
+    - add_to_project: true
+    - auto_label: true
+    - notify_teams: true
+    - check_duplicates: true
+
+  inactive_issues:
+    warning_after: 14d
+    close_after: 30d
+    exclude_labels:
+      - "status: blocked"
+      - "status: investigating"
+
+  stale_issues:
+    mark_stale_after: 60d
+    close_stale_after: 7d
+    stale_label: "status: stale"
+    exempt_labels:
+      - "status: evergreen"
+      - "type: security"
+
+# Project Board Integration
+project_board:
+  id: 3
+  status_field: Status
+  auto_add: true
+  columns:
+    triage:
+      name: "📥 Triage"
+      auto_add:
+        - new_issues
+    todo:
+      name: "📋 To Do"
+      auto_add:
+        - triaged_issues
+    in_progress:
+      name: "🏃 In Progress"
+      auto_add:
+        - assigned_issues
+    review:
+      name: "👀 Review"
+      auto_add:
+        - ready_for_review
+    done:
+      name: "✅ Done"
+      auto_add:
+        - closed_issues
+
+# Labels Configuration
+labels:
+  # Type Labels
+  - name: "type: bug"
+    color: "d73a4a"
+    description: "Something isn't working"
+  - name: "type: enhancement"
+    color: "a2eeef"
+    description: "New feature or request"
+  - name: "type: security"
+    color: "d93f0b"
+    description: "Security related issue"
+  - name: "type: documentation"
+    color: "0075ca"
+    description: "Documentation improvements"
+
+  # Priority Labels
+  - name: "priority: critical"
+    color: "b60205"
+    description: "Needs immediate attention"
+  - name: "priority: high"
+    color: "d93f0b"
+    description: "High priority issue"
+  - name: "priority: medium"
+    color: "fbca04"
+    description: "Medium priority issue"
+  - name: "priority: low"
+    color: "0e8a16"
+    description: "Low priority issue"
+
+  # Status Labels
+  - name: "status: confirmed"
+    color: "215cea"
+    description: "Issue has been confirmed"
+  - name: "status: investigating"
+    color: "fbca04"
+    description: "Issue is being investigated"
+  - name: "status: blocked"
+    color: "d93f0b"
+    description: "Issue is blocked"
+  - name: "status: duplicate"
+    color: "cfd3d7"
+    description: "This issue already exists"
+  - name: "status: wontfix"
+    color: "ffffff"
+    description: "This will not be worked on"
+
+  # Platform Labels
+  - name: "platform: ios"
+    color: "c5def5"
+    description: "iOS specific issue"
+  - name: "platform: android"
+    color: "bfdadc"
+    description: "Android specific issue"
+  - name: "platform: web"
+    color: "d4c5f9"
+    description: "Web specific issue"
+
+# Response Templates
+templates:
+  welcome: |
+    Thanks for creating an issue! Our team will review it shortly.
+
+    In the meantime:
+    - 📱 For immediate support, check our [FAQ](docs/FAQ.md)
+    - 🔍 Search our [knowledge base](docs/KB.md)
+    - 💬 Join our [Discord community](https://discord.gg/openclaw-console)
+
+  needs_info: |
+    We need some additional information to help resolve this issue:
+
+    Please provide:
+    - [ ] Steps to reproduce
+    - [ ] Expected behavior
+    - [ ] Actual behavior
+    - [ ] Screenshots/logs if applicable
+
+  stale_warning: |
+    This issue has been inactive for 60 days. It will be closed in 7 days unless there is new activity.
+
+    If this issue is still relevant:
+    - Add a comment with current status
+    - Add more details if available
+    - Update labels if needed
+
+# SLA Configuration
+sla:
+  response_time:
+    critical: 2h
+    high: 24h
+    medium: 48h
+    low: 72h
+
+  resolution_time:
+    critical: 24h
+    high: 72h
+    medium: 7d
+    low: 14d
+
+# Notifications
+notifications:
+  channels:
+    - type: slack
+      channel: "#openclaw-console-issues"
+      triggers:
+        - new_critical_bug
+        - sla_breach
+        - security_issue
+
+    - type: discord
+      channel: "bug-reports"
+      triggers:
+        - new_issue
+        - major_update
+
+    - type: email
+      recipients:
+        - security-team@company.com
+      triggers:
+        - security_critical
+        - data_breach
+
+# Analytics
+analytics:
+  metrics:
+    - name: time_to_first_response
+      threshold: 24h
+    - name: time_to_resolution
+      threshold: 7d
+    - name: customer_satisfaction
+      threshold: 4.5
+    - name: bug_resolution_rate
+      threshold: 90%
+
+  reports:
+    - name: weekly_summary
+      schedule: "0 9 * * MON"
+      recipients: ["team-leads"]
+    - name: monthly_metrics
+      schedule: "0 9 1 * *"
+      recipients: ["stakeholders"]
