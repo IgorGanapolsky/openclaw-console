@@ -112,12 +112,15 @@ jobs:
           echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
       - name: Configure git credentials for match
-        if: ${{ secrets.ADMIN_TOKEN != '' }}
         env:
           GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          if [ -n "${GIT_AUTH_TOKEN:-}" ]; then
+            git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          else
+            echo "No ADMIN_TOKEN provided; skipping git credentials setup."
+          fi
 
       - name: Setup signing certificates and profiles (match)
         continue-on-error: true
