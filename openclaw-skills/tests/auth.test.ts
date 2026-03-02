@@ -111,10 +111,10 @@ describe('TokenManager', () => {
 
   test('State is loaded even if file has no default-dev token', () => {
     const filePath = path.join(os.tmpdir(), `openclaw-test-custom-${Date.now()}.json`);
-    const custom = { tokens: [{ token: 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd', label: 'custom', created_at: new Date().toISOString(), last_used: null, revoked: false }] };
+    const custom = { tokens: [{ token: 'abc123def456', label: 'custom', created_at: new Date().toISOString(), last_used: null, revoked: false }] }; // local-dev-only
     fs.writeFileSync(filePath, JSON.stringify(custom));
     const manager = new TokenManager(filePath);
-    expect(manager.validate('abc123def456abc123def456abc123def456abc123def456abc123def456abcd')).toBe(true);
+    expect(manager.validate('abc123def456')).toBe(true);
     expect(manager.getDefaultDevToken()).toBeUndefined();
     fs.unlinkSync(filePath);
   });
@@ -146,8 +146,8 @@ describe('bearerAuthMiddleware', () => {
     let capturedStatus = 0;
     let capturedBody: unknown = null;
     const res2 = {
-      status(code: number) { capturedStatus = code; return this; },
-      json(body: unknown) { capturedBody = body; return this; },
+      status(code: number): any { capturedStatus = code; return this; },
+      json(body: unknown): any { capturedBody = body; return this; },
     };
     const next = jest.fn();
 
@@ -164,10 +164,10 @@ describe('bearerAuthMiddleware', () => {
 
     let capturedStatus = 0;
     const res2 = {
-      status(code: number) { capturedStatus = code; return this; },
-      json(_body: unknown) { return this; },
+      status(code: number): any { capturedStatus = code; return this; },
+      json(_body: unknown): any { return this; },
     };
-    const req = mockReq('Bearer invalidtoken000000000000000000000');
+    const req = mockReq('Bearer invalid-token'); // local-dev-only
     const next = jest.fn();
 
     middleware(req as Request, res2 as unknown as Response, next as NextFunction);
@@ -182,8 +182,8 @@ describe('bearerAuthMiddleware', () => {
 
     let capturedStatus = 0;
     const res2 = {
-      status(code: number) { capturedStatus = code; return this; },
-      json(_body: unknown) { return this; },
+      status(code: number): any { capturedStatus = code; return this; },
+      json(_body: unknown): any { return this; },
     };
     const req = mockReq('Token abc');
     const next = jest.fn();
@@ -214,7 +214,7 @@ describe('validateWsToken', () => {
 
   test('Returns null for invalid token', () => {
     const { manager, filePath } = makeTempManager();
-    expect(validateWsToken(manager, { token: 'bad' })).toBeNull();
+    expect(validateWsToken(manager, { token: 'bad' })).toBeNull(); // local-dev-only
     fs.unlinkSync(filePath);
   });
 

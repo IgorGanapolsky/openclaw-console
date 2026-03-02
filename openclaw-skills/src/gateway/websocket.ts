@@ -5,7 +5,8 @@
  * broadcasting of server→client events.
  */
 
-import { WebSocketServer, WebSocket } from 'ws';
+import type { WebSocketServer} from 'ws';
+import { WebSocket } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   WebSocketMessage,

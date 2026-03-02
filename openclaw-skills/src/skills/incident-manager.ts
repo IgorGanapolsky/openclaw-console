@@ -53,7 +53,7 @@ export class IncidentManagerSkill {
     const incident = this.state.getIncident(incidentId);
     if (!incident) return null;
 
-    let output = '';
+    let output = ''; // eslint-disable-line no-useless-assignment
     let newStatus: IncidentStatus | null = null;
 
     switch (action) {
