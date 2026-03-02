@@ -143,10 +143,3 @@ func taskStatusColor(_ status: TaskStatus) -> Color {
     case .failed: return .red
     }
 }
-
-#Preview {
-    NavigationStack {
-        TaskListView(viewModel: TaskListViewModel(agentId: "a1", webSocket: WebSocketService()))
-            .environment(WebSocketService())
-    }
-}

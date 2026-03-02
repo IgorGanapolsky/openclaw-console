@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.screens.incidents
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +14,7 @@ import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.SeverityBadge
 import com.openclaw.console.ui.components.TimeAgoText
 import com.openclaw.console.ui.theme.LocalOpenClawColors
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

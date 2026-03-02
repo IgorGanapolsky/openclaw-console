@@ -21,9 +21,9 @@ final class ApprovalViewModel {
 
     // MARK: Private
 
-    private var webSocket: WebSocketService
-    private var cancellables = Set<AnyCancellable>()
-    private var expiryTimer: Swift.Task<Void, Never>?
+    @ObservationIgnored private var webSocket: WebSocketService
+    @ObservationIgnored private var cancellables = Set<AnyCancellable>()
+    @ObservationIgnored private var expiryTimer: _Concurrency.Task<Void, Never>?
 
     // MARK: Init
 
@@ -115,17 +115,16 @@ final class ApprovalViewModel {
     // MARK: - Expiry Monitor
 
     private func startExpiryMonitor() {
-        expiryTimer = Swift.Task { [weak self] in
-            while !Swift.Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 10_000_000_000) // 10s
-                guard !Swift.Task.isCancelled else { break }
-                await MainActor.run {
-                    self?.purgeExpired()
-                }
+        expiryTimer = _Concurrency.Task { [weak self] in
+            while !_Concurrency.Task.isCancelled {
+                try? await _Concurrency.Task.sleep(nanoseconds: 10_000_000_000) // 10s
+                guard !_Concurrency.Task.isCancelled else { break }
+                await self?.purgeExpired()
             }
         }
     }
 
+    @MainActor
     private func purgeExpired() {
         pendingApprovals.removeAll { $0.isExpired }
     }
@@ -146,9 +145,10 @@ final class ApprovalViewModel {
         case .approvalRequest(let request):
             if !pendingApprovals.contains(where: { $0.id == request.id }) {
                 pendingApprovals.append(request)
-                Swift.Task {
+                let pendingCount = pendingApprovals.count
+                _Concurrency.Task {
                     await NotificationService.shared.scheduleApprovalNotification(for: request)
-                    await NotificationService.shared.updateBadge(count: self.pendingApprovals.count)
+                    await NotificationService.shared.updateBadge(count: pendingCount)
                 }
             }
         default:

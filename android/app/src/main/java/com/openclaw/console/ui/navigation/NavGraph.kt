@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.navigation
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
@@ -28,6 +24,7 @@ import com.openclaw.console.ui.screens.incidents.IncidentListScreen
 import com.openclaw.console.ui.screens.settings.AddGatewayScreen
 import com.openclaw.console.ui.screens.settings.SettingsScreen
 import com.openclaw.console.ui.screens.tasks.TaskDetailScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class Screen(val route: String, val label: String) {
     // Bottom nav roots

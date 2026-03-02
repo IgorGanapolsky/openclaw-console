@@ -71,10 +71,3 @@ private struct OnboardingView: View {
         }
     }
 }
-
-#Preview {
-    ContentView()
-        .environment(GatewayManager())
-        .environment(WebSocketService())
-        .environment(ApprovalViewModel(webSocket: WebSocketService()))
-}

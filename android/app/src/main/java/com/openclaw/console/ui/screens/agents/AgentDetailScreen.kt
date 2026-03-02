@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.screens.agents
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -21,6 +17,7 @@ import com.openclaw.console.ui.components.StatusDot
 import com.openclaw.console.ui.components.TimeAgoText
 import com.openclaw.console.ui.screens.chat.ChatContent
 import com.openclaw.console.ui.screens.tasks.TaskListContent
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
