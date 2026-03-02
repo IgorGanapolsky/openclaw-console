@@ -1,0 +1,10 @@
+appId: com.openclaw.console
+---
+# Smoke test: Verify app launches on Android
+- launchApp
+
+# Verify main screen elements
+- assertVisible: 'OpenClaw Console'
+- assertVisible:
+    text: '.*Connect.*'
+    optional: true

@@ -1,0 +1,9 @@
+{
+  "name": "dev-quality",
+  "description": "Enforces code quality standards for OpenClaw Console",
+  "version": "1.0.0",
+  "hooks": {
+    "pre-commit": ["lint", "test"],
+    "pre-push": ["verify"]
+  }
+}

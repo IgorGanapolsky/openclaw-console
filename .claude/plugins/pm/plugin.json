@@ -1,0 +1,6 @@
+{
+  "name": "pm",
+  "description": "Project management commands for OpenClaw Console",
+  "version": "1.0.0",
+  "commands": ["status", "next", "standup", "sync"]
+}
