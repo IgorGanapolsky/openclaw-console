@@ -4,7 +4,8 @@ appId: com.openclaw.console
 - launchApp
 
 # Verify main screen elements
-- assertVisible: 'OpenClaw Console'
+- assertVisible: 'Agents'
+- assertVisible: 'Settings'
 - assertVisible:
     text: '.*Connect.*'
     optional: true
