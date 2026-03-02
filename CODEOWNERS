@@ -1,0 +1,14 @@
+# Default owner for everything
+* @IgorGanapolsky
+
+# iOS
+ios/ @IgorGanapolsky
+
+# Android
+android/ @IgorGanapolsky
+
+# Skills gateway
+openclaw-skills/ @IgorGanapolsky
+
+# CI/CD
+.github/ @IgorGanapolsky

@@ -1,0 +1,40 @@
+# Gitleaks configuration for OpenClaw Work Console
+# https://github.com/gitleaks/gitleaks
+
+title = "OpenClaw Console Secret Detection"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "sentry-auth-token"
+description = "Sentry Auth Token"
+regex = '''sntrys_[A-Za-z0-9=_+/]{50,}'''
+keywords = ["sntrys_"]
+
+[[rules]]
+id = "sentry-dsn"
+description = "Sentry DSN"
+regex = '''https://[a-f0-9]+@[a-z0-9.]+\.sentry\.io/[0-9]+'''
+keywords = ["sentry.io"]
+
+[[rules]]
+id = "firebase-api-key"
+description = "Firebase API Key"
+regex = '''AIza[0-9A-Za-z_-]{35}'''
+keywords = ["AIza"]
+
+[[rules]]
+id = "openclaw-gateway-token"
+description = "OpenClaw Gateway Token"
+regex = '''oc_tok_[A-Za-z0-9]{32,}'''
+keywords = ["oc_tok_"]
+
+[allowlist]
+paths = [
+  '''\.gitleaks\.toml$''',
+  '''node_modules/''',
+  '''\.git/''',
+  '''android/build/''',
+  '''openclaw-skills/dist/''',
+]
