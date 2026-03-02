@@ -96,7 +96,7 @@ cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
 
 - iOS bundle ID: `com.openclaw.console`
 - Android package: `com.openclaw.console`
-- Apple Team ID: `S498967Y68`
-- App Store Connect Issuer ID: `9e5d7ebf-d4fe-47c2-8370-14dd87c17113`
-- App Store Connect Key ID: `4RP6S27FL2`
+- Apple Team ID: `${APPLE_TEAM_ID}`
+- App Store Connect Issuer ID: `${APPSTORE_ISSUER_ID}`
+- App Store Connect Key ID: `${APPSTORE_KEY_ID}`
 - Gateway default port: `18789`

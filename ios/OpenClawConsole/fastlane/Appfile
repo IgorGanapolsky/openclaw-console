@@ -1,4 +1,4 @@
 app_identifier("com.openclaw.console")
 apple_id("iganapolsky@gmail.com")
-itc_team_id("118615431")
-team_id("S498967Y68")
+itc_team_id(ENV["ITC_TEAM_ID"])
+team_id(ENV["APPLE_TEAM_ID"])
