@@ -1,0 +1,65 @@
+name: North Star Guardrail
+
+on:
+  schedule:
+    - cron: '10 14 * * *'  # Daily at 14:10 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: north-star-guardrail
+  cancel-in-progress: true
+
+jobs:
+  north-star:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify North Star alignment
+        run: |
+          echo "=== OpenClaw Console North Star Guardrail ==="
+          echo ""
+          echo "Vision: Be the definitive mobile cockpit for OpenClaw agents"
+          echo "North Star Metric: Weekly Qualified Task Units (WQTU)"
+          echo ""
+
+          # Check that key product files exist
+          MISSING=0
+          for f in ios/OpenClawConsole/Sources/App/OpenClawConsoleApp.swift \
+                   android/app/src/main/java/com/openclaw/console/MainActivity.kt \
+                   openclaw-skills/src/index.ts; do
+            if [ ! -f "$f" ]; then
+              echo "WARN: Missing key file: $f"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+
+          if [ "$MISSING" -gt 0 ]; then
+            echo ""
+            echo "WARNING: $MISSING key product files missing. Ensure all platforms are maintained."
+          else
+            echo "All key product files present."
+          fi
+
+          echo ""
+          echo "North Star snapshot:"
+          if [ -f "marketing/data/north_star.json" ]; then
+            cat marketing/data/north_star.json
+          else
+            echo "No north_star.json found yet."
+          fi
+
+      - name: Upload north star snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: north-star-snapshot
+          path: marketing/data/north_star.json
+          retention-days: 14
+          if-no-files-found: ignore
