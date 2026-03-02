@@ -175,7 +175,18 @@ jobs:
         run: |
           if [ -d ".maestro" ] && [ -f ".maestro/smoke-test-ios.yaml" ]; then
             echo "Running iOS Maestro tests..."
-            maestro test .maestro/smoke-test-ios.yaml
+            set +e
+            maestro test .maestro/smoke-test-ios.yaml 2>&1 | tee /tmp/maestro-ios.log
+            maestro_exit=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$maestro_exit" -ne 0 ]; then
+              if grep -q "Not enough devices connected" /tmp/maestro-ios.log; then
+                echo "No Maestro-compatible iOS device detected in CI; skipping iOS Maestro tests."
+              else
+                exit "$maestro_exit"
+              fi
+            fi
           else
             echo "No iOS Maestro tests found - skipping E2E tests"
           fi
