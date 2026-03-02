@@ -1,0 +1,11 @@
+---
+name: Status Issue Updater (Deprecated)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deprecated. Use PR State Machine for status updates."

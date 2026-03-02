@@ -1,0 +1,69 @@
+# OpenClaw Console
+
+> A native iOS + Android mobile app for supervising OpenClaw agents — the quiet mobile cockpit for developers and operators.
+
+## Overview
+
+OpenClaw Console is a dual-platform mobile application for monitoring and controlling OpenClaw AI agents. It connects directly to an OpenClaw gateway via WebSocket, providing a focused, distraction-free interface for agent supervision, CI/deploy monitoring, incident alerts, and biometric approvals.
+
+## Vision
+
+Be the definitive mobile cockpit for developers and operators who run OpenClaw, replacing noisy social channels with a purpose-built, secure work console.
+
+## Use Cases
+
+- Monitor OpenClaw agent task streams from mobile
+- Approve dangerous actions (deploys, shell commands) with biometric confirmation
+- View CI/CD pipeline status and PR dashboards
+- Receive incident alerts and trigger runbooks
+- Switch between multiple agents and workspaces
+
+## Technical Stack
+
+- **iOS**: Swift 6, SwiftUI, @Observable MVVM, LocalAuthentication (Face ID / Touch ID)
+- **Android**: Kotlin 2.x, Jetpack Compose, Material Design 3, Hilt DI, BiometricPrompt
+- **Skills Gateway**: TypeScript, WebSocket server on port 18789
+- **Shared patterns**: Dark UI, task-first UX, gateway-first architecture
+
+## Key Features
+
+- Gateway connection + token auth (QR scan or manual entry)
+- Agent & workspace switcher
+- Task-first feed (grouped by job, not endless chat)
+- Biometric approval flows for dangerous actions
+- CI/PR dashboards (status, checks, labels)
+- Incident view with severity and runbook triggers
+- Configurable notifications (silent, warnings-only, critical-only)
+
+## Repository Structure
+
+- `ios/OpenClawConsole/` — Swift/SwiftUI iOS app
+- `android/` — Kotlin/Compose Android app
+- `openclaw-skills/` — TypeScript skills gateway
+- `docs/` — Architecture, protocol, setup guides
+- `.maestro/` — E2E test flows
+- `marketing/` — Growth data and keyword strategy
+
+## Building
+
+### iOS
+```
+cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole build
+```
+
+### Android
+```
+cd android && ./gradlew assembleDebug
+```
+
+### Skills Gateway
+```
+cd openclaw-skills && npm ci && npm start
+```
+
+## Links
+
+- Repository: https://github.com/IgorGanapolsky/openclaw-console
+- Privacy Policy: https://github.com/IgorGanapolsky/openclaw-console/blob/main/PRIVACY_POLICY.md
+- Issues: https://github.com/IgorGanapolsky/openclaw-console/issues
+- License: MIT
