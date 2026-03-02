@@ -22,9 +22,6 @@ let package = Package(
         .executableTarget(
             name: "OpenClawConsole",
             path: "OpenClawConsole",
-            resources: [
-                .process("Info.plist")
-            ],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
             ]

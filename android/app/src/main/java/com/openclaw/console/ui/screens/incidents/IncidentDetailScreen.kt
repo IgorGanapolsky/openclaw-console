@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.openclaw.console.data.model.Incident
@@ -22,7 +23,7 @@ fun IncidentDetailScreen(
     appViewModel: AppViewModel,
     onBack: () -> Unit
 ) {
-    val incidentRepo by appViewModel.incidentRepository.collectAsState()
+    val incidentRepo by appViewModel.incidentRepository.collectAsStateWithLifecycle()
     val incident by remember(incidentRepo) {
         derivedStateOf { incidentRepo?.getIncident(incidentId) }
     }

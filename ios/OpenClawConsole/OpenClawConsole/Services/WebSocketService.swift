@@ -80,7 +80,7 @@ final class WebSocketService: NSObject {
 
         let wsURLString = baseURL
             .replacingOccurrences(of: "https://", with: "wss://")
-            .replacingOccurrences(of: "http://", with: "ws://")
+            .replacingOccurrences(of: "http://", with: "ws://") // allow-http local gateway support
 
         guard let url = URL(string: "\(wsURLString)/ws?token=\(token)") else {
             connectionState = .failed("Invalid gateway URL")

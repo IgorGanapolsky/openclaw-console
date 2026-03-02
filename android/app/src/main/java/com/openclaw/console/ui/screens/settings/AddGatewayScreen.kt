@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openclaw.console.ui.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,7 +31,7 @@ fun AddGatewayScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
-    val uiState by viewModel.addGatewayUiState.collectAsState()
+    val uiState by viewModel.addGatewayUiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     var tokenVisible by remember { mutableStateOf(false) }
 

@@ -28,12 +28,12 @@ struct AddGatewayView: View {
     // MARK: - URL Validation
 
     private var urlHasHttpWarning: Bool {
-        baseURL.hasPrefix("http://") && !baseURL.hasPrefix("https://")
+        baseURL.hasPrefix("http://") && !baseURL.hasPrefix("https://") // allow-http local gateway support
     }
 
     private var urlIsValid: Bool {
         guard !baseURL.isEmpty else { return false }
-        return baseURL.hasPrefix("http://") || baseURL.hasPrefix("https://")
+        return baseURL.hasPrefix("http://") || baseURL.hasPrefix("https://") // allow-http local gateway support
     }
 
     private var canSave: Bool {

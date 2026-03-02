@@ -12,8 +12,8 @@ import { WebSocketServer } from 'ws';
 import { parse as parseQs } from 'node:url';
 import type { Request, Response } from 'express';
 import { bearerAuthMiddleware, validateWsToken, TokenManager } from './auth.js';
-import { StateManager } from './state.js';
-import { createWebSocketManager, WebSocketManager } from './websocket.js';
+import type { StateManager } from './state.js';
+import { createWebSocketManager, type WebSocketManager } from './websocket.js';
 import type { GatewayConfig } from '../config/default.js';
 import type {
   ChatRequest,
@@ -212,11 +212,11 @@ export function createGatewayServer(
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {
-          console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`);
-          console.info(`[gateway] WebSocket endpoint: ws://${config.host}:${config.port}/ws?token=<token>`);
+          console.info(`[gateway] OpenClaw gateway listening on configured host ${config.host}:${config.port}`);
+          console.info('[gateway] WebSocket endpoint available at /ws (authentication required)');
           const devToken = tokenManager.getDefaultDevToken();
           if (devToken) {
-            console.info(`[gateway] Dev token: ${devToken.slice(0, 8)}…`);
+            console.info(`[gateway] Dev token configured (${devToken.length} chars)`);
           }
           resolve();
         });

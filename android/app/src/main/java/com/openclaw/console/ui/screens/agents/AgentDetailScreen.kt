@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,8 +27,8 @@ fun AgentDetailScreen(
     onTaskClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val agentRepo by appViewModel.agentRepository.collectAsState()
-    val taskRepo by appViewModel.taskRepository.collectAsState()
+    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+    val taskRepo by appViewModel.taskRepository.collectAsStateWithLifecycle()
 
     val agent by remember(agentRepo) {
         derivedStateOf {

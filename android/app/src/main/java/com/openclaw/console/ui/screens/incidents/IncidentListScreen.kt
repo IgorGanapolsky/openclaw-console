@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openclaw.console.data.model.Incident
 import com.openclaw.console.data.model.IncidentStatus
 import com.openclaw.console.ui.AppViewModel
@@ -27,14 +28,14 @@ fun IncidentListScreen(
     onIncidentClick: (String) -> Unit,
     viewModel: IncidentViewModel = viewModel()
 ) {
-    val incidentRepo by appViewModel.incidentRepository.collectAsState()
-    val connectionState by appViewModel.connectionState.collectAsState()
+    val incidentRepo by appViewModel.incidentRepository.collectAsStateWithLifecycle()
+    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
 
     LaunchedEffect(incidentRepo) {
         viewModel.setRepository(incidentRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     if (pullRefreshState.isRefreshing) {

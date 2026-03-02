@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openclaw.console.data.model.GatewayConnection
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
@@ -29,17 +30,17 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
-    val approvalRepo by appViewModel.approvalRepository.collectAsState()
+    val approvalRepo by appViewModel.approvalRepository.collectAsStateWithLifecycle()
     val pendingApprovals by remember(approvalRepo) {
         derivedStateOf { approvalRepo?.pendingApprovals?.value ?: emptyList() }
     }
-    val connectionState by appViewModel.connectionState.collectAsState()
+    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.setRepository(gatewayRepo)
     }
 
-    val uiState by viewModel.settingsUiState.collectAsState()
+    val uiState by viewModel.settingsUiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {

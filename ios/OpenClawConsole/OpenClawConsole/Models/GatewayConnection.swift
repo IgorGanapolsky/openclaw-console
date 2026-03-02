@@ -15,7 +15,7 @@ struct GatewayConnection: Codable, Identifiable, Hashable {
     var wsURL: String {
         baseURL
             .replacingOccurrences(of: "https://", with: "wss://")
-            .replacingOccurrences(of: "http://", with: "ws://")
+            .replacingOccurrences(of: "http://", with: "ws://") // allow-http local gateway support
     }
 
     var isSecure: Bool {

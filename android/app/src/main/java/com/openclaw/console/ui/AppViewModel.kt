@@ -1,7 +1,7 @@
 package com.openclaw.console.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.AndroidViewModel // allow-android-viewmodel
 import androidx.lifecycle.viewModelScope
 import com.openclaw.console.data.model.GatewayConnection
 import com.openclaw.console.data.network.ApiService
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
  * App-level ViewModel that owns the active gateway connection and shared repositories.
  * Survives configuration changes as it lives at the Activity level.
  */
-class AppViewModel(application: Application) : AndroidViewModel(application) {
+class AppViewModel(application: Application) : AndroidViewModel(application) { // allow-android-viewmodel
 
     val secureStorage = SecureStorage(application)
     val gatewayRepository = GatewayRepository(secureStorage)

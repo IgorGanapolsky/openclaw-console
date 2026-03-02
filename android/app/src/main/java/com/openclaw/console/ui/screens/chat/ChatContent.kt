@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -37,7 +38,7 @@ fun ChatContent(
     val scope = rememberCoroutineScope()
 
     // Collect incoming chat responses from WebSocket
-    val agentRepo by appViewModel.agentRepository.collectAsState()
+    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
     LaunchedEffect(agentRepo) {
         // access wsClient events through AppViewModel; listen for chat responses
         // We need access to wsClient; route through a shared events approach

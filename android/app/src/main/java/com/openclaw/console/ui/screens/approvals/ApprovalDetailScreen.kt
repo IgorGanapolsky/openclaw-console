@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openclaw.console.data.model.ActionType
 import com.openclaw.console.data.model.ApprovalDecision
 import com.openclaw.console.data.model.RiskLevel
@@ -38,7 +39,7 @@ fun ApprovalDetailScreen(
     onBack: () -> Unit,
     viewModel: ApprovalViewModel = viewModel()
 ) {
-    val approvalRepo by appViewModel.approvalRepository.collectAsState()
+    val approvalRepo by appViewModel.approvalRepository.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -46,7 +47,7 @@ fun ApprovalDetailScreen(
         viewModel.init(approvalId, approvalRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Biometric trigger
     LaunchedEffect(uiState.screenState) {

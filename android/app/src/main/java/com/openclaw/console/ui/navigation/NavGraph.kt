@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -57,8 +58,8 @@ private data class BottomNavItem(
 fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     val navController = rememberNavController()
 
-    val pendingApprovalCount by appViewModel.pendingApprovalCount.collectAsState()
-    val incidentRepository by appViewModel.incidentRepository.collectAsState()
+    val pendingApprovalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
+    val incidentRepository by appViewModel.incidentRepository.collectAsStateWithLifecycle()
     val openIncidentCount by remember(incidentRepository) {
         derivedStateOf {
             incidentRepository?.incidents?.value

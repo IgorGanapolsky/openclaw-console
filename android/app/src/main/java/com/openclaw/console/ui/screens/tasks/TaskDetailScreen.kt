@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openclaw.console.data.model.*
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
@@ -36,13 +37,13 @@ fun TaskDetailScreen(
     onBack: () -> Unit,
     viewModel: TaskDetailViewModel = viewModel()
 ) {
-    val taskRepo by appViewModel.taskRepository.collectAsState()
+    val taskRepo by appViewModel.taskRepository.collectAsStateWithLifecycle()
 
     LaunchedEffect(agentId, taskId, taskRepo) {
         viewModel.init(agentId, taskId, taskRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     // Auto-scroll when new steps arrive
@@ -106,7 +107,7 @@ fun TaskDetailScreen(
                 }
             }
             else -> {
-                val task = uiState.task!!
+                val task = requireNotNull(uiState.task)
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
