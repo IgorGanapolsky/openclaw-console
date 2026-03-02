@@ -1,0 +1,50 @@
+version: 2
+updates:
+  # Swift Package Manager (iOS)
+  - package-ecosystem: "swift"
+    directory: "/ios/OpenClawConsole"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ios"
+
+  # Gradle (Android)
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "android"
+
+  # npm (TypeScript skills)
+  - package-ecosystem: "npm"
+    directory: "/openclaw-skills"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "skills"
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"

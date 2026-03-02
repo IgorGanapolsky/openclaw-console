@@ -1,0 +1,93 @@
+name: Security Pipeline
+on:
+  schedule:
+    - cron: "0 0 * * *" # Daily at midnight UTC
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+    paths:
+      - "openclaw-skills/package.json"
+      - "openclaw-skills/package-lock.json"
+      - "android/app/build.gradle.kts"
+      - "android/build.gradle.kts"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  dependency-scan:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "openclaw-skills/package-lock.json"
+
+      - name: npm audit (skills)
+        working-directory: openclaw-skills
+        run: |
+          npm ci
+          npm audit --audit-level=high || true
+
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, swift, kotlin-or-java]
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Custom secret patterns
+        run: |
+          ERRORS=0
+          for pattern in "AKIA[0-9A-Z]{16}" "ghp_[a-zA-Z0-9]{36}" "sk-[a-zA-Z0-9]{48}" "firebase.*api.*key"; do
+            if grep -rn "$pattern" --include="*.swift" --include="*.kt" --include="*.ts" --include="*.json" \
+               --exclude-dir=node_modules --exclude-dir=build --exclude-dir=.git . 2>/dev/null; then
+              echo "FAIL: Found potential secret matching pattern: $pattern"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "Found $ERRORS potential secret leak(s)"
+            exit 1
+          fi
+          echo "No secrets detected"
