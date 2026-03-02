@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 2 of 4 (Code Signing and Distribution)
-Plan: 2 of 4 in current phase
-Status: Plan 02-02 paused at human-action checkpoint (keystore backup required)
-Last activity: 2026-03-02 — Plan 02-02 Task 1 complete (Android release keystore generated, 4 signing secrets set in production GitHub environment)
+Plan: 3 of 4 in current phase
+Status: Plan 02-03 paused at human-action checkpoint (6 App Store Connect secrets + fastlane match appstore local run required)
+Last activity: 2026-03-02 — Plan 02-03 Task 1 complete (iOS cert repo created, MATCH_GIT_URL set in production environment)
 
-Progress: [█████░░░░░] 34%
+Progress: [██████░░░░] 40%
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ Progress: [█████░░░░░] 34%
 
 *Updated after each plan completion*
 | Phase 02-code-signing-and-distribution P02 | 2 | 1 tasks | 0 files |
+| Phase 02-code-signing-and-distribution P03 | 1 | 1 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,7 @@ Progress: [█████░░░░░] 34%
 - 02-02: Certificate SHA-256: 4F:E6:A3:C5:D7:74:F9:20:E0:33:32:60:7E:E2:72:42:19:6A:1F:6D:75:02:CE:31:6D:04:93:C4:1C:22:41:14
 - [Phase 02-02]: PKCS12 keystore format (JDK 21 default): KEY_PASSWORD = KEYSTORE_PASSWORD because PKCS12 does not support separate store/key passwords
 - [Phase 02-02]: 4096-bit RSA, 10000-day validity, alias=openclaw, SHA-256: 4F:E6:A3:C5:D7:74:F9:20:E0:33:32:60:7E:E2:72:42:19:6A:1F:6D:75:02:CE:31:6D:04:93:C4:1C:22:41:14
+- [Phase 02-03]: Cert repo IgorGanapolsky/openclaw-certificates created (private, empty); MATCH_GIT_URL set in production; 6 App Store Connect secrets require human action
 
 ### Pending Todos
 
@@ -71,8 +73,8 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 1: Match cert repo (MATCH_GIT_URL) existence unconfirmed — must verify before Phase 2 signing work begins
-- Phase 1: App Store Connect API key scope (APPSTORE_PRIVATE_KEY) unconfirmed — validate during Phase 1
+- Phase 2: Match cert repo EXISTS at IgorGanapolsky/openclaw-certificates (private, EMPTY — needs fastlane match appstore local run)
+- Phase 2: App Store Connect API key secrets (APPSTORE_KEY_ID, APPSTORE_PRIVATE_KEY, APPSTORE_ISSUER_ID) missing from production — require Apple dashboard access
 - Phase 1: workflow_run name field match between ios.yml/android.yml and internal-distribution.yml must be manually verified
 - Phase 2: Android keystore GENERATED (~/openclaw-release.jks) and secrets set — backup to password manager REQUIRED before proceeding to 02-03
 - Phase 2: 178 pre-existing Kotlin compilation errors in UI layer (NavGraph, screen files) block assembleDebug — logged in deferred-items.md — needs dedicated repair plan
@@ -80,5 +82,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: 02-02-PLAN.md Task 2 checkpoint:human-action — Android keystore generated, secrets set; awaiting password manager backup confirmation.
+Stopped at: 02-03-PLAN.md checkpoint:human-action — cert repo created, MATCH_GIT_URL set; awaiting 6 App Store Connect secrets and fastlane match appstore local run.
 Resume file: None
