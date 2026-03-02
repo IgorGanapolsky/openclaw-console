@@ -80,6 +80,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. CI Pipeline Repair | 4/4 | Complete    | 2026-03-02 |
-| 2. Code Signing and Distribution | 1/4 | In progress | - |
+| 2. Code Signing and Distribution | 2/4 | In Progress|  |
 | 3. Device Testing Validation | 0/TBD | Not started | - |
 | 4. Distribution Hardening | 0/TBD | Not started | - |
