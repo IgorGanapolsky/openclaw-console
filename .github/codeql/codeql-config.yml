@@ -1,0 +1,7 @@
+name: "OpenClaw Console CodeQL Config"
+queries:
+  - uses: security-and-quality
+paths-ignore:
+  - node_modules
+  - "**/*.test.ts"
+  - "**/*.spec.ts"

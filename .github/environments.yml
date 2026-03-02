@@ -1,0 +1,21 @@
+# Environment configuration reference for OpenClaw Console
+# Create these environments in GitHub Settings > Environments
+
+staging:
+  protection_rules:
+    required_reviewers:
+      - IgorGanapolsky
+    wait_timer: 5
+  deployment_branch_policy:
+    protected_branches: false
+    custom_branches:
+      - develop
+      - release/*
+
+production:
+  protection_rules:
+    required_reviewers:
+      - IgorGanapolsky
+    wait_timer: 15
+  deployment_branch_policy:
+    protected_branches: true

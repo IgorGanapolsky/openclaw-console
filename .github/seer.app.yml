@@ -1,0 +1,25 @@
+name: Seer by Sentry
+description: AI-powered code review assistant focused on error handling and safety
+url: https://github.com/apps/seer-by-sentry
+public: false
+default_events:
+  - pull_request
+  - pull_request_review
+  - pull_request_review_comment
+  - push
+  - status
+  - check_run
+  - check_suite
+
+default_permissions:
+  checks: write
+  contents: read
+  issues: write
+  metadata: read
+  pull_requests: write
+  statuses: write
+
+bot:
+  name: seer-by-sentry
+  display_name: Seer by Sentry
+  description: "AI-powered code review focusing on error handling and safety"
