@@ -1,0 +1,32 @@
+{
+  "snapshots": [
+    {
+      "timestamp": "2026-02-20T21:08:03.483935+00:00",
+      "ios_total": 0,
+      "ios_rating": 0.0,
+      "ios_recent_7d": 0,
+      "android_total": 0,
+      "android_rating": 0.0,
+      "android_recent_7d": 0
+    }
+  ],
+  "alerts": [],
+  "ios": {
+    "total_reviews": 0,
+    "avg_rating": 0.0
+  },
+  "android": {
+    "total_reviews": 0,
+    "avg_rating": 0.0
+  },
+  "latest_velocity": {
+    "ios_velocity": 0.0,
+    "android_velocity": 0.0
+  },
+  "review_prompt_config": {
+    "completions_before_prompt": 3,
+    "min_days_between_prompts": 30,
+    "prompt_after_positive_experience": true,
+    "suppress_during_low_rating_period": false
+  }
+}

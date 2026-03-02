@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+    <!--
+        CVE-2025-55182 and CVE-2025-55184 affect React Server Components (RSC)
+        which are used for server-side rendering in frameworks like Next.js.
+
+        This repository uses native iOS/Android clients and a Node.js gateway.
+        React Server Components are not part of the runtime architecture and
+        cannot be exploited in this context.
+
+        The vulnerability requires:
+        1. Server-side React rendering with RSC APIs
+        2. HTTP requests to server endpoints running RSC
+
+        Neither condition applies to a mobile app compiled for iOS/Android.
+
+        Reference: https://react.dev/blog/2025/12/03/critical-security-vulnerability-in-react-server-components
+    -->
+    <suppress>
+        <notes><![CDATA[
+            CVE-2025-55182 (React2Shell) - CVSS 10.0
+            This RCE vulnerability affects React Server Components used in server-side rendering.
+            Not applicable because this repository does not run React Server Components.
+        ]]></notes>
+        <packageUrl regex="true">^pkg:npm/react@.*$</packageUrl>
+        <cve>CVE-2025-55182</cve>
+    </suppress>
+
+    <suppress>
+        <notes><![CDATA[
+            CVE-2025-55184 - CVSS 7.5 (DoS/Source Code Exposure)
+            This vulnerability affects React Server Components used in server-side rendering.
+            Not applicable because this repository does not run React Server Components.
+        ]]></notes>
+        <packageUrl regex="true">^pkg:npm/react@.*$</packageUrl>
+        <cve>CVE-2025-55184</cve>
+    </suppress>
+
+</suppressions>

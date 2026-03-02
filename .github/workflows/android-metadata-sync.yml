@@ -1,0 +1,38 @@
+name: Android Metadata Sync
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync-metadata:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install google-api-python-client==2.190.0 google-auth==2.48.0
+
+      - name: Write Google Play key
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_JSON_KEY" ]; then
+            echo "GOOGLE_PLAY_JSON_KEY secret is not set" >&2
+            exit 1
+          fi
+          echo "$GOOGLE_PLAY_JSON_KEY" > "$RUNNER_TEMP/play-service-account.json"
+
+      - name: Upload Android metadata
+        env:
+          GOOGLE_PLAY_JSON_KEY_PATH: ${{ runner.temp }}/play-service-account.json
+        run: python3 scripts/sync_android_metadata.py
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play-service-account.json"

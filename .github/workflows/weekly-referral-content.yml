@@ -1,0 +1,61 @@
+name: Weekly Referral Content Generation
+
+on:
+  schedule:
+    - cron: '0 14 * * 5' # Every Friday at 14:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: referral-content
+  cancel-in-progress: false
+
+jobs:
+  generate-content:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run referral content pipeline
+        run: |
+          python scripts/backlinks_referral.py \
+            --repo-root . \
+            --report-out marketing/data/referral_report.md
+
+      - name: Commit referral content
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add marketing/referral_content/ marketing/data/referral_campaigns.json marketing/data/referral_report.md
+          if git diff --cached --quiet; then
+            echo "No referral content changes to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(referral): weekly Reddit, PH, and blog content refresh"
+          BRANCH="auto/referral-content-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          gh pr create --base develop --head "$BRANCH" --title "chore(referral): weekly referral content refresh" --body "Automated weekly Reddit, ProductHunt, and blog referral content refresh" --label "automation" || true
+
+      - name: Upload referral report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: referral-report
+          path: |
+            marketing/data/referral_report.md
+            marketing/data/referral_campaigns.json
+            marketing/referral_content/

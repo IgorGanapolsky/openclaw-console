@@ -31,7 +31,7 @@ jobs:
 
           # Check that key product files exist
           MISSING=0
-          for f in ios/OpenClawConsole/Sources/App/OpenClawConsoleApp.swift \
+          for f in ios/OpenClawConsole/OpenClawConsole/OpenClawConsoleApp.swift \
                    android/app/src/main/java/com/openclaw/console/MainActivity.kt \
                    openclaw-skills/src/index.ts; do
             if [ ! -f "$f" ]; then

@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-03-02T14:37:41.390404+00:00",
+  "repo": "IgorGanapolsky/openclaw-console",
+  "providers": [
+    "gemini",
+    "anthropic",
+    "openai"
+  ],
+  "prompt_count": 3,
+  "results": [
+    {
+      "provider": "gemini",
+      "recommendation_share": 0.3333,
+      "recommendation_count": 3,
+      "status": "ok"
+    },
+    {
+      "provider": "anthropic",
+      "recommendation_share": 0.3333,
+      "recommendation_count": 3,
+      "status": "ok"
+    },
+    {
+      "provider": "openai",
+      "recommendation_share": 0.3333,
+      "recommendation_count": 3,
+      "status": "ok"
+    }
+  ],
+  "notes": "Baseline placeholder snapshot. Replace with provider-evaluated scoring when API-based eval is enabled."
+}

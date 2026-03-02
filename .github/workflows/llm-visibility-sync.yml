@@ -1,0 +1,45 @@
+name: LLM Visibility Sync
+
+on:
+  schedule:
+    - cron: "0 9 * * 1,4" # Twice weekly for stable trend signal without excessive API spend
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: llm-visibility-sync
+  cancel-in-progress: true
+
+jobs:
+  refresh-llm-kpi:
+    uses: ./.github/workflows/weekly-shared.yml
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PROJECT_PAT: ${{ secrets.PROJECT_PAT }}
+    with:
+      fetch_depth: "0"
+      pip_packages: requests
+      run_command: |
+        python scripts/llm_recommendation_share.py \
+          --repo-root . \
+          --prompt-set marketing/data/llm_prompt_set.json \
+          --output marketing/data/llm_recommendation_share.json \
+          --providers gemini,anthropic,openai
+        python scripts/wiki_sync.py
+      commit_paths: |
+        marketing/data/llm_recommendation_share.json
+        wiki/Daily-Metrics-Dashboard.md
+        wiki/Paid-Acquisition.md
+      commit_message: "chore(kpi): refresh llm recommendation share snapshot"
+      publish_wiki: true
+      wiki_path: wiki/
+      artifact_name: llm-visibility-kpi
+      artifact_path: |
+        marketing/data/llm_recommendation_share.json
+        wiki/Daily-Metrics-Dashboard.md
+        wiki/Paid-Acquisition.md
+      artifact_retention_days: "14"

@@ -1,0 +1,172 @@
+{
+  "platform": "reddit_ads",
+  "created": "2026-02-23T13:34:00Z",
+  "status": "ready_to_launch",
+  "account": "eazyigz123",
+  "objective": "app_installs",
+  "app_store_urls": {
+    "ios": "https://apps.apple.com/app/random-tactical-timer/id6758355312",
+    "android": "https://play.google.com/store/apps/details?id=com.iganapolsky.randomtimer"
+  },
+  "budget": {
+    "daily_usd": 10.0,
+    "campaign_total_usd": 300.0,
+    "test_phase_days": 14,
+    "test_phase_budget_usd": 140.0,
+    "target_cpi_usd": 2.50
+  },
+  "ad_groups": [
+    {
+      "name": "Combat Sports - Subreddit Targeting",
+      "bid_type": "CPC",
+      "max_bid_usd": 1.50,
+      "subreddits": [
+        "r/boxing",
+        "r/MMA",
+        "r/bjj",
+        "r/MuayThai",
+        "r/martialarts",
+        "r/amateur_boxing",
+        "r/Kickboxing",
+        "r/Fencing"
+      ],
+      "ad_copy": {
+        "headline": "Train Reaction, Not Rhythm",
+        "body": "Your timer shouldn't be predictable. Random Tactical Timer fires at an unpredictable moment — built for fighters who train under real pressure. Free. No ads.",
+        "cta": "Install"
+      },
+      "priority": "high",
+      "rationale": "Core combat niche. High intent, small but engaged communities."
+    },
+    {
+      "name": "Fitness & Conditioning - Subreddit Targeting",
+      "bid_type": "CPC",
+      "max_bid_usd": 1.25,
+      "subreddits": [
+        "r/HIIT",
+        "r/CrossFit",
+        "r/bodyweightfitness",
+        "r/homegym",
+        "r/Fitness",
+        "r/kettlebell",
+        "r/running"
+      ],
+      "ad_copy": {
+        "headline": "Stop Watching the Clock",
+        "body": "Random intervals force you to stay present. Set a range, train hard, react when it fires. HIIT, EMOM, drills — chaos training that works. Free app, zero ads.",
+        "cta": "Install"
+      },
+      "priority": "medium",
+      "rationale": "Broader fitness audience. Lower intent but higher volume."
+    },
+    {
+      "name": "Tactical & LEO - Subreddit Targeting",
+      "bid_type": "CPC",
+      "max_bid_usd": 1.75,
+      "subreddits": [
+        "r/tacticaltraining",
+        "r/ProtectAndServe",
+        "r/Military",
+        "r/CCW",
+        "r/CompetitionShooting",
+        "r/tacticalgear"
+      ],
+      "ad_copy": {
+        "headline": "Stress Inoculation Timer",
+        "body": "Train against uncertain triggers. Random Tactical Timer forces genuine reaction — the same principle behind military stress conditioning. Free. Private. No tracking.",
+        "cta": "Install"
+      },
+      "priority": "high",
+      "rationale": "Highest conversion potential. 'Tactical' is in the app name. Privacy-conscious audience → 'no tracking' resonates."
+    },
+    {
+      "name": "Keyword Targeting - High Intent",
+      "bid_type": "CPC",
+      "max_bid_usd": 1.50,
+      "keywords": [
+        "reaction time training",
+        "random interval timer",
+        "boxing timer app",
+        "MMA training timer",
+        "unpredictable timer",
+        "HIIT timer app",
+        "workout timer random",
+        "stress inoculation training",
+        "combat conditioning",
+        "sparring timer",
+        "round timer boxing",
+        "EMOM timer",
+        "CrossFit timer app",
+        "tactical training tools",
+        "reaction drill timer"
+      ],
+      "ad_copy": {
+        "headline": "Your Timer Should Surprise You",
+        "body": "Random Tactical Timer fires at an unpredictable moment within your range. Built for fighters, coaches, and anyone who refuses to train on autopilot.",
+        "cta": "Install"
+      },
+      "priority": "high",
+      "rationale": "Keyword targeting gets 29.6% higher CTR on Reddit vs interest/community targeting."
+    }
+  ],
+  "negative_keywords": [
+    "online timer",
+    "timer website",
+    "countdown website",
+    "free online",
+    "egg timer",
+    "pomodoro",
+    "meditation timer",
+    "sleep timer",
+    "cooking timer"
+  ],
+  "targeting": {
+    "locations": ["US", "CA", "GB", "AU"],
+    "platforms": ["iOS", "Android"],
+    "device_types": ["mobile"],
+    "exclude_existing_users": true
+  },
+  "reddit_pro_trends_keywords": [
+    "boxing timer",
+    "reaction training",
+    "interval timer app",
+    "HIIT timer",
+    "random timer",
+    "combat training",
+    "MMA training",
+    "CrossFit timer",
+    "tactical training",
+    "workout app"
+  ],
+  "creative_variants": [
+    {
+      "id": "A",
+      "headline": "Train Reaction, Not Rhythm",
+      "body": "Your timer shouldn't be predictable. Random Tactical Timer fires at an unpredictable moment — built for fighters who train under real pressure. Free. No ads.",
+      "angle": "combat_identity"
+    },
+    {
+      "id": "B",
+      "headline": "Your Timer Should Surprise You",
+      "body": "Set a range. Train hard. React when it fires. Random Tactical Timer eliminates anticipation from every drill. Free app, zero tracking.",
+      "angle": "curiosity_hook"
+    },
+    {
+      "id": "C",
+      "headline": "Stop Pacing Yourself",
+      "body": "Traditional timers teach your brain to anticipate. Random Tactical Timer forces genuine reaction. Used by fighters, coaches, and tactical trainers. Free.",
+      "angle": "pain_point"
+    }
+  ],
+  "optimization_plan": {
+    "week_1": "Launch all 4 ad groups with $2.50/day each. Run all 3 creative variants (A/B/C test).",
+    "week_2": "Kill underperforming ad groups (CPI > $4). Double budget on winners. Pause losing creatives.",
+    "week_3_4": "Scale winning ad group to $15-20/day. Add lookalike targeting if Reddit Pixel installed.",
+    "kpis": {
+      "target_ctr": "0.8%",
+      "target_cpi": "$2.50",
+      "target_day_1_retention": "40%",
+      "kill_threshold_cpi": "$5.00"
+    }
+  }
+}

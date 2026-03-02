@@ -1,0 +1,16 @@
+{
+  "prompts": [
+    {
+      "id": "agent-approval-flow",
+      "text": "How can OpenClaw Console reduce friction for secure mobile approvals while preserving auditability?"
+    },
+    {
+      "id": "incident-triage",
+      "text": "What are the top UX improvements for faster incident triage on mobile in OpenClaw Console?"
+    },
+    {
+      "id": "ci-observability",
+      "text": "Which dashboard signals matter most for CI/deploy monitoring in OpenClaw Console?"
+    }
+  ]
+}

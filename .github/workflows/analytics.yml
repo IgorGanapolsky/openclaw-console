@@ -1,0 +1,91 @@
+name: CI/CD Analytics
+on:
+  schedule:
+    - cron: "0 0 * * 0" # Weekly on Sunday
+  workflow_dispatch:
+
+jobs:
+  analyze-workflows:
+    uses: ./.github/workflows/weekly-shared.yml
+    with:
+      run_command: |
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/actions/runs" \
+          --paginate \
+          --jq '.workflow_runs[] | select(.created_at >= (now - 604800 | strftime("%Y-%m-%dT%H:%M:%SZ"))) | {workflow_name: .name, conclusion: .conclusion, duration: (.updated_at | fromdate - (.created_at | fromdate))}' \
+          > workflow_stats.json
+
+        echo "### CI/CD Performance Report (Last 7 Days)" > report.md
+        echo "" >> report.md
+        echo "#### Build Success Rate" >> report.md
+        jq -r '[.conclusion] | group_by(.) | map({conclusion: .[0], count: length}) | map("\(.conclusion): \(.count)") | .[]' workflow_stats.json >> report.md
+        echo "" >> report.md
+
+        echo "#### Average Build Duration" >> report.md
+        jq -r 'group_by(.workflow_name) | map({name: .[0].workflow_name, avg_duration: (map(.duration) | add / length)}) | .[] | "\(.name): \(.avg_duration | floor)s"' workflow_stats.json >> report.md
+        echo "" >> report.md
+
+        echo "#### Cache Performance" >> report.md
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/actions/caches" \
+          --jq '.actions_caches | map({size_in_mb: (.size_in_bytes/1048576 | floor), last_accessed_at}) | "Total caches: \(length)\nTotal size: \(map(.size_in_mb) | add)MB"' >> report.md
+      issue_title: Weekly CI/CD Performance Report
+      issue_content_path: ./report.md
+      issue_labels: |
+        metrics
+        automation
+        ci-cd
+
+  analyze-security:
+    uses: ./.github/workflows/weekly-shared.yml
+    with:
+      run_command: |
+        echo "### Security Metrics Report (Last 7 Days)" > security_report.md
+        echo "" >> security_report.md
+
+        echo "#### CodeQL Alerts" >> security_report.md
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/code-scanning/alerts" \
+          --jq 'group_by(.state) | map({state: .[0].state, count: length}) | .[] | "\(.state): \(.count)"' >> security_report.md
+        echo "" >> security_report.md
+
+        echo "#### Dependency Alerts" >> security_report.md
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/dependabot/alerts" \
+          --jq 'group_by(.state) | map({state: .[0].state, count: length}) | .[] | "\(.state): \(.count)"' >> security_report.md
+        echo "" >> security_report.md
+
+        echo "#### Secret Scanning Alerts" >> security_report.md
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/secret-scanning/alerts" \
+          --jq 'group_by(.state) | map({state: .[0].state, count: length}) | .[] | "\(.state): \(.count)"' >> security_report.md
+      issue_title: Weekly Security Metrics Report
+      issue_content_path: ./security_report.md
+      issue_labels: |
+        security
+        metrics
+        automation
+
+  analyze-deployments:
+    uses: ./.github/workflows/weekly-shared.yml
+    with:
+      run_command: |
+        echo "### Deployment Metrics Report (Last 7 Days)" > deployment_report.md
+        echo "" >> deployment_report.md
+
+        echo "#### Deployment Statistics" >> deployment_report.md
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/deployments" \
+          --jq '[.[] | select(.created_at >= (now - 604800 | strftime("%Y-%m-%dT%H:%M:%SZ")))] | group_by(.environment) | map({env: .[0].environment, count: length, success: map(select(.state == "success")) | length}) | .[] | "\(.env):\n  Total: \(.count)\n  Success Rate: \((.success/.count * 100 | floor))%"' >> deployment_report.md
+        echo "" >> deployment_report.md
+
+        echo "#### Recent Deployments" >> deployment_report.md
+        gh api -H "Accept: application/vnd.github+json" \
+          "/repos/$REPO/deployments" \
+          --jq 'limit(5; reverse) | .[] | "- \(.environment) (\(.created_at)): \(.state)"' >> deployment_report.md
+      issue_title: Weekly Deployment Metrics Report
+      issue_content_path: ./deployment_report.md
+      issue_labels: |
+        deployments
+        metrics
+        automation
