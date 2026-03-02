@@ -4,6 +4,22 @@ A focused mobile cockpit for monitoring and controlling [OpenClaw](https://githu
 
 > **Not a chat app.** This is a single-purpose work console for developers, DevOps engineers, indie hackers, and trading/infra builders who self-host OpenClaw and want to supervise agents from their phone.
 
+---
+
+## Vision
+
+A world where every developer, operator, and builder has a quiet, powerful mobile control plane for their AI agents and infrastructure — free from the noise and distraction of social messaging apps.
+
+## Mission
+
+Deliver the definitive native mobile console for [OpenClaw](https://github.com/openclaw) that lets self-hosting professionals monitor agents, approve dangerous actions with biometric safety, and supervise CI/deployments/trading from their pocket — with zero dependency on Telegram, WhatsApp, Slack, or Discord.
+
+## North Star Metric
+
+**Daily Active Approvers** — the number of unique users who approve at least one agent action per day via the console. This metric captures real operational trust: users are not just viewing dashboards, they are actively governing their infrastructure through the app. Every feature we build should move this number up.
+
+---
+
 ## What It Does
 
 | Feature | Description |
@@ -119,16 +135,6 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
 In the app, go to Settings → Add Gateway → enter your gateway URL and token.
-
-### 4. Push to GitHub
-
-```bash
-# Initialize and push to a new private repo
-git init
-git add .
-git commit -m "Initial commit: OpenClaw Work Console"
-gh repo create openclaw-console --private --source=. --push
-```
 
 ## Configuration
 
