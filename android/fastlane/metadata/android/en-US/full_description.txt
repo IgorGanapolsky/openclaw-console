@@ -1,0 +1,20 @@
+OpenClaw Work Console is a focused mobile cockpit for monitoring and controlling your OpenClaw agents. No social apps, no distractions — just a single-purpose work tool.
+
+Monitor your agents, track CI/CD tasks, respond to incidents, and approve dangerous actions (deploys, shell commands, config changes) with biometric verification — all from your phone.
+
+Key Features:
+
+• Connect to one or more OpenClaw gateways with secure token auth
+• Real-time agent status dashboard (online/offline/busy)
+• Task-centric activity feed with live timeline updates
+• Aggregated incident alerts across all agents with severity filtering
+• Biometric-gated approval workflow for dangerous actions
+• Minimal chat for quick agent instructions
+
+Built for developers, DevOps engineers, indie hackers, and trading/infra builders who self-host OpenClaw and want a quiet, professional mobile console.
+
+Security:
+• Tokens stored in Android Keystore (EncryptedSharedPreferences)
+• TLS enforced by default
+• Biometric/PIN required for dangerous action approvals
+• Designed for VPN deployment (Tailscale/WireGuard)

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Identity -->
+	<key>CFBundleDisplayName</key>
+	<string>OpenClaw Console</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.openclaw.console</string>
+	<key>CFBundleName</key>
+	<string>OpenClawConsole</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+
+	<!-- Minimum OS -->
+	<key>MinimumOSVersion</key>
+	<string>17.0</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- Launch Screen -->
+	<key>UILaunchScreen</key>
+	<dict/>
+
+	<!-- Orientation -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Privacy - required for Face ID -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>OpenClaw Console uses Face ID to verify your identity before approving sensitive agent actions.</string>
+
+	<!-- Privacy - required if connecting to local network gateways -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>OpenClaw Console connects to OpenClaw gateway servers on your local network to monitor and control agents.</string>
+
+	<!-- App Transport Security - enforce HTTPS by default -->
+	<!-- To allow HTTP for local development, add NSExceptionDomains with NSAllowsInsecureHTTPLoads -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+
+	<!-- Background Modes - none required for this app -->
+	<!-- Local notifications do not require a background mode -->
+
+	<!-- Scene Configuration (SwiftUI lifecycle) -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+</dict>
+</plist>

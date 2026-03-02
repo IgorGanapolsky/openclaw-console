@@ -1,0 +1,59 @@
+name: iOS CI
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'ios/**'
+
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: ios/OpenClawConsole
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 15.2
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -scheme OpenClawConsole -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2'
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -scheme OpenClawConsole \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+      - name: Run Unit Tests
+        run: |
+          xcodebuild test \
+            -scheme OpenClawConsole \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+  lint:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: ios/OpenClawConsole
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint
+        run: swiftlint lint --strict --reporter github-actions-logging

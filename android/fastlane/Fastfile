@@ -1,0 +1,24 @@
+default_platform(:android)
+
+platform :android do
+  desc "Submit a new Internal Build to Google Play"
+  lane :internal do
+    gradle(task: "bundleRelease")
+    upload_to_play_store(track: "internal")
+  end
+
+  desc "Promote internal to production"
+  lane :promote_to_production do
+    upload_to_play_store(track: "internal", track_promote_to: "production")
+  end
+
+  desc "Distribute to Firebase App Distribution"
+  lane :firebase_dev do
+    gradle(task: "assembleRelease")
+    firebase_app_distribution(
+      app: ENV["FIREBASE_ANDROID_APP_ID"],
+      groups: "qa-team,developers",
+      release_notes: "Dev build from develop branch (#{ENV['GITHUB_SHA'] || 'local'})"
+    )
+  end
+end

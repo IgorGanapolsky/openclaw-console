@@ -1,0 +1,33 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1
+    )
+    build_app(scheme: "OpenClawConsole")
+    upload_to_testflight
+  end
+
+  desc "Setup certificates and profiles via match"
+  lane :setup do
+    match(type: "appstore")
+  end
+
+  desc "Distribute to Firebase App Distribution"
+  lane :firebase_dev do
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1
+    )
+    build_app(
+      scheme: "OpenClawConsole",
+      export_method: "ad-hoc"
+    )
+    firebase_app_distribution(
+      app: ENV["FIREBASE_IOS_APP_ID"],
+      groups: "qa-team,developers",
+      release_notes: "Dev build from develop branch (#{ENV['GITHUB_SHA'] || 'local'})"
+    )
+  end
+end
