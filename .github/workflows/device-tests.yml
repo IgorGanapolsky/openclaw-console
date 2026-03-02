@@ -89,32 +89,7 @@ jobs:
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
-          script: |
-            # Wait for emulator to be ready
-            echo "Waiting for emulator to be ready..."
-            adb wait-for-device
-            sleep 10
-
-            # Install and launch app
-            echo "Installing OpenClaw Console..."
-            adb install android/app/build/outputs/apk/debug/app-debug.apk
-
-            # Run Maestro tests if available
-            if [ -d ".maestro" ] && [ -f ".maestro/smoke-test-android.yaml" ]; then
-              echo "Running Maestro smoke tests..."
-              maestro test .maestro/smoke-test-android.yaml
-            else
-              echo "No Maestro tests found - performing basic launch test"
-              adb shell am start -n com.openclaw.console/.MainActivity
-              sleep 5
-              # Check if app launched successfully
-              if adb shell dumpsys activity activities | grep -q "com.openclaw.console"; then
-                echo "✅ App launched successfully"
-              else
-                echo "❌ App failed to launch"
-                exit 1
-              fi
-            fi
+          script: sh scripts/device-tests/ci-maestro.sh
 
   ios-device-tests:
     name: iOS Simulator Tests
