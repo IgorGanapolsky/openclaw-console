@@ -37,4 +37,5 @@ paths = [
   '''\.git/''',
   '''android/build/''',
   '''openclaw-skills/dist/''',
+  '''tests/.*\.test\.ts$''',
 ]

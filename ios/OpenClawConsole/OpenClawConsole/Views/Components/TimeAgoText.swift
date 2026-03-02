@@ -24,9 +24,9 @@ struct TimeAgoText: View {
             .onAppear { update() }
             // Refresh every minute
             .task {
-                while !Task.isCancelled {
+                while !Swift.Task.isCancelled {
                     update()
-                    try? await Task.sleep(nanoseconds: 60_000_000_000)
+                    try? await Swift.Task.sleep(nanoseconds: 60_000_000_000)
                 }
             }
             .accessibilityLabel(accessibilityDate)

@@ -93,7 +93,7 @@ struct ChatView: View {
                 let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { return }
                 inputText = ""
-                Task { await vm.sendMessage(text) }
+                Swift.Task { await vm.sendMessage(text) }
             } label: {
                 if vm.isSending {
                     ProgressView()

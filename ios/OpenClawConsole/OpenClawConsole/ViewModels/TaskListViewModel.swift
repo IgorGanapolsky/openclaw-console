@@ -10,12 +10,12 @@ final class TaskListViewModel {
 
     // MARK: State
 
-    private(set) var tasks: [Task] = []
+    private(set) var tasks: [OCTask] = []
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
     var statusFilter: TaskStatus? = nil
 
-    var filteredTasks: [Task] {
+    var filteredTasks: [OCTask] {
         guard let filter = statusFilter else { return tasks }
         return tasks.filter { $0.status == filter }
     }
@@ -69,7 +69,7 @@ final class TaskListViewModel {
             var task = tasks[index]
             if !task.steps.contains(where: { $0.id == step.id }) {
                 // Rebuild task with new step appended
-                tasks[index] = Task(
+                tasks[index] = OCTask(
                     id: task.id,
                     agentId: task.agentId,
                     title: task.title,
@@ -89,7 +89,7 @@ final class TaskListViewModel {
     private func applyTaskUpdate(_ update: TaskUpdate) {
         guard let index = tasks.firstIndex(where: { $0.id == update.id }) else { return }
         let old = tasks[index]
-        tasks[index] = Task(
+        tasks[index] = OCTask(
             id: old.id,
             agentId: old.agentId,
             title: old.title,

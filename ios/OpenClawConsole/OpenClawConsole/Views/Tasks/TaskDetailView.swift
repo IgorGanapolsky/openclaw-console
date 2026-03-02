@@ -77,7 +77,7 @@ struct TaskDetailView: View {
             } description: {
                 Text(error)
             } actions: {
-                Button("Retry") { Task { await vm.fetchTask() } }
+                Button("Retry") { Swift.Task { await vm.fetchTask() } }
                     .buttonStyle(.bordered)
             }
         } else {
@@ -88,7 +88,7 @@ struct TaskDetailView: View {
 
     // MARK: - Task Header
 
-    private func taskHeader(task: Task) -> some View {
+    private func taskHeader(task: OCTask) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 TaskStatusBadge(status: task.status)
@@ -140,7 +140,7 @@ struct TaskDetailView: View {
             Button {
                 let text = chatInput
                 chatInput = ""
-                Task { await vm.sendMessage(text) }
+                Swift.Task { await vm.sendMessage(text) }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 28))

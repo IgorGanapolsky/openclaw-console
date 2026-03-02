@@ -130,7 +130,7 @@ struct TaskStep: Codable, Identifiable, Hashable {
 
 // MARK: - Task
 
-struct Task: Codable, Identifiable, Hashable {
+struct OCTask: Codable, Identifiable, Hashable {
     let id: String
     let agentId: String
     let title: String
@@ -153,7 +153,7 @@ struct Task: Codable, Identifiable, Hashable {
         case links
     }
 
-    static func == (lhs: Task, rhs: Task) -> Bool {
+    static func == (lhs: OCTask, rhs: OCTask) -> Bool {
         lhs.id == rhs.id
     }
 
@@ -164,7 +164,7 @@ struct Task: Codable, Identifiable, Hashable {
 
 // MARK: - TaskUpdate (WebSocket payload)
 
-struct TaskUpdate: Codable {
+struct OCTaskUpdate: Codable {
     let id: String
     let agentId: String
     let status: TaskStatus

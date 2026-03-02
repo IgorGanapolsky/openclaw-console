@@ -91,7 +91,7 @@ struct MainTabView: View {
         webSocket.connect(baseURL: gateway.baseURL, token: token)
 
         // Fetch initial data
-        Task {
+        Swift.Task {
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
             await approvalViewModel.fetchPendingApprovals()

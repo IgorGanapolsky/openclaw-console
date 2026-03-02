@@ -168,7 +168,7 @@ struct AddGatewayView: View {
             ? (KeychainService.shared.retrieve(for: tempGateway.id) ?? "")
             : token
 
-        Task {
+        Swift.Task {
             // Temporarily save token for testing
             if !testToken.isEmpty {
                 try? KeychainService.shared.save(token: testToken, for: tempGateway.id)

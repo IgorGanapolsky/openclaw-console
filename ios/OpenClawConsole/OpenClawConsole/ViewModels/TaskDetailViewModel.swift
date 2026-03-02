@@ -10,7 +10,7 @@ final class TaskDetailViewModel {
 
     // MARK: State
 
-    private(set) var task: Task?
+    private(set) var task: OCTask?
     private(set) var isLoading: Bool = false
     private(set) var errorMessage: String?
     private(set) var isSendingMessage: Bool = false
@@ -92,7 +92,7 @@ final class TaskDetailViewModel {
         case .taskStep(let step):
             guard step.taskId == taskId, var current = task else { return }
             guard !current.steps.contains(where: { $0.id == step.id }) else { return }
-            task = Task(
+            task = OCTask(
                 id: current.id,
                 agentId: current.agentId,
                 title: current.title,
@@ -106,7 +106,7 @@ final class TaskDetailViewModel {
 
         case .taskUpdate(let update):
             guard update.id == taskId, let current = task else { return }
-            task = Task(
+            task = OCTask(
                 id: current.id,
                 agentId: current.agentId,
                 title: current.title,

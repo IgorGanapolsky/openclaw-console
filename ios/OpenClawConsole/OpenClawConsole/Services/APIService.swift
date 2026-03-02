@@ -136,11 +136,11 @@ final class APIService {
 
     // MARK: - Tasks
 
-    func fetchTasks(for agentId: String) async throws -> [Task] {
+    func fetchTasks(for agentId: String) async throws -> [OCTask] {
         try await request(path: "/api/agents/\(agentId)/tasks")
     }
 
-    func fetchTask(agentId: String, taskId: String) async throws -> Task {
+    func fetchTask(agentId: String, taskId: String) async throws -> OCTask {
         try await request(path: "/api/agents/\(agentId)/tasks/\(taskId)")
     }
 

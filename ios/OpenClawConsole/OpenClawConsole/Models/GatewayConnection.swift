@@ -15,7 +15,7 @@ struct GatewayConnection: Codable, Identifiable, Hashable {
     var wsURL: String {
         baseURL
             .replacingOccurrences(of: "https://", with: "wss://")
-            .replacingOccurrences(of: "http://", // allow-http with: "ws://")
+            .replacingOccurrences(of: "http://", with: "ws://") // allow-http
     }
 
     var isSecure: Bool {

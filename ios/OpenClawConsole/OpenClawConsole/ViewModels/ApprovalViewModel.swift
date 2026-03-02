@@ -23,7 +23,7 @@ final class ApprovalViewModel {
 
     private var webSocket: WebSocketService
     private var cancellables = Set<AnyCancellable>()
-    private var expiryTimer: Task<Void, Never>?
+    private var expiryTimer: Swift.Task<Void, Never>?
 
     // MARK: Init
 
@@ -115,10 +115,10 @@ final class ApprovalViewModel {
     // MARK: - Expiry Monitor
 
     private func startExpiryMonitor() {
-        expiryTimer = Task { [weak self] in
-            while !Task.isCancelled {
+        expiryTimer = Swift.Task { [weak self] in
+            while !Swift.Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 10_000_000_000) // 10s
-                guard !Task.isCancelled else { break }
+                guard !Swift.Task.isCancelled else { break }
                 await MainActor.run {
                     self?.purgeExpired()
                 }
@@ -146,7 +146,7 @@ final class ApprovalViewModel {
         case .approvalRequest(let request):
             if !pendingApprovals.contains(where: { $0.id == request.id }) {
                 pendingApprovals.append(request)
-                Task {
+                Swift.Task {
                     await NotificationService.shared.scheduleApprovalNotification(for: request)
                     await NotificationService.shared.updateBadge(count: self.pendingApprovals.count)
                 }

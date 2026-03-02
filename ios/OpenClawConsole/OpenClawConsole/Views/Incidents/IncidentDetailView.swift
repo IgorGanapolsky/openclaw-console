@@ -163,7 +163,7 @@ struct IncidentDetailView: View {
         actionConfirmation = nil
         isActioning = true
 
-        Task {
+        Swift.Task {
             await viewModel.triggerAction(action, for: incident)
             await MainActor.run {
                 isActioning = false

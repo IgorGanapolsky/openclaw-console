@@ -43,7 +43,7 @@ struct TaskListView: View {
             .frame(minHeight: 44)
         }
         .listStyle(.insetGrouped)
-        .navigationDestination(for: Task.self) { task in
+        .navigationDestination(for: OCTask.self) { task in
             TaskDetailView(agentId: task.agentId, taskId: task.id)
         }
     }
@@ -94,7 +94,7 @@ struct TaskListView: View {
 // MARK: - TaskRow
 
 struct TaskRow: View {
-    let task: Task
+    let task: OCTask
 
     var body: some View {
         HStack(spacing: 12) {

@@ -77,7 +77,7 @@ struct ApprovalDetailView: View {
         }
         .confirmationDialog("Deny Approval", isPresented: $showDenyConfirmation, titleVisibility: .visible) {
             Button("Deny Action", role: .destructive) {
-                Task { await performDeny() }
+                Swift.Task { await performDeny() }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -219,7 +219,7 @@ struct ApprovalDetailView: View {
 
     private var actionButtons: some View {
         VStack(spacing: 10) {
-            Button(action: { Task { await performApprove() } }) {
+            Button(action: { Swift.Task { await performApprove() } }) {
                 Label {
                     Text("Approve")
                         .font(.headline)
@@ -249,7 +249,7 @@ struct ApprovalDetailView: View {
         do {
             try await approvalViewModel.approve(approval: approval)
             decided = true
-            try? await Task.sleep(nanoseconds: 500_000_000)
+            try? await Swift.Task.sleep(nanoseconds: 500_000_000)
             dismiss()
         } catch let error as BiometricError {
             errorMessage = error.errorDescription
@@ -263,7 +263,7 @@ struct ApprovalDetailView: View {
         do {
             try await approvalViewModel.deny(approval: approval)
             decided = true
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            try? await Swift.Task.sleep(nanoseconds: 300_000_000)
             dismiss()
         } catch {
             errorMessage = (error as? OpenClawError)?.errorDescription ?? error.localizedDescription
