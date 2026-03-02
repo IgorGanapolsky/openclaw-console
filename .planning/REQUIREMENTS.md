@@ -70,36 +70,36 @@ Explicitly excluded to maintain focus on core deployment pipeline.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
+Coverage validated during roadmap creation (2026-03-02).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CI-01 | Phase 1 | Pending |
-| CI-02 | Phase 1 | Pending |
-| CI-03 | Phase 1 | Pending |
-| CI-04 | Phase 1 | Pending |
-| CI-05 | Phase 1 | Pending |
-| CI-06 | Phase 1 | Pending |
-| SIGN-01 | Phase 2 | Pending |
-| SIGN-02 | Phase 2 | Pending |
-| SIGN-03 | Phase 2 | Pending |
-| SIGN-04 | Phase 2 | Pending |
-| SIGN-05 | Phase 2 | Pending |
-| TEST-01 | Phase 3 | Pending |
-| TEST-02 | Phase 3 | Pending |
-| TEST-03 | Phase 3 | Pending |
-| TEST-04 | Phase 3 | Pending |
-| TEST-05 | Phase 3 | Pending |
-| INFRA-01 | Phase 4 | Pending |
-| INFRA-02 | Phase 4 | Pending |
-| INFRA-03 | Phase 4 | Pending |
-| INFRA-04 | Phase 4 | Pending |
+| CI-01 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-02 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-03 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-04 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-05 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-06 | Phase 1 - CI Pipeline Repair | Pending |
+| SIGN-01 | Phase 2 - Code Signing and Distribution | Pending |
+| SIGN-02 | Phase 2 - Code Signing and Distribution | Pending |
+| SIGN-03 | Phase 2 - Code Signing and Distribution | Pending |
+| SIGN-04 | Phase 2 - Code Signing and Distribution | Pending |
+| SIGN-05 | Phase 2 - Code Signing and Distribution | Pending |
+| TEST-01 | Phase 3 - Device Testing Validation | Pending |
+| TEST-02 | Phase 3 - Device Testing Validation | Pending |
+| TEST-03 | Phase 3 - Device Testing Validation | Pending |
+| TEST-04 | Phase 3 - Device Testing Validation | Pending |
+| TEST-05 | Phase 3 - Device Testing Validation | Pending |
+| INFRA-01 | Phase 4 - Distribution Hardening | Pending |
+| INFRA-02 | Phase 4 - Distribution Hardening | Pending |
+| INFRA-03 | Phase 4 - Distribution Hardening | Pending |
+| INFRA-04 | Phase 4 - Distribution Hardening | Pending |
 
 **Coverage:**
 - v1 requirements: 20 total
 - Mapped to phases: 20
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 — traceability confirmed during roadmap creation*
