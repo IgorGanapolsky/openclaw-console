@@ -45,9 +45,9 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Android launcher icons + signingConfigs block (SIGN-01, SIGN-05 prereq)
-- [ ] 02-02-PLAN.md — Android keystore backup + GitHub Secrets (SIGN-01, SIGN-03)
-- [ ] 02-03-PLAN.md — iOS match cert repo + all iOS secrets (SIGN-02, SIGN-03)
-- [ ] 02-04-PLAN.md — apksigner verification + end-to-end distribution trigger (SIGN-04, SIGN-05)
+- [x] 02-02-PLAN.md — Android keystore backup + GitHub Secrets (SIGN-01, SIGN-03)
+- [x] 02-03-PLAN.md — iOS match cert repo + all iOS secrets (SIGN-02, SIGN-03)
+- [ ] 02-04-PLAN.md — apksigner verification + end-to-end distribution trigger (SIGN-04, SIGN-05) [paused at human-verify checkpoint]
 
 ### Phase 3: Device Testing Validation
 **Goal**: The biometric agent approval workflow is confirmed working on real physical hardware — not just simulators — so the core product value proposition is validated before beta expansion
@@ -80,6 +80,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. CI Pipeline Repair | 4/4 | Complete    | 2026-03-02 |
-| 2. Code Signing and Distribution | 3/4 | In Progress|  |
+| 2. Code Signing and Distribution | 4/4 (paused at checkpoint) | In Progress|  |
 | 3. Device Testing Validation | 0/TBD | Not started | - |
 | 4. Distribution Hardening | 0/TBD | Not started | - |
