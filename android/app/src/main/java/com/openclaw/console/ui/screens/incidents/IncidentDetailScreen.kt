@@ -22,7 +22,7 @@ fun IncidentDetailScreen(
     appViewModel: AppViewModel,
     onBack: () -> Unit
 ) {
-    val incidentRepo by appViewModel.incidentRepository.collectAsState()
+    val incidentRepo by appViewModel.incidentRepository.collectAsStateWithLifecycle()
     val incident by remember(incidentRepo) {
         derivedStateOf { incidentRepo?.getIncident(incidentId) }
     }

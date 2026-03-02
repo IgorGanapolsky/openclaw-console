@@ -57,8 +57,8 @@ private data class BottomNavItem(
 fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     val navController = rememberNavController()
 
-    val pendingApprovalCount by appViewModel.pendingApprovalCount.collectAsState()
-    val incidentRepository by appViewModel.incidentRepository.collectAsState()
+    val pendingApprovalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
+    val incidentRepository by appViewModel.incidentRepository.collectAsStateWithLifecycle()
     val openIncidentCount by remember(incidentRepository) {
         derivedStateOf {
             incidentRepository?.incidents?.value

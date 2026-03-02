@@ -37,7 +37,7 @@ fun ChatContent(
     val scope = rememberCoroutineScope()
 
     // Collect incoming chat responses from WebSocket
-    val agentRepo by appViewModel.agentRepository.collectAsState()
+    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
     LaunchedEffect(agentRepo) {
         // access wsClient events through AppViewModel; listen for chat responses
         // We need access to wsClient; route through a shared events approach

@@ -30,7 +30,7 @@ fun AddGatewayScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
-    val uiState by viewModel.addGatewayUiState.collectAsState()
+    val uiState by viewModel.addGatewayUiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     var tokenVisible by remember { mutableStateOf(false) }
 

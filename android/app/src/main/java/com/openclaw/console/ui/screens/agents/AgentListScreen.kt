@@ -28,15 +28,15 @@ fun AgentListScreen(
     onAgentClick: (String) -> Unit,
     viewModel: AgentListViewModel = viewModel()
 ) {
-    val agentRepo by appViewModel.agentRepository.collectAsState()
-    val approvalCount by appViewModel.pendingApprovalCount.collectAsState()
-    val connectionState by appViewModel.connectionState.collectAsState()
+    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+    val approvalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
+    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
 
     LaunchedEffect(agentRepo) {
         viewModel.setRepository(agentRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pullToRefreshState = rememberPullToRefreshState()
 
     if (pullToRefreshState.isRefreshing) {

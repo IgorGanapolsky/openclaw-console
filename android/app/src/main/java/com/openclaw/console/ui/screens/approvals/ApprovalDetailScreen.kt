@@ -38,7 +38,7 @@ fun ApprovalDetailScreen(
     onBack: () -> Unit,
     viewModel: ApprovalViewModel = viewModel()
 ) {
-    val approvalRepo by appViewModel.approvalRepository.collectAsState()
+    val approvalRepo by appViewModel.approvalRepository.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -46,7 +46,7 @@ fun ApprovalDetailScreen(
         viewModel.init(approvalId, approvalRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Biometric trigger
     LaunchedEffect(uiState.screenState) {

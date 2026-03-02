@@ -23,7 +23,7 @@ let package = Package(
             name: "OpenClawConsole",
             path: "OpenClawConsole",
             resources: [
-                .process("Info.plist")
+                // Info.plist managed by Xcode-SPM integration
             ],
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")

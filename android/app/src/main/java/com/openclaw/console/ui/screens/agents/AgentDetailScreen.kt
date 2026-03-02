@@ -26,8 +26,8 @@ fun AgentDetailScreen(
     onTaskClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val agentRepo by appViewModel.agentRepository.collectAsState()
-    val taskRepo by appViewModel.taskRepository.collectAsState()
+    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+    val taskRepo by appViewModel.taskRepository.collectAsStateWithLifecycle()
 
     val agent by remember(agentRepo) {
         derivedStateOf {

@@ -36,13 +36,13 @@ fun TaskDetailScreen(
     onBack: () -> Unit,
     viewModel: TaskDetailViewModel = viewModel()
 ) {
-    val taskRepo by appViewModel.taskRepository.collectAsState()
+    val taskRepo by appViewModel.taskRepository.collectAsStateWithLifecycle()
 
     LaunchedEffect(agentId, taskId, taskRepo) {
         viewModel.init(agentId, taskId, taskRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     // Auto-scroll when new steps arrive
@@ -106,7 +106,7 @@ fun TaskDetailScreen(
                 }
             }
             else -> {
-                val task = uiState.task!!
+                val task = uiState.task ?: return@Button
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(paddingValues),

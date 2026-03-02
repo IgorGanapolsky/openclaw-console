@@ -27,14 +27,14 @@ fun IncidentListScreen(
     onIncidentClick: (String) -> Unit,
     viewModel: IncidentViewModel = viewModel()
 ) {
-    val incidentRepo by appViewModel.incidentRepository.collectAsState()
-    val connectionState by appViewModel.connectionState.collectAsState()
+    val incidentRepo by appViewModel.incidentRepository.collectAsStateWithLifecycle()
+    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
 
     LaunchedEffect(incidentRepo) {
         viewModel.setRepository(incidentRepo)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pullRefreshState = rememberPullToRefreshState()
 
     if (pullRefreshState.isRefreshing) {
