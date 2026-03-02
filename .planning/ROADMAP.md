@@ -23,7 +23,13 @@ This is a brownfield repair project, not a greenfield build. Substantial native 
   3. The android.yml workflow produces a debug APK with AGP 8.7.x and Kotlin 2.1.x — no version compatibility errors
   4. Build number in the produced artifacts matches GITHUB_RUN_NUMBER (not a hardcoded value)
   5. Firebase distribution job shows no FIREBASE_TOKEN deprecation warning — service account auth succeeds
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Regenerate npm lockfile with Node 20 (CI-01)
+- [ ] 01-02-PLAN.md — Android toolchain upgrade + versionCode injection (CI-03, CI-06)
+- [ ] 01-03-PLAN.md — iOS runner upgrade to macos-15 + Fastfile setup_ci + iOS build number (CI-02, CI-04, CI-06)
+- [ ] 01-04-PLAN.md — Firebase auth migration to service account (CI-05)
 
 ### Phase 2: Code Signing and Distribution
 **Goal**: Signed testing builds reach Firebase App Distribution and TestFlight automatically on every green develop build — testers can install the app without any manual developer intervention
@@ -67,7 +73,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. CI Pipeline Repair | 0/TBD | Not started | - |
+| 1. CI Pipeline Repair | 0/4 | Not started | - |
 | 2. Code Signing and Distribution | 0/TBD | Not started | - |
 | 3. Device Testing Validation | 0/TBD | Not started | - |
 | 4. Distribution Hardening | 0/TBD | Not started | - |
