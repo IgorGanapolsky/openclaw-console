@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 1 of 4 (CI Pipeline Repair)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-02 — Roadmap created from requirements + research
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-03-02 — Plan 01-01 complete (npm lockfile repair + CI branch trigger)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 6%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 7 min
+- Total execution time: 0.12 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-ci-pipeline-repair | 1 | 7 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: none yet
+- Last 5 plans: 01-01 (7 min)
 - Trend: -
 
 *Updated after each plan completion*
@@ -42,6 +42,9 @@ Progress: [░░░░░░░░░░] 0%
 - Project: Fix CI before adding features — existing code has what's needed, deployment pipeline is the blocker
 - Project: Use Firebase + TestFlight for internal testing distribution — standard tools with biometric testing support
 - Project: Defer production App Store release until beta validates biometric approval workflow
+- 01-01: Regenerate lockfile with Node 20 (npm 10) to match CI; lockfileVersion 3 confirmed
+- 01-01: Remove tests/**/* from tsconfig.json include — test compilation belongs in tsconfig.test.json only
+- 01-01: Use String() coercion for Express 5 req.params (typed string|string[] under strict mode)
 
 ### Pending Todos
 
@@ -57,5 +60,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Roadmap written — ROADMAP.md and STATE.md created, REQUIREMENTS.md traceability updated
+Stopped at: Completed 01-01-PLAN.md — npm lockfile repair, TypeScript build fix, CI branch trigger
 Resume file: None

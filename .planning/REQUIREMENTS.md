@@ -9,7 +9,7 @@ Requirements for unblocking testing builds and validating core biometric approva
 
 ### CI Pipeline Repair
 
-- [ ] **CI-01**: npm lockfile corruption fixed - skills-test CI job passes consistently
+- [x] **CI-01**: npm lockfile corruption fixed - skills-test CI job passes consistently
 - [ ] **CI-02**: iOS workflows upgraded to macOS-15 + Xcode 16.4 (Apple SDK mandate)
 - [ ] **CI-03**: Android toolchain upgraded (AGP 8.7.x + Kotlin 2.1.x + Compose BOM 2025.12.00)
 - [ ] **CI-04**: iOS Fastfile includes setup_ci call to prevent keychain unlock hangs
@@ -74,7 +74,7 @@ Coverage validated during roadmap creation (2026-03-02).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CI-01 | Phase 1 - CI Pipeline Repair | Pending |
+| CI-01 | Phase 1 - CI Pipeline Repair | Complete |
 | CI-02 | Phase 1 - CI Pipeline Repair | Pending |
 | CI-03 | Phase 1 - CI Pipeline Repair | Pending |
 | CI-04 | Phase 1 - CI Pipeline Repair | Pending |
@@ -102,4 +102,4 @@ Coverage validated during roadmap creation (2026-03-02).
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 — traceability confirmed during roadmap creation*
+*Last updated: 2026-03-02 — CI-01 marked complete after plan 01-01 execution*

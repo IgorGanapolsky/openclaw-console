@@ -26,7 +26,7 @@ This is a brownfield repair project, not a greenfield build. Substantial native 
 **Plans**: 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Regenerate npm lockfile with Node 20 (CI-01)
+- [x] 01-01-PLAN.md — Regenerate npm lockfile with Node 20 (CI-01)
 - [ ] 01-02-PLAN.md — Android toolchain upgrade + versionCode injection (CI-03, CI-06)
 - [ ] 01-03-PLAN.md — iOS runner upgrade to macos-15 + Fastfile setup_ci + iOS build number (CI-02, CI-04, CI-06)
 - [ ] 01-04-PLAN.md — Firebase auth migration to service account (CI-05)
@@ -73,7 +73,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. CI Pipeline Repair | 0/4 | Not started | - |
+| 1. CI Pipeline Repair | 1/4 | In progress | - |
 | 2. Code Signing and Distribution | 0/TBD | Not started | - |
 | 3. Device Testing Validation | 0/TBD | Not started | - |
 | 4. Distribution Hardening | 0/TBD | Not started | - |
