@@ -73,10 +73,10 @@ export class CiMonitorSkill {
 
   // ── Simulated poll ────────────────────────────────────────────────────────
 
-  private async tick(): Promise<void> {
-    const runs = await this.fetchWorkflowRuns();
+  private tick(): void {
+    const runs = this.fetchWorkflowRuns();
     for (const run of runs) {
-      await this.processRun(run);
+      this.processRun(run);
     }
   }
 
@@ -84,7 +84,7 @@ export class CiMonitorSkill {
    * Simulate fetching workflow runs from the GitHub API.
    * In production, replace with actual API calls using octokit.
    */
-  private async fetchWorkflowRuns(): Promise<SimulatedWorkflowRun[]> {
+  private fetchWorkflowRuns(): SimulatedWorkflowRun[] {
     this.runCounter++;
     const now = new Date().toISOString();
 
@@ -110,7 +110,7 @@ export class CiMonitorSkill {
     return runs;
   }
 
-  private async processRun(run: SimulatedWorkflowRun): Promise<void> {
+  private processRun(run: SimulatedWorkflowRun): void {
     const runUrl = `https://github.com/${this.options.repository}/actions/runs/${run.runId}`;
 
     const links: ResourceLink[] = [

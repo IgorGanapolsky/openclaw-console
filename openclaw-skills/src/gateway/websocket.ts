@@ -5,8 +5,8 @@
  * broadcasting of server→client events.
  */
 
-import type { WebSocketServer} from 'ws';
 import { WebSocket } from 'ws';
+import type { WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   WebSocketMessage,
@@ -148,7 +148,15 @@ export class WebSocketManager {
     });
 
     ws.on('message', (raw) => {
-      this.handleMessage(session, raw.toString());
+      const text =
+        typeof raw === 'string'
+          ? raw
+          : Buffer.isBuffer(raw)
+            ? raw.toString('utf8')
+            : Array.isArray(raw)
+              ? Buffer.concat(raw).toString('utf8')
+              : '';
+      if (text.length > 0) this.handleMessage(session, text);
     });
 
     ws.on('close', () => {
@@ -204,7 +212,7 @@ export class WebSocketManager {
         this.handleChatMessage(session, msg.payload as WsChatMessage);
         break;
       default:
-        this.sendError(session, ERROR_CODES.GATEWAY_UNAVAILABLE, `Unknown event type: ${type}`);
+        this.sendError(session, ERROR_CODES.GATEWAY_UNAVAILABLE, `Unknown event type: ${String(msg.type)}`);
     }
   }
 

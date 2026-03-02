@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openclaw.console.data.model.*
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
@@ -106,7 +107,7 @@ fun TaskDetailScreen(
                 }
             }
             else -> {
-                val task = uiState.task ?: return@Button
+                val task = requireNotNull(uiState.task)
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(paddingValues),
