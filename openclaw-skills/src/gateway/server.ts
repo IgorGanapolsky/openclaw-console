@@ -40,6 +40,9 @@ export function createGatewayServer(
   config: GatewayConfig,
   state: StateManager,
 ): GatewayServer {
+  const firstParam = (value: string | string[] | undefined): string =>
+    Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+
   const app = express();
   const tokenManager = new TokenManager(config.tokenStorePath);
   const auth = bearerAuthMiddleware(tokenManager);
@@ -80,7 +83,7 @@ export function createGatewayServer(
   });
 
   app.get('/api/agents/:id', auth, (req: Request, res: Response) => {
-    const agent = state.getAgent(req.params['id'] ?? '');
+    const agent = state.getAgent(firstParam(req.params['id']));
     if (!agent) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
@@ -91,7 +94,7 @@ export function createGatewayServer(
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
   app.get('/api/agents/:id/tasks', auth, (req: Request, res: Response) => {
-    const agentId = req.params['id'] ?? '';
+    const agentId = firstParam(req.params['id']);
     if (!state.getAgent(agentId)) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
@@ -100,8 +103,8 @@ export function createGatewayServer(
   });
 
   app.get('/api/agents/:id/tasks/:taskId', auth, (req: Request, res: Response) => {
-    const agentId = req.params['id'] ?? '';
-    const taskId = req.params['taskId'] ?? '';
+    const agentId = firstParam(req.params['id']);
+    const taskId = firstParam(req.params['taskId']);
     if (!state.getAgent(agentId)) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
@@ -127,7 +130,7 @@ export function createGatewayServer(
   });
 
   app.post('/api/approvals/:id/respond', auth, (req: Request, res: Response) => {
-    const approvalId = req.params['id'] ?? '';
+    const approvalId = firstParam(req.params['id']);
     const pending = state.getPendingApproval(approvalId);
     if (!pending) {
       res.status(404).json({ error: { code: ERROR_CODES.APPROVAL_EXPIRED, message: 'Approval not found or expired' } });
@@ -159,7 +162,7 @@ export function createGatewayServer(
   // ── Chat ──────────────────────────────────────────────────────────────────
 
   app.post('/api/agents/:id/chat', auth, (req: Request, res: Response) => {
-    const agentId = req.params['id'] ?? '';
+    const agentId = firstParam(req.params['id']);
     const agent = state.getAgent(agentId);
     if (!agent) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
