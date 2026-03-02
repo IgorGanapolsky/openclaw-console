@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
-    "uuid": "^9.0.0",
+    "uuid": "^13.0.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
