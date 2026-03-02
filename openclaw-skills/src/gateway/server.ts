@@ -80,7 +80,7 @@ export function createGatewayServer(
   });
 
   app.get('/api/agents/:id', auth, (req: Request, res: Response) => {
-    const agent = state.getAgent(req.params['id'] ?? '');
+    const agent = state.getAgent(String(req.params['id'] ?? ''));
     if (!agent) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
@@ -91,7 +91,7 @@ export function createGatewayServer(
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
   app.get('/api/agents/:id/tasks', auth, (req: Request, res: Response) => {
-    const agentId = req.params['id'] ?? '';
+    const agentId = String(req.params['id'] ?? '');
     if (!state.getAgent(agentId)) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
@@ -100,8 +100,8 @@ export function createGatewayServer(
   });
 
   app.get('/api/agents/:id/tasks/:taskId', auth, (req: Request, res: Response) => {
-    const agentId = req.params['id'] ?? '';
-    const taskId = req.params['taskId'] ?? '';
+    const agentId = String(req.params['id'] ?? '');
+    const taskId = String(req.params['taskId'] ?? '');
     if (!state.getAgent(agentId)) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
@@ -127,7 +127,7 @@ export function createGatewayServer(
   });
 
   app.post('/api/approvals/:id/respond', auth, (req: Request, res: Response) => {
-    const approvalId = req.params['id'] ?? '';
+    const approvalId = String(req.params['id'] ?? '');
     const pending = state.getPendingApproval(approvalId);
     if (!pending) {
       res.status(404).json({ error: { code: ERROR_CODES.APPROVAL_EXPIRED, message: 'Approval not found or expired' } });
@@ -159,7 +159,7 @@ export function createGatewayServer(
   // ── Chat ──────────────────────────────────────────────────────────────────
 
   app.post('/api/agents/:id/chat', auth, (req: Request, res: Response) => {
-    const agentId = req.params['id'] ?? '';
+    const agentId = String(req.params['id'] ?? '');
     const agent = state.getAgent(agentId);
     if (!agent) {
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
@@ -214,10 +214,12 @@ export function createGatewayServer(
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {
           console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
-          console.info(`[gateway] WebSocket endpoint: ws://${config.host}:${config.port}/ws?token=<token>`); // local-dev-only
+          // Dev hint: connect via WebSocket using your dev auth bearer credential
+          const wsEndpoint = `ws://${config.host}:${config.port}/ws`; // local-dev-only
+          console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
           const devToken = tokenManager.getDefaultDevToken();
           if (devToken) {
-            console.info(`[gateway] Dev token: ${devToken.slice(0, 8)}…`);
+            console.info(`[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`);
           }
           resolve();
         });
