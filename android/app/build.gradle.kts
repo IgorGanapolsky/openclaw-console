@@ -2,17 +2,18 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "com.openclaw.console"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.openclaw.console"
         minSdk = 28
-        targetSdk = 34
-        versionCode = 1
+        targetSdk = 35
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -44,10 +45,6 @@ android {
         compose = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
-    }
-
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -56,7 +53,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.01.00")
+    val composeBom = platform("androidx.compose:compose-bom:2025.12.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
