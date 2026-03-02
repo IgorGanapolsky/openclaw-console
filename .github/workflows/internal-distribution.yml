@@ -45,11 +45,11 @@ jobs:
             REF="${INPUT_REF:-develop}"
             SHOULD_RUN="true"
             REASON="manual_dispatch"
-          elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" && "$WORKFLOW_BRANCH" == "develop" ]]; then
+          elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" && ("$WORKFLOW_BRANCH" == "develop" || "$WORKFLOW_BRANCH" == "main") ]]; then
             REF="$WORKFLOW_SHA"
             SHA="$WORKFLOW_SHA"
             SHOULD_RUN="true"
-            REASON="ci_green_on_develop"
+            REASON="ci_green_on_${WORKFLOW_BRANCH}"
           fi
 
           echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
