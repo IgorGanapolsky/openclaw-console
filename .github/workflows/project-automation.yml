@@ -172,55 +172,41 @@ jobs:
             const businessHealth = (approvalFeatures > 0 && bugCount < 3 && securityCount === 0) ? '🟢 On Track' :
               (approvalFeatures > 0 || bugCount < 5) ? '🟡 Needs Focus' : '🔴 At Risk';
 
-            const body = `# 📊 OpenClaw Console Project Status
-
-*Last updated: ${fmtDate}*
-
-## 🎯 Business Goal: $100/day via Pro subscriptions
-**Status: ${businessHealth}** | **North Star: Daily Active Approvers (DAA)**
-
-## 📈 Current Metrics
-
-| Metric | Count | Status |
-| --- | ---: | --- |
-| 📋 Open Issues | ${issueCount} | ${issueHealth} |
-| 🔧 Open PRs | ${prCount} | ${prHealth} |
-| 🏃 In Progress | ${inProgress} | ${progressRate}% (${progressHealth}) |
-| 🐛 Bugs | ${bugCount} | ${bugHealth} |
-| 🔒 Security | ${securityCount} | ${securityHealth} |
-| 🚫 Release Blockers | ${releaseBlockers} | ${releaseBlockers > 0 ? '🔴 Blocked' : '🟢 Clear'} |
-
-## 🏗️ Development Focus
-
-| Category | Count | Notes |
-| --- | ---: | --- |
-| ✨ Features | ${featureCount} | New capabilities |
-| 📱 Mobile (Android/iOS) | ${mobileCount} | Core platform work |
-| 🛠️ Skills Gateway | ${skillsCount} | TypeScript backend |
-| 🔐 Biometric/Auth | ${biometricCount} | Critical for approvals |
-| 🎯 Approval Features | ${approvalFeatures} | **DAA focus area** |
-
-## 🚀 Delivery (last 30 days)
-- **Merged PRs:** ${throughput}
-- **Median PR lead time:** ${fmtDuration(medianLead)}
-
-## 📊 Activity (last 7 days)
-- **Active items updated:** ${activityCount}
-- **Activity rate:** ${activityRate}% (${activityHealth})
-${priorities.length ? `
-## 🔝 Priority Items
-${priorities.join('\n')}
-` : ''}
-## 🎯 Recommendations
-${recs.map(r => `- ${r}`).join('\n')}
-
----
-
-**Vision:** Native mobile console for OpenClaw agents with biometric approvals
-**Mission:** Zero dependency on Telegram/Slack/Discord for professional operators
-**Revenue Target:** $10-20/month Pro subscriptions for self-hosting developers
-
-*Automation: every 8 hours + on repo events. Manual refresh via workflow dispatch.*`;
+            const body = '# 📊 OpenClaw Console Project Status\n\n' +
+              '*Last updated: ' + fmtDate + '*\n\n' +
+              '## 🎯 Business Goal: $100/day via Pro subscriptions\n' +
+              '**Status: ' + businessHealth + '** | **North Star: Daily Active Approvers (DAA)**\n\n' +
+              '## 📈 Current Metrics\n\n' +
+              '| Metric | Count | Status |\n' +
+              '| --- | ---: | --- |\n' +
+              '| 📋 Open Issues | ' + issueCount + ' | ' + issueHealth + ' |\n' +
+              '| 🔧 Open PRs | ' + prCount + ' | ' + prHealth + ' |\n' +
+              '| 🏃 In Progress | ' + inProgress + ' | ' + progressRate + '% (' + progressHealth + ') |\n' +
+              '| 🐛 Bugs | ' + bugCount + ' | ' + bugHealth + ' |\n' +
+              '| 🔒 Security | ' + securityCount + ' | ' + securityHealth + ' |\n' +
+              '| 🚫 Release Blockers | ' + releaseBlockers + ' | ' + (releaseBlockers > 0 ? '🔴 Blocked' : '🟢 Clear') + ' |\n\n' +
+              '## 🏗️ Development Focus\n\n' +
+              '| Category | Count | Notes |\n' +
+              '| --- | ---: | --- |\n' +
+              '| ✨ Features | ' + featureCount + ' | New capabilities |\n' +
+              '| 📱 Mobile (Android/iOS) | ' + mobileCount + ' | Core platform work |\n' +
+              '| 🛠️ Skills Gateway | ' + skillsCount + ' | TypeScript backend |\n' +
+              '| 🔐 Biometric/Auth | ' + biometricCount + ' | Critical for approvals |\n' +
+              '| 🎯 Approval Features | ' + approvalFeatures + ' | **DAA focus area** |\n\n' +
+              '## 🚀 Delivery (last 30 days)\n' +
+              '- **Merged PRs:** ' + throughput + '\n' +
+              '- **Median PR lead time:** ' + fmtDuration(medianLead) + '\n\n' +
+              '## 📊 Activity (last 7 days)\n' +
+              '- **Active items updated:** ' + activityCount + '\n' +
+              '- **Activity rate:** ' + activityRate + '% (' + activityHealth + ')\n' +
+              (priorities.length ? '\n## 🔝 Priority Items\n' + priorities.join('\n') + '\n' : '') +
+              '\n## 🎯 Recommendations\n' +
+              recs.map(r => '- ' + r).join('\n') + '\n\n' +
+              '---\n\n' +
+              '**Vision:** Native mobile console for OpenClaw agents with biometric approvals\n' +
+              '**Mission:** Zero dependency on Telegram/Slack/Discord for professional operators\n' +
+              '**Revenue Target:** $10-20/month Pro subscriptions for self-hosting developers\n\n' +
+              '*Automation: every 8 hours + on repo events. Manual refresh via workflow dispatch.*';
 
             await github.rest.issues.update({
               owner,
