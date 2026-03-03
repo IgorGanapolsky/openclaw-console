@@ -1,5 +1,7 @@
 name: Security Pipeline
 on:
+  pull_request:
+    branches: [main, develop]
   schedule:
     - cron: "0 0 * * *" # Daily at midnight UTC
   workflow_dispatch:
@@ -69,7 +71,27 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
+        if: matrix.language != 'swift'
         uses: github/codeql-action/autobuild@v4
+
+      - name: Build Swift for CodeQL
+        if: matrix.language == 'swift'
+        working-directory: ios/OpenClawConsole
+        run: |
+          SIMULATOR_NAME=$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*/\1/p' | head -n 1)
+          if [ -n "$SIMULATOR_NAME" ]; then
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          else
+            DESTINATION="generic/platform=iOS Simulator"
+          fi
+          echo "Using destination: $DESTINATION"
+          xcodebuild build \
+            -scheme OpenClawConsole \
+            -destination "$DESTINATION" \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
