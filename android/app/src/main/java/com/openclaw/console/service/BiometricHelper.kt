@@ -22,6 +22,7 @@ sealed class BiometricResult {
     data class Error(val code: Int, val message: String) : BiometricResult()
     data object NotAvailable : BiometricResult()
     data object UserCancelled : BiometricResult()
+    data object Lockout : BiometricResult()
 }
 
 object BiometricHelper {
@@ -97,12 +98,12 @@ object BiometricHelper {
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 if (continuation.isActive) {
-                    val result = if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
-                        errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON
-                    ) {
-                        BiometricResult.UserCancelled
-                    } else {
-                        BiometricResult.Error(errorCode, errString.toString())
+                    val result = when (errorCode) {
+                        BiometricPrompt.ERROR_USER_CANCELED,
+                        BiometricPrompt.ERROR_NEGATIVE_BUTTON -> BiometricResult.UserCancelled
+                        BiometricPrompt.ERROR_LOCKOUT,
+                        BiometricPrompt.ERROR_LOCKOUT_PERMANENT -> BiometricResult.Lockout
+                        else -> BiometricResult.Error(errorCode, errString.toString())
                     }
                     continuation.resume(result)
                 }
