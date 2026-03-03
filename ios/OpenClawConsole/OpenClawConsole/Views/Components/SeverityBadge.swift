@@ -25,13 +25,3 @@ struct SeverityBadge: View {
         .accessibilityLabel("\(severity.displayName) severity")
     }
 }
-
-#Preview {
-    HStack(spacing: 12) {
-        SeverityBadge(severity: .critical)
-        SeverityBadge(severity: .warning)
-        SeverityBadge(severity: .info)
-        SeverityBadge(severity: .critical, compact: true)
-    }
-    .padding()
-}

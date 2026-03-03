@@ -86,7 +86,7 @@ final class TaskListViewModel {
         }
     }
 
-    private func applyTaskUpdate(_ update: TaskUpdate) {
+    private func applyTaskUpdate(_ update: OCTaskUpdate) {
         guard let index = tasks.firstIndex(where: { $0.id == update.id }) else { return }
         let old = tasks[index]
         tasks[index] = OCTask(

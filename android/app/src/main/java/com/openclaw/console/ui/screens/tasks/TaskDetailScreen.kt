@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.screens.tasks
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +26,7 @@ import com.openclaw.console.ui.theme.MonospaceStyle
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +107,7 @@ fun TaskDetailScreen(
                 }
             }
             else -> {
-                val task = uiState.task ?: return@IconButton
+                val task = uiState.task!! // allow-nonnull
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(paddingValues),

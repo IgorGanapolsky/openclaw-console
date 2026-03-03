@@ -102,7 +102,7 @@ final class IncidentListViewModel {
             if !incidents.contains(where: { $0.id == incident.id }) {
                 incidents.insert(incident, at: 0)
                 // Schedule notification for critical incidents
-                Swift.Task {
+                _Concurrency.Task {
                     await NotificationService.shared.scheduleCriticalIncidentNotification(for: incident)
                 }
             }

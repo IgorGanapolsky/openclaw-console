@@ -145,10 +145,3 @@ private struct ApprovalQueueRow: View {
         }
     }
 }
-
-#Preview {
-    let ws = WebSocketService()
-    ApprovalBannerView()
-        .environment(ApprovalViewModel(webSocket: ws))
-        .padding()
-}

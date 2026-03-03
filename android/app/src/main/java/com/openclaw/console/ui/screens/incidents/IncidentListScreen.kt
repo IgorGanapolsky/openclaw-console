@@ -1,9 +1,5 @@
 package com.openclaw.console.ui.screens.incidents
 
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,18 +7,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.Incident
 import com.openclaw.console.data.model.IncidentStatus
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,14 +34,7 @@ fun IncidentListScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val pullRefreshState = rememberPullToRefreshState()
-
-    if (pullRefreshState.isRefreshing) {
-        LaunchedEffect(Unit) {
-            viewModel.refresh()
-            pullRefreshState.endRefresh()
-        }
-    }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -63,11 +51,16 @@ fun IncidentListScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.refresh()
+                isRefreshing = false
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .nestedScroll(pullRefreshState.nestedScrollConnection)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 ConnectionStatusBanner(state = connectionState)
@@ -86,7 +79,7 @@ fun IncidentListScreen(
                             label = {
                                 val label = when (filter) {
                                     IncidentFilter.ALL -> {
-                                        val openCount = appViewModel.incidentRepository.value?.incidents ?: emptyList().count {
+                                        val openCount = uiState.incidents.count {
                                             it.status == IncidentStatus.OPEN
                                         }
                                         if (openCount > 0) "All ($openCount)" else "All"
@@ -156,10 +149,6 @@ fun IncidentListScreen(
                 }
             }
 
-            PullToRefreshBox(
-                state = pullRefreshState,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
         }
     }
 }
