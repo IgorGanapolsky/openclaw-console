@@ -194,6 +194,7 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
@@ -206,8 +207,8 @@ jobs:
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
             exit 1
           fi
-          if [ -z "${FIREBASE_TOKEN:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            echo "❌ Need one of FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY for Firebase authentication"
+          if [ -z "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ] && [ -z "${FIREBASE_TOKEN:-}" ]; then
+            echo "❌ Need one of FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN for Firebase authentication"
             exit 1
           fi
 
@@ -338,14 +339,19 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
-      - name: Prepare Google auth fallback for Firebase
+      - name: Prepare Firebase auth credentials
         env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+            CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
+            echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
-            echo "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
+            printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
           fi
 
@@ -354,7 +360,6 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
           TESTERS="${FIREBASE_INTERNAL_TESTERS:-iganapolsky@gmail.com}"
@@ -366,12 +371,12 @@ jobs:
             --testers "$TESTERS"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
-          if [ -n "${FIREBASE_TOKEN:-}" ]; then
-            "${CMD[@]}" --token "$FIREBASE_TOKEN"
-          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
             "${CMD[@]}"
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            "${CMD[@]}" --token "$FIREBASE_TOKEN"
           else
-            echo "❌ Missing Firebase auth. Set FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY."
+            echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
             exit 1
           fi
 
