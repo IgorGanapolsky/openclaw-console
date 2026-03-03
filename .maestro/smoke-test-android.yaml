@@ -1,9 +1,36 @@
 appId: com.openclaw.console
 ---
-# Smoke test: Verify app launches on Android
+# Smoke test: Verify onboarding and gateway connection
 - launchApp
 
-# Optional sanity checks (UI can vary by connection/bootstrap state in CI)
-- assertVisible:
-    text: '.*(Agents|Settings|Connect|Gateway).*'
-    optional: true
+# 1. Navigate to Settings to add a gateway
+- tapOn: 'Settings'
+- assertVisible: 'Gateway Connections'
+
+# 2. Add a new gateway
+- tapOn: 'Add Gateway'
+- assertVisible: 'Gateway Name'
+
+- inputText:
+    index: 0
+    text: "Dev Gateway"
+- inputText:
+    index: 1
+    text: "http://localhost:8080"
+- inputText:
+    index: 2
+    text: "dev-token-123"
+
+# 3. Test & Save
+- tapOn: 'Test & Save'
+
+# 4. Verify we are back on settings and connection is listed
+- assertVisible: 'Dev Gateway'
+- assertVisible: 'http://localhost:8080'
+
+# 5. Connect to it
+- tapOn: 'Connect'
+
+# 6. Verify we are on Agents screen and it shows online status (if mock server active)
+- tapOn: 'Agents'
+- assertVisible: 'Agents'

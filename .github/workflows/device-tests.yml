@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           cache: 'gradle'
 
       - name: Create dummy google-services.json for CI
@@ -93,20 +93,17 @@ jobs:
 
   ios-device-tests:
     name: iOS Simulator Tests
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
-
       - name: List available simulators
         run: |
           xcrun simctl list devices available | grep iPhone
           echo "Selected simulator for testing:"
-          xcrun simctl list devices available | grep "iPhone 15 " | head -1
+          xcrun simctl list devices available | grep "iPhone 16" | head -1
 
       - name: Build and test iOS app
         working-directory: ios/OpenClawConsole
@@ -114,7 +111,7 @@ jobs:
           # Build for simulator
           xcodebuild build \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -configuration Debug \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
@@ -124,7 +121,7 @@ jobs:
           set +e
           xcodebuild test \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -configuration Debug \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
