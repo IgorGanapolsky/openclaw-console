@@ -340,6 +340,9 @@ jobs:
               if (stateLabel === "pr-state:draft") {
                 return "Draft PR; required checks are not yet enforced.";
               }
+              if (stateLabel === "pr-state:ci_green" && requiredCount === 0) {
+                return "No required checks configured; PR state machine is green.";
+              }
               if (stateLabel === "pr-state:ci_green") {
                 return `${requiredCount}/${requiredCount} required checks are passing.`;
               }
@@ -412,6 +415,8 @@ jobs:
                 stateLabel = "pr-state:draft";
               } else if (failedChecks.length > 0) {
                 stateLabel = "pr-state:blocked";
+              } else if (requiredContexts.length === 0) {
+                stateLabel = "pr-state:ci_green";
               } else if (requiredContexts.length > 0 && pendingCount === 0) {
                 stateLabel = "pr-state:ci_green";
               }
