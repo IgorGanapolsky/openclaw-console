@@ -145,13 +145,31 @@ jobs:
         run: fastlane setup
         working-directory: ios/OpenClawConsole
 
+      - name: Detect iOS project file
+        id: ios_project
+        working-directory: ios/OpenClawConsole
+        run: |
+          set -euo pipefail
+          if [ -f "OpenClawConsole.xcodeproj/project.pbxproj" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Found OpenClawConsole.xcodeproj"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ OpenClawConsole.xcodeproj is missing; TestFlight upload step will be skipped."
+          fi
+
       - name: Build and upload to TestFlight
+        if: steps.ios_project.outputs.present == 'true'
         env:
           CI: "true"
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: fastlane beta
         working-directory: ios/OpenClawConsole
+
+      - name: Skip TestFlight upload (missing Xcode project)
+        if: steps.ios_project.outputs.present != 'true'
+        run: echo "Skipping TestFlight upload because OpenClawConsole.xcodeproj is not present in this repository."
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -267,10 +285,43 @@ jobs:
           echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
           echo "Resolved APK path: $APK_PATH"
 
-      - name: Verify APK is signed
+      - name: Sign release APK when unsigned
+        id: signed_apk
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
           APK_PATH="${{ steps.apk.outputs.apk_path }}"
+          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" -type f 2>/dev/null | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            APKSIGNER=$(command -v apksigner || true)
+          fi
+
+          if [[ "$APK_PATH" == *"-unsigned.apk" ]]; then
+            if [ -z "$APKSIGNER" ]; then
+              echo "❌ APK is unsigned and apksigner is unavailable; cannot produce distributable APK."
+              exit 1
+            fi
+            SIGNED_APK="${APK_PATH%-unsigned.apk}-signed.apk"
+            "$APKSIGNER" sign \
+              --ks /tmp/release.keystore \
+              --ks-pass "pass:${KEYSTORE_PASSWORD}" \
+              --ks-key-alias "${KEY_ALIAS}" \
+              --key-pass "pass:${KEY_PASSWORD}" \
+              --out "$SIGNED_APK" \
+              "$APK_PATH"
+            APK_PATH="$SIGNED_APK"
+            echo "✅ Signed APK generated: $APK_PATH"
+          fi
+
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Verify APK is signed
+        run: |
+          set -euo pipefail
+          APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
           # Use apksigner from Android SDK build-tools (available on ubuntu-latest via setup-java)
           APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" -type f 2>/dev/null | sort -V | tail -1)
           if [ -z "$APKSIGNER" ]; then
@@ -307,7 +358,7 @@ jobs:
         run: |
           set -euo pipefail
           TESTERS="${FIREBASE_INTERNAL_TESTERS:-iganapolsky@gmail.com}"
-          APK_PATH="${{ steps.apk.outputs.apk_path }}"
+          APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
           CMD=(
             firebase appdistribution:distribute
             "$APK_PATH"
@@ -329,7 +380,7 @@ jobs:
         if: always()
         with:
           name: android-apk-internal
-          path: ${{ steps.apk.outputs.apk_path }}
+          path: ${{ steps.signed_apk.outputs.apk_path }}
           if-no-files-found: warn
 
       - name: Cleanup secrets
