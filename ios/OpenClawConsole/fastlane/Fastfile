@@ -46,7 +46,10 @@ platform :ios do
       export_method: "app-store",
       xcargs: "-allowProvisioningUpdates"
     )
-    upload_to_testflight(api_key: api_key)
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true
+    )
   end
 
   desc "Setup certificates and profiles via match"
@@ -54,7 +57,8 @@ platform :ios do
     setup_ci if ENV["CI"] == "true"
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
-      match(type: "appstore")
+      # Explicitly set readonly to false so CI can generate the initial certs
+      match(type: "appstore", readonly: false)
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
     end
