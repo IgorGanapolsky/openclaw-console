@@ -39,3 +39,7 @@ paths = [
   '''openclaw-skills/dist/''',
   '''tests/.*\.test\.ts$''',
 ]
+regexes = [
+  '''YOUR_ADMIN_TOKEN''',
+  '''ocw_YOUR_DEV_TOKEN''',
+]
