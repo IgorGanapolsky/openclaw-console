@@ -30,18 +30,6 @@ jobs:
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
-      - name: Install Fastlane
-        run: gem install fastlane
-        working-directory: ios/OpenClawConsole
-
-      - name: Write App Store Connect key
-        env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
-
       - name: Build and upload to TestFlight
         env:
           CI: "true"
@@ -51,7 +39,9 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: bundle exec fastlane beta
+        run: |
+          gem install fastlane
+          bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
   android-firebase-internal:
@@ -76,26 +66,17 @@ jobs:
           bundler-cache: true
           working-directory: android
 
-      - name: Install Fastlane
-        run: gem install fastlane
-        working-directory: android
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon
-        working-directory: android
-
-      - name: Find and Move APK
+      - name: Distribute to Firebase
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          mkdir -p android/app/build/outputs/apk/release/
-          cp "$APK_PATH" android/app/build/outputs/apk/release/app-release.apk
-        
-      - name: Build and Distribute to Firebase
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON || secrets.GOOGLE_PLAY_JSON_KEY }}
-          groups: developers
-          testers: ig5973700@gmail.com
-          file: android/app/build/outputs/apk/release/app-release.apk
-          releaseNotes: "GSD Internal build (${{ github.sha }})"
+          ./gradlew assembleRelease --no-daemon
+          npm install -g firebase-tools
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          firebase appdistribution:distribute "$APK_PATH" \
+            --app "$FIREBASE_ANDROID_APP_ID" \
+            --testers "ig5973700@gmail.com" \
+            --release-notes "GSD Internal build (${GITHUB_SHA})" \
+            --token "$FIREBASE_TOKEN"
+        working-directory: android
