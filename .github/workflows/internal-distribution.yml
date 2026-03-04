@@ -287,7 +287,7 @@ jobs:
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-iganapolsky@gmail.com}"
+          TESTERS="${FIREBASE_INTERNAL_TESTERS:-ig5973700@gmail.com}"
           CMD=(
             firebase appdistribution:distribute
             android/app/build/outputs/apk/release/app-release.apk
