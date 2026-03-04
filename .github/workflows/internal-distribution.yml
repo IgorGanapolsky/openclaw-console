@@ -265,44 +265,15 @@ jobs:
           "$APKSIGNER" verify --verbose "$APK_PATH"
           echo "✅ APK signature verified"
 
-      - name: Install Firebase CLI
-        run: npm install --global firebase-tools
-
-      - name: Prepare Google auth fallback for Firebase
-        env:
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
-            echo "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
-            echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
-          fi
-
-      - name: Distribute to internal Firebase tester(s)
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
-        run: |
-          set -euo pipefail
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-ig5973700@gmail.com}"
-          CMD=(
-            firebase appdistribution:distribute
-            android/app/build/outputs/apk/release/app-release.apk
-            --app "$FIREBASE_APP_ID"
-            --testers "$TESTERS"
-            --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
-          )
-          if [ -n "${FIREBASE_TOKEN:-}" ]; then
-            "${CMD[@]}" --token "$FIREBASE_TOKEN"
-          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            "${CMD[@]}"
-          else
-            echo "❌ Missing Firebase auth. Set FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY."
-            exit 1
-          fi
+      - name: Deploy to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ steps.firebase.outputs.app_id }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON || secrets.GOOGLE_PLAY_JSON_KEY }}
+          groups: developers
+          testers: ig5973700@gmail.com
+          file: android/app/build/outputs/apk/release/app-release.apk
+          releaseNotes: "Internal auto-distribution from develop (${{ github.sha }})"
 
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
