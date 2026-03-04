@@ -48,8 +48,11 @@ platform :ios do
     )
     upload_to_testflight(
       api_key: api_key,
-      skip_waiting_for_build_processing: true
+      skip_waiting_for_build_processing: true,
+      itc_provider: ENV["ITC_PROVIDER"]
     )
+    # Explicitly invite the user if they aren't already in the group
+    # Note: This requires the tester to be already added to the App Store Connect Users
   end
 
   desc "Setup certificates and profiles via match"
