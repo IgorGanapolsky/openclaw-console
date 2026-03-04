@@ -5,6 +5,7 @@ platform :ios do
   lane :beta do
     setup_ci if ENV["CI"] == "true"
 
+    # Use App Store Connect API key if available
     api_key = nil
     if ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"]
       key_content = ENV["APPSTORE_PRIVATE_KEY"]
@@ -41,16 +42,55 @@ platform :ios do
       end
     end
 
+    UI.message("Using build number #{next_build_number} for version #{marketing_version}")
     increment_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
       build_number: next_build_number
     )
-    build_app(
-      scheme: "OpenClawConsole",
-      export_method: "app-store",
-      xcargs: "-allowProvisioningUpdates"
+
+    if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
+      # CI runners do not have Apple ID accounts configured; force manual signing
+      # with match-managed App Store profiles for deterministic archives.
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: true,
+        api_key: api_key
+      )
+
+      app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
+
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: false,
+        targets: ["OpenClawConsole"],
+        code_sign_identity: "Apple Distribution",
+        profile_name: app_profile
+      )
+
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        export_options: {
+          signingStyle: "manual",
+          provisioningProfiles: {
+            "com.openclaw.console" => app_profile
+          }
+        }
+      )
+    else
+      # Local/dev fallback
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        xcargs: "-allowProvisioningUpdates"
+      )
+    end
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      api_key: api_key
     )
-    upload_to_testflight(api_key: api_key)
   end
 
   desc "Setup certificates and profiles via match"
