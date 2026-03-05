@@ -243,11 +243,62 @@ jobs:
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
           fi
 
+      - name: Discover Firebase app id by Android package
+        id: firebase_discovery
+        env:
+          EXPECTED_PACKAGE: com.openclaw.console
+          CONFIGURED_APP_ID: ${{ steps.firebase.outputs.app_id }}
+        run: |
+          set -euo pipefail
+
+          find_app_in_project() {
+            local project_id="$1"
+            local apps_json
+            apps_json="$(firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
+            if [ -z "$apps_json" ]; then
+              return 1
+            fi
+            echo "$apps_json" | jq -r --arg pkg "$EXPECTED_PACKAGE" '
+              (.. | objects | select(.packageName? == $pkg) | .appId? // empty)
+            ' | head -n 1
+          }
+
+          DISCOVERED_APP_ID=""
+          DISCOVERED_PROJECT=""
+          PROJECTS_JSON="$(firebase projects:list --json 2>/dev/null || true)"
+          PROJECT_IDS="$(echo "$PROJECTS_JSON" | jq -r '
+            [.. | objects | .projectId? // empty] | unique[]?
+          ' 2>/dev/null || true)"
+
+          for project_id in $PROJECT_IDS; do
+            app_id="$(find_app_in_project "$project_id" || true)"
+            if [ -n "$app_id" ]; then
+              DISCOVERED_APP_ID="$app_id"
+              DISCOVERED_PROJECT="$project_id"
+              break
+            fi
+          done
+
+          FINAL_APP_ID="${DISCOVERED_APP_ID:-$CONFIGURED_APP_ID}"
+          if [ -z "$FINAL_APP_ID" ]; then
+            echo "❌ Could not determine Firebase app id for package $EXPECTED_PACKAGE."
+            echo "Set FIREBASE_ANDROID_APP_ID to the correct Firebase Android app id."
+            exit 1
+          fi
+
+          if [ -n "$DISCOVERED_PROJECT" ]; then
+            echo "Using Firebase app id discovered in project: $DISCOVERED_PROJECT"
+          else
+            echo "Using configured Firebase app id from workflow metadata."
+          fi
+
+          echo "app_id=$FINAL_APP_ID" >> "$GITHUB_OUTPUT"
+
       - name: Distribute to internal Firebase tester(s)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_APP_ID: ${{ steps.firebase_discovery.outputs.app_id }}
         run: |
           set -euo pipefail
           TESTERS="${FIREBASE_INTERNAL_TESTERS:-ig5973700@gmail.com}"
@@ -259,7 +310,7 @@ jobs:
             --release-notes "GSD Internal build ($GITHUB_SHA)"
           )
           if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
-            "${CMD[@]}"
+            env -u FIREBASE_TOKEN "${CMD[@]}"
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
             "${CMD[@]}" --token "$FIREBASE_TOKEN"
           else
