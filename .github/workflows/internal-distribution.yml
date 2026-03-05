@@ -229,11 +229,14 @@ jobs:
 
       - name: Prepare Firebase auth credentials
         env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+          if [ -n "${FIREBASE_TOKEN:-}" ]; then
+            echo "FIREBASE_TOKEN present; using token auth path."
+          elif [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
             printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
@@ -309,10 +312,10 @@ jobs:
             --testers "$TESTERS"
             --release-notes "GSD Internal build ($GITHUB_SHA)"
           )
-          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
-            env -u FIREBASE_TOKEN "${CMD[@]}"
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+          if [ -n "${FIREBASE_TOKEN:-}" ]; then
             "${CMD[@]}" --token "$FIREBASE_TOKEN"
+          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+            "${CMD[@]}"
           else
             echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
             exit 1
