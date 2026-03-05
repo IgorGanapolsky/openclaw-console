@@ -61,8 +61,8 @@ jobs:
             echo "Missing APPSTORE_PRIVATE_KEY or APPSTORE_KEY_ID"
             exit 1
           fi
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$APPSTORE_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
 
       - name: Build and upload to TestFlight
         if: steps.ios_project.outputs.present == 'true'
@@ -141,9 +141,12 @@ jobs:
             echo "No release APK found under android/app/build/outputs/apk/release"
             exit 1
           fi
+          CANONICAL_PATH="android/app/build/outputs/apk/release/app-release.apk"
           echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
-          cp "$APK_PATH" android/app/build/outputs/apk/release/app-release.apk
-          echo "canonical=android/app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_OUTPUT"
+          echo "canonical=$CANONICAL_PATH" >> "$GITHUB_OUTPUT"
+          if [ "$APK_PATH" != "$CANONICAL_PATH" ]; then
+            cp "$APK_PATH" "$CANONICAL_PATH"
+          fi
 
       - name: Verify APK signature
         run: |
@@ -169,5 +172,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-internal
-          path: ${{ steps.apk.outputs.canonical }}
+          path: ${{ steps.apk.outputs.canonical || steps.apk.outputs.path }}
           if-no-files-found: warn
