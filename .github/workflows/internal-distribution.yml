@@ -267,13 +267,19 @@ jobs:
           find_app_in_project() {
             local project_id="$1"
             local apps_json
+            local app_id
             apps_json="$(firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
             if [ -z "$apps_json" ]; then
               return 1
             fi
-            echo "$apps_json" | jq -r --arg pkg "$EXPECTED_PACKAGE" '
+            app_id="$(echo "$apps_json" | jq -r --arg pkg "$EXPECTED_PACKAGE" '
               (.. | objects | select(.packageName? == $pkg) | .appId? // empty)
-            ' | head -n 1
+            ' 2>/dev/null | head -n 1 || true)"
+            if [ -n "$app_id" ]; then
+              echo "$app_id"
+              return 0
+            fi
+            return 1
           }
 
           DISCOVERED_APP_ID=""
@@ -299,13 +305,14 @@ jobs:
             CREATE_JSON="$(firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
             CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
               (.. | objects | .appId? // empty)
-            ' 2>/dev/null | head -n 1)"
+            ' 2>/dev/null | head -n 1 || true)"
             if [ -n "$CREATED_APP_ID" ]; then
               DISCOVERED_APP_ID="$CREATED_APP_ID"
               DISCOVERED_PROJECT="$CONFIGURED_PROJECT_ID"
               echo "Created Firebase Android app for package $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
             else
               echo "Firebase app create did not return app id for project: $CONFIGURED_PROJECT_ID"
+              echo "$CREATE_JSON" | sed -n '1,5p'
             fi
           fi
 
