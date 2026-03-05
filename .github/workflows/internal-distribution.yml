@@ -242,16 +242,25 @@ jobs:
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "${FIREBASE_TOKEN:-}" ]; then
-            echo "FIREBASE_TOKEN present; using token auth path."
-          elif [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+            echo "Using FIREBASE_SERVICE_ACCOUNT_JSON auth path."
             CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
             printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            if [ -n "${FIREBASE_TOKEN:-}" ]; then
+              echo "FIREBASE_TOKEN_FALLBACK=$FIREBASE_TOKEN" >> "$GITHUB_ENV"
+            fi
           elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+            echo "Using GOOGLE_PLAY_JSON_KEY auth path."
             CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
             printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            if [ -n "${FIREBASE_TOKEN:-}" ]; then
+              echo "FIREBASE_TOKEN_FALLBACK=$FIREBASE_TOKEN" >> "$GITHUB_ENV"
+            fi
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            echo "Using FIREBASE_TOKEN auth path."
+            echo "FIREBASE_TOKEN=$FIREBASE_TOKEN" >> "$GITHUB_ENV"
           fi
 
       - name: Discover Firebase app id by Android package
@@ -260,7 +269,6 @@ jobs:
           EXPECTED_PACKAGE: com.openclaw.console
           CONFIGURED_APP_ID: ${{ steps.firebase.outputs.app_id }}
           CONFIGURED_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -349,7 +357,7 @@ jobs:
 
       - name: Distribute to internal Firebase tester(s)
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_TOKEN_FALLBACK: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
           FIREBASE_APP_ID: ${{ steps.firebase_discovery.outputs.app_id }}
         run: |
@@ -362,10 +370,29 @@ jobs:
             --testers "$TESTERS"
             --release-notes "GSD Internal build ($GITHUB_SHA)"
           )
-          if [ -n "${FIREBASE_TOKEN:-}" ]; then
-            "${CMD[@]}" --token "$FIREBASE_TOKEN"
-          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
-            "${CMD[@]}"
+
+          run_distribute() {
+            if [ -n "${FIREBASE_TOKEN:-}" ]; then
+              "${CMD[@]}" --token "$FIREBASE_TOKEN"
+            else
+              "${CMD[@]}"
+            fi
+          }
+
+          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+            echo "Distributing with GOOGLE_APPLICATION_CREDENTIALS."
+            if ! run_distribute; then
+              if [ -n "${FIREBASE_TOKEN_FALLBACK:-}" ]; then
+                echo "Service-account distribution failed; retrying with FIREBASE_TOKEN."
+                FIREBASE_TOKEN="$FIREBASE_TOKEN_FALLBACK"
+                run_distribute
+              else
+                exit 1
+              fi
+            fi
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            echo "Distributing with FIREBASE_TOKEN."
+            run_distribute
           else
             echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
             exit 1
