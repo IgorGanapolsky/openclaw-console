@@ -151,6 +151,8 @@ jobs:
           set -euo pipefail
           APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
           PACKAGE_NAME="$(jq -r '.client[0].client_info.android_client_info.package_name // empty' app/google-services.json)"
+          PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
+          PROJECT_NUMBER="$(jq -r '.project_info.project_number // empty' app/google-services.json)"
           if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
             APP_ID="$FIREBASE_ANDROID_APP_ID"
           fi
@@ -166,8 +168,14 @@ jobs:
             echo "❌ GOOGLE_SERVICES_JSON package_name mismatch: expected com.openclaw.console, got $PACKAGE_NAME"
             exit 1
           fi
+          if [ -z "$PROJECT_ID" ]; then
+            echo "❌ Could not resolve project_id from GOOGLE_SERVICES_JSON."
+            exit 1
+          fi
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
           echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+          echo "project_number=$PROJECT_NUMBER" >> "$GITHUB_OUTPUT"
           echo "Resolved Firebase app id for package $PACKAGE_NAME"
 
       - name: Decode release keystore
@@ -251,6 +259,8 @@ jobs:
         env:
           EXPECTED_PACKAGE: com.openclaw.console
           CONFIGURED_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          CONFIGURED_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -268,46 +278,51 @@ jobs:
 
           DISCOVERED_APP_ID=""
           DISCOVERED_PROJECT=""
-          PROJECTS_JSON="$(firebase projects:list --json 2>/dev/null || true)"
-          PROJECT_IDS="$(echo "$PROJECTS_JSON" | jq -r '
-            [.. | objects | .projectId? // empty] | unique[]?
-          ' 2>/dev/null || true)"
 
-          for project_id in $PROJECT_IDS; do
-            app_id="$(find_app_in_project "$project_id" || true)"
+          if [ -z "${FIREBASE_TOKEN:-}" ] && [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+            echo "❌ Firebase discovery is unauthenticated. Set FIREBASE_TOKEN or service account credentials."
+            exit 1
+          fi
+
+          # First resolve against the exact Firebase project declared in google-services.json.
+          if [ -n "${CONFIGURED_PROJECT_ID:-}" ]; then
+            app_id="$(find_app_in_project "$CONFIGURED_PROJECT_ID" || true)"
             if [ -n "$app_id" ]; then
               DISCOVERED_APP_ID="$app_id"
-              DISCOVERED_PROJECT="$project_id"
-              break
+              DISCOVERED_PROJECT="$CONFIGURED_PROJECT_ID"
             fi
-          done
+          fi
+
+          if [ -z "$DISCOVERED_APP_ID" ] && [ -n "${CONFIGURED_PROJECT_ID:-}" ]; then
+            echo "No existing Android app found for $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
+            echo "Attempting create in project: $CONFIGURED_PROJECT_ID"
+            CREATE_JSON="$(firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
+            CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
+              (.. | objects | .appId? // empty)
+            ' 2>/dev/null | head -n 1)"
+            if [ -n "$CREATED_APP_ID" ]; then
+              DISCOVERED_APP_ID="$CREATED_APP_ID"
+              DISCOVERED_PROJECT="$CONFIGURED_PROJECT_ID"
+              echo "Created Firebase Android app for package $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
+            else
+              echo "Firebase app create did not return app id for project: $CONFIGURED_PROJECT_ID"
+            fi
+          fi
 
           if [ -z "$DISCOVERED_APP_ID" ]; then
-            CONFIG_PROJECT_NUMBER="$(echo "$CONFIGURED_APP_ID" | awk -F: 'NF >= 2 { print $2 }')"
-            TARGET_PROJECT_ID=""
+            PROJECTS_JSON="$(firebase projects:list --json 2>/dev/null || true)"
+            PROJECT_IDS="$(echo "$PROJECTS_JSON" | jq -r '
+              [.. | objects | .projectId? // empty] | unique[]?
+            ' 2>/dev/null || true)"
 
-            if [ -n "$CONFIG_PROJECT_NUMBER" ]; then
-              TARGET_PROJECT_ID="$(echo "$PROJECTS_JSON" | jq -r --arg pn "$CONFIG_PROJECT_NUMBER" '
-                (.. | objects | select((.projectNumber? | tostring) == $pn) | .projectId?) // empty
-              ' | head -n 1)"
-            fi
-
-            if [ -z "$TARGET_PROJECT_ID" ]; then
-              TARGET_PROJECT_ID="$(echo "$PROJECT_IDS" | head -n 1)"
-            fi
-
-            if [ -n "$TARGET_PROJECT_ID" ]; then
-              echo "No existing Android app found for $EXPECTED_PACKAGE. Attempting create in project: $TARGET_PROJECT_ID"
-              CREATE_JSON="$(firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$TARGET_PROJECT_ID" --json 2>/dev/null || true)"
-              CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
-                (.. | objects | .appId? // empty)
-              ' | head -n 1)"
-              if [ -n "$CREATED_APP_ID" ]; then
-                DISCOVERED_APP_ID="$CREATED_APP_ID"
-                DISCOVERED_PROJECT="$TARGET_PROJECT_ID"
-                echo "Created Firebase Android app for package $EXPECTED_PACKAGE in project: $TARGET_PROJECT_ID"
+            for project_id in $PROJECT_IDS; do
+              app_id="$(find_app_in_project "$project_id" || true)"
+              if [ -n "$app_id" ]; then
+                DISCOVERED_APP_ID="$app_id"
+                DISCOVERED_PROJECT="$project_id"
+                break
               fi
-            fi
+            done
           fi
 
           FINAL_APP_ID="${DISCOVERED_APP_ID:-$CONFIGURED_APP_ID}"
