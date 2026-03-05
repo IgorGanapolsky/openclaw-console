@@ -282,6 +282,34 @@ jobs:
             fi
           done
 
+          if [ -z "$DISCOVERED_APP_ID" ]; then
+            CONFIG_PROJECT_NUMBER="$(echo "$CONFIGURED_APP_ID" | awk -F: 'NF >= 2 { print $2 }')"
+            TARGET_PROJECT_ID=""
+
+            if [ -n "$CONFIG_PROJECT_NUMBER" ]; then
+              TARGET_PROJECT_ID="$(echo "$PROJECTS_JSON" | jq -r --arg pn "$CONFIG_PROJECT_NUMBER" '
+                (.. | objects | select((.projectNumber? | tostring) == $pn) | .projectId?) // empty
+              ' | head -n 1)"
+            fi
+
+            if [ -z "$TARGET_PROJECT_ID" ]; then
+              TARGET_PROJECT_ID="$(echo "$PROJECT_IDS" | head -n 1)"
+            fi
+
+            if [ -n "$TARGET_PROJECT_ID" ]; then
+              echo "No existing Android app found for $EXPECTED_PACKAGE. Attempting create in project: $TARGET_PROJECT_ID"
+              CREATE_JSON="$(firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$TARGET_PROJECT_ID" --json 2>/dev/null || true)"
+              CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
+                (.. | objects | .appId? // empty)
+              ' | head -n 1)"
+              if [ -n "$CREATED_APP_ID" ]; then
+                DISCOVERED_APP_ID="$CREATED_APP_ID"
+                DISCOVERED_PROJECT="$TARGET_PROJECT_ID"
+                echo "Created Firebase Android app for package $EXPECTED_PACKAGE in project: $TARGET_PROJECT_ID"
+              fi
+            fi
+          fi
+
           FINAL_APP_ID="${DISCOVERED_APP_ID:-$CONFIGURED_APP_ID}"
           if [ -z "$FINAL_APP_ID" ]; then
             echo "❌ Could not determine Firebase app id for package $EXPECTED_PACKAGE."
