@@ -42,4 +42,6 @@ paths = [
 regexes = [
   '''YOUR_ADMIN_TOKEN''',
   '''ocw_YOUR_DEV_TOKEN''',
+  '''Authorization:\s*Bearer\s*(YOUR_ADMIN_TOKEN|ocw_YOUR_DEV_TOKEN|<ADMIN_TOKEN>|<DEV_TOKEN>)''',
+  '''Bearer\s*(YOUR_ADMIN_TOKEN|ocw_YOUR_DEV_TOKEN|<ADMIN_TOKEN>|<DEV_TOKEN>)''',
 ]
