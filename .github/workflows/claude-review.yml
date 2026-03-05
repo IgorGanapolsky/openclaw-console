@@ -22,7 +22,7 @@ jobs:
         id: claude_review
         if: ${{ secrets.ANTHROPIC_API_KEY != '' }}
         continue-on-error: true
-        uses: anthropics/claude-code-action@ea5a04005c9fd4deed2ed803c15a64d0e6eb65d0 # v1
+        uses: anthropics/claude-code-action@1fc90f3ed982521116d8ff6d85b948c9b12cae3e # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: "dependabot[bot],github-actions[bot]"
