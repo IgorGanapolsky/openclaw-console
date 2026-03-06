@@ -1,3 +1,5 @@
+require "shellwords"
+
 default_platform(:ios)
 
 def ensure_xcode_project!
@@ -37,6 +39,39 @@ def app_store_api_key_from_env
     key_content: key_content,
     is_key_content_base64: is_base64
   )
+end
+
+def resolved_appstore_key_path
+  key_id = ENV["APPSTORE_KEY_ID"]
+  return nil if key_id.to_s.empty?
+
+  explicit_key_path = ENV["APPSTORE_KEY_PATH"]
+  return explicit_key_path unless explicit_key_path.to_s.empty?
+
+  File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
+end
+
+def signing_xcargs
+  args = []
+  args << "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" unless ENV["APPLE_TEAM_ID"].to_s.empty?
+  args << "-allowProvisioningUpdates"
+
+  key_path = resolved_appstore_key_path
+  has_api_key_auth = (
+    ENV["CI"] == "true" &&
+    !ENV["APPSTORE_KEY_ID"].to_s.empty? &&
+    !ENV["APPSTORE_ISSUER_ID"].to_s.empty? &&
+    !key_path.to_s.empty? &&
+    File.exist?(key_path)
+  )
+
+  if has_api_key_auth
+    args << "-authenticationKeyPath #{Shellwords.escape(key_path)}"
+    args << "-authenticationKeyID #{ENV['APPSTORE_KEY_ID']}"
+    args << "-authenticationKeyIssuerID #{ENV['APPSTORE_ISSUER_ID']}"
+  end
+
+  args.join(" ")
 end
 
 def sync_match_with_bootstrap(api_key:, readonly:)
@@ -134,10 +169,7 @@ platform :ios do
         build_app(
           scheme: "OpenClawConsole",
           export_method: "app-store",
-          xcargs: [
-            ("DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?),
-            "-allowProvisioningUpdates"
-          ].compact.join(" "),
+          xcargs: signing_xcargs,
           export_options: {
             signingStyle: "manual",
             provisioningProfiles: {
@@ -153,10 +185,7 @@ platform :ios do
         build_app(
           scheme: "OpenClawConsole",
           export_method: "app-store",
-          xcargs: [
-            ("DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?),
-            "-allowProvisioningUpdates"
-          ].compact.join(" ")
+          xcargs: signing_xcargs
         )
       end
     else
@@ -164,10 +193,7 @@ platform :ios do
       build_app(
         scheme: "OpenClawConsole",
         export_method: "app-store",
-        xcargs: [
-          ("DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?),
-          "-allowProvisioningUpdates"
-        ].compact.join(" ")
+        xcargs: signing_xcargs
       )
     end
 

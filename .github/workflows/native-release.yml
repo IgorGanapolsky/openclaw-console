@@ -102,7 +102,9 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
+          echo "APPSTORE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
       - name: Configure git credentials for match
         env:
@@ -116,6 +118,7 @@ jobs:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
