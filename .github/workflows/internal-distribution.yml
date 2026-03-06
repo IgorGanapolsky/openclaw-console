@@ -99,6 +99,23 @@ jobs:
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate OpenClawConsole.xcodeproj
+        working-directory: ios/OpenClawConsole
+        run: |
+          set -euo pipefail
+          if [ ! -f "OpenClawConsole.xcodeproj/project.pbxproj" ]; then
+            xcodegen generate
+          fi
+          test -f "OpenClawConsole.xcodeproj/project.pbxproj"
+
       - name: Install Fastlane
         run: gem install fastlane
         working-directory: ios/OpenClawConsole
@@ -120,8 +137,6 @@ jobs:
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Setup signing certificates and profiles (match)
-        id: signing_setup
-        continue-on-error: true
         env:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
@@ -133,38 +148,7 @@ jobs:
         run: fastlane setup
         working-directory: ios/OpenClawConsole
 
-      - name: Detect iOS project file
-        id: ios_project
-        working-directory: ios/OpenClawConsole
-        run: |
-          set -euo pipefail
-          if [ -f "OpenClawConsole.xcodeproj/project.pbxproj" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Found OpenClawConsole.xcodeproj"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "⚠️ OpenClawConsole.xcodeproj is missing; TestFlight upload step will be skipped."
-          fi
-
-      - name: Decide iOS upload readiness
-        id: ios_ready
-        run: |
-          set -euo pipefail
-          READY="true"
-          REASON="ready"
-          if [ "${{ steps.ios_project.outputs.present }}" != "true" ]; then
-            READY="false"
-            REASON="missing_xcode_project"
-          elif [ "${{ steps.signing_setup.outcome }}" != "success" ]; then
-            READY="false"
-            REASON="signing_setup_failed"
-          fi
-          echo "ready=$READY" >> "$GITHUB_OUTPUT"
-          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
-          echo "iOS upload readiness: $READY ($REASON)"
-
       - name: Build and upload to TestFlight
-        if: steps.ios_ready.outputs.ready == 'true'
         env:
           CI: "true"
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -177,11 +161,6 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: fastlane beta
         working-directory: ios/OpenClawConsole
-
-      - name: Skip TestFlight upload
-        if: steps.ios_ready.outputs.ready != 'true'
-        run: |
-          echo "Skipping TestFlight upload: ${{ steps.ios_ready.outputs.reason }}"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
