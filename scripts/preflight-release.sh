@@ -106,6 +106,13 @@ if [[ -f "$PBXPROJ" ]]; then
 IOS_VERSION_NAME=$(grep -m1 'MARKETING_VERSION' "$PBXPROJ" | cut -d'=' -f2 | tr -d ' ;')
 IOS_BUILD_NUMBER=$(grep -m1 'CURRENT_PROJECT_VERSION' "$PBXPROJ" | cut -d'=' -f2 | tr -d ' ;')
 info "iOS:     $IOS_VERSION_NAME ($IOS_BUILD_NUMBER)"
+else
+IOS_INFO_PLIST="$PROJECT_ROOT/ios/OpenClawConsole/OpenClawConsole/Info.plist"
+if [[ -f "$IOS_INFO_PLIST" ]]; then
+  IOS_VERSION_NAME=$(plutil -extract CFBundleShortVersionString raw "$IOS_INFO_PLIST" 2>/dev/null || true)
+  IOS_BUILD_NUMBER=$(plutil -extract CFBundleVersion raw "$IOS_INFO_PLIST" 2>/dev/null || true)
+  info "iOS (Info.plist): $IOS_VERSION_NAME ($IOS_BUILD_NUMBER)"
+fi
 fi
 # Cross-platform version parity warning
 if [[ -n "$ANDROID_VERSION_NAME" && -n "$IOS_VERSION_NAME" ]]; then

@@ -75,6 +75,23 @@ jobs:
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate OpenClawConsole.xcodeproj
+        working-directory: ios/OpenClawConsole
+        run: |
+          set -euo pipefail
+          if [ ! -f "OpenClawConsole.xcodeproj/project.pbxproj" ]; then
+            xcodegen generate
+          fi
+          test -f "OpenClawConsole.xcodeproj/project.pbxproj"
+
       - name: Install Fastlane
         run: gem install fastlane
         working-directory: ios/OpenClawConsole

@@ -1,5 +1,30 @@
 default_platform(:ios)
 
+def ensure_xcode_project!
+  project_root = File.expand_path("..", __dir__)
+  xcodeproj_path = File.join(project_root, "OpenClawConsole.xcodeproj", "project.pbxproj")
+  project_spec = File.join(project_root, "project.yml")
+
+  return if File.exist?(xcodeproj_path)
+
+  unless File.exist?(project_spec)
+    UI.user_error!("Missing OpenClawConsole.xcodeproj and project.yml. Cannot build iOS app.")
+  end
+
+  unless system("command -v xcodegen >/dev/null 2>&1")
+    UI.user_error!("xcodegen is required to generate OpenClawConsole.xcodeproj")
+  end
+
+  UI.message("OpenClawConsole.xcodeproj not found. Generating from project.yml via xcodegen.")
+  Dir.chdir(project_root) do
+    sh("xcodegen generate")
+  end
+
+  unless File.exist?(xcodeproj_path)
+    UI.user_error!("xcodegen did not generate OpenClawConsole.xcodeproj")
+  end
+end
+
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
@@ -18,6 +43,7 @@ platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
     setup_ci if ENV["CI"] == "true"
+    ensure_xcode_project!
 
     # Use App Store Connect API key if available
     api_key = app_store_api_key_from_env
@@ -111,6 +137,7 @@ platform :ios do
   desc "Setup certificates and profiles via match"
   lane :setup do
     setup_ci if ENV["CI"] == "true"
+    ensure_xcode_project!
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
@@ -129,6 +156,7 @@ platform :ios do
 
   desc "Distribute to Firebase App Distribution"
   lane :firebase_dev do
+    ensure_xcode_project!
     increment_build_number(
       build_number: latest_testflight_build_number + 1
     )
