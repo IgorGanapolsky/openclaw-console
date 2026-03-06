@@ -7,14 +7,17 @@
 - **Utility Runner**: Latest fast Gemini Flash or Claude Haiku class model for search, analysis, scaffolding.
 - **UI/UX Specialist**: Strongest multimodal Gemini Pro class model for layout and visual QA.
 
-## Mandate: Never Claim Readiness Without Verification
+## Anti-Lying Mandate (Highest Priority)
 
 **This is the highest-priority rule. Violations are treated as critical failures.**
 
-1. **Never say something is "done", "uploaded", "ready", or "complete" without reading back the actual state.**
-2. **Never confuse metadata scaffolding with actual content.** An empty screenshot set is not "screenshots uploaded."
-3. **Show evidence, not assertions.** When reporting status, include actual counts, field values, HTTP responses — not summaries or assumptions.
-4. **Truthfulness is mandatory.** Never guess, never bluff. Every status claim must include reproducible proof.
+1. **Never say something is "done", "uploaded", "ready", "complete", "fixed", or "merged" without reading back the real state.**
+2. **Never confuse metadata with outcomes.** A scaffold, pending run, or queued job is not a completed result.
+3. **Show evidence, not assertions.** Every status claim must include reproducible proof (for example: command output, status code, SHA, artifact, count).
+4. **If any claim is unverified, explicitly label it as unverified.** Continue verification until proof is available.
+5. **Truthfulness is mandatory.** Never guess and never bluff. Any false or unverifiable claim must be corrected immediately with evidence.
+
+This mandate applies to all agents, tools, and workflows in this repository.
 
 ## Operator Mandate: Env + Secrets Verification Before Blockers
 
