@@ -359,33 +359,90 @@ jobs:
           FIREBASE_INTERNAL_GROUPS: ${{ secrets.FIREBASE_INTERNAL_GROUPS || vars.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          trap 'rc=$?; echo "❌ Firebase distribution failed at line ${LINENO}: ${BASH_COMMAND} (rc=${rc})"; exit ${rc}' ERR
+
+          normalize_csv() {
+            printf '%s' "${1-}" \
+              | tr $'\n\r;' ',' \
+              | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
+          }
+
           TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
           GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
           APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
-          CMD=(
+
+          AUTH_MODE="service-account"
+          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+            # firebase-tools can implicitly prioritize FIREBASE_TOKEN if present.
+            unset FIREBASE_TOKEN
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            AUTH_MODE="token"
+          else
+            echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
+            exit 1
+          fi
+
+          TESTERS="$(normalize_csv "$TESTERS")"
+          GROUPS="$(normalize_csv "$GROUPS")"
+
+          BASE_CMD=(
             firebase appdistribution:distribute
             "$APK_PATH"
             --app "$FIREBASE_APP_ID"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
+          if [ "$AUTH_MODE" = "token" ]; then
+            BASE_CMD+=(--token "$FIREBASE_TOKEN")
+          fi
+
+          run_dist() {
+            local label="$1"
+            local log_file="$2"
+            shift 2
+            echo "Firebase distribution attempt: $label (auth=$AUTH_MODE)"
+            set +e
+            "${BASE_CMD[@]}" "$@" 2>&1 | tee "$log_file"
+            local rc=${PIPESTATUS[0]}
+            set -e
+            if [ "$rc" -ne 0 ]; then
+              echo "Attempt '$label' failed with exit code $rc"
+              tail -n 120 "$log_file" || true
+            fi
+            return "$rc"
+          }
+
+          ATTEMPT_ARGS=()
           if [ -n "$TESTERS" ]; then
-            CMD+=(--testers "$TESTERS")
+            ATTEMPT_ARGS+=(--testers "$TESTERS")
           fi
           if [ -n "$GROUPS" ]; then
-            CMD+=(--groups "$GROUPS")
+            ATTEMPT_ARGS+=(--groups "$GROUPS")
           fi
+
           if [ -z "$TESTERS" ] && [ -z "$GROUPS" ]; then
             echo "No testers/groups configured. Uploading build without invite audience."
           fi
-          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
-            "${CMD[@]}"
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            "${CMD[@]}" --token "$FIREBASE_TOKEN"
-          else
-            echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
-            exit 1
+
+          if run_dist "audience-targeted" /tmp/firebase-dist-attempt1.log "${ATTEMPT_ARGS[@]}"; then
+            exit 0
           fi
+
+          if [ -n "$TESTERS" ] && [ -n "$GROUPS" ]; then
+            if run_dist "groups-only-retry" /tmp/firebase-dist-attempt2.log --groups "$GROUPS"; then
+              exit 0
+            fi
+          fi
+
+          if [ "${#ATTEMPT_ARGS[@]}" -gt 0 ]; then
+            echo "Retrying Firebase upload without testers/groups."
+            if run_dist "upload-only-retry" /tmp/firebase-dist-attempt3.log; then
+              exit 0
+            fi
+          fi
+
+          echo "Firebase distribution failed after retries."
+          exit 1
 
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
