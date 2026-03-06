@@ -28,6 +28,7 @@
 		953C3B052F95CC93A8040197 /* IncidentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B37EC455A5F78045FA8EA7A /* IncidentDetailView.swift */; };
 		966ECBF0E91A054093E2D67F /* GatewayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6A371EC180F91BDFA129B9 /* GatewayListView.swift */; };
 		9F737B7808C9CD05B42D4B9B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842FD483A26BED5A85DC4F7C /* ChatMessage.swift */; };
+		A330FCFB0BA37C7C133E62C6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CED7B8B440732222DBF270DB /* Assets.xcassets */; };
 		A493D58690FC2CE687DA91D7 /* IncidentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E2C6547FC111A0704755D8 /* IncidentListView.swift */; };
 		AC0FFC34FFACB1A930B10B57 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91ED0911899971B33856481 /* KeychainService.swift */; };
 		AFF4755AB8473B8C3FB0CD59 /* TimeAgoText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1974DC28FE46E8DE552AB153 /* TimeAgoText.swift */; };
@@ -75,6 +76,7 @@
 		C61E89ABC4C29C3008787294 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		C91ED0911899971B33856481 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		CADA3CC20D4CDDDEBDD0F5E4 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
+		CED7B8B440732222DBF270DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D025F37633CB3007EC40F5FB /* Agent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Agent.swift; sourceTree = "<group>"; };
 		D2F9FF3A8CA3A0C5D1395632 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		D928179E99267A56D9E33E52 /* TaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListView.swift; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 		19758D90190C83E6F7D602ED /* OpenClawConsole */ = {
 			isa = PBXGroup;
 			children = (
+				CED7B8B440732222DBF270DB /* Assets.xcassets */,
 				7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */,
 				F9D50A5D1534369CB96C4286 /* Models */,
 				F845E0B17B0AF7DD02686BF0 /* Services */,
@@ -241,6 +244,7 @@
 			buildConfigurationList = 3F26A693C9973452D55D440B /* Build configuration list for PBXNativeTarget "OpenClawConsole" */;
 			buildPhases = (
 				AC55413DEC7B34043F71182C /* Sources */,
+				D3B4FE988C1C4DC28FAAF903 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -285,6 +289,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D3B4FE988C1C4DC28FAAF903 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A330FCFB0BA37C7C133E62C6 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AC55413DEC7B34043F71182C /* Sources */ = {

@@ -46,6 +46,26 @@ jobs:
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
+      - name: Fail fast on required iOS distribution secrets
+        if: steps.ios_project.outputs.present == 'true'
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          for name in APPLE_TEAM_ID MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              echo "❌ Missing required secret: $name"
+              exit 1
+            fi
+          done
+
       - name: Install Fastlane
         if: steps.ios_project.outputs.present == 'true'
         run: gem install fastlane
@@ -64,13 +84,36 @@ jobs:
           mkdir -p "$HOME/.appstoreconnect/private_keys"
           echo "$APPSTORE_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
 
+      - name: Configure git credentials for match
+        if: steps.ios_project.outputs.present == 'true'
+        env:
+          GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Setup signing certificates and profiles (match)
+        if: steps.ios_project.outputs.present == 'true'
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: fastlane setup
+        working-directory: ios/OpenClawConsole
+
       - name: Build and upload to TestFlight
         if: steps.ios_project.outputs.present == 'true'
         env:
           CI: "true"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
@@ -149,23 +192,28 @@ jobs:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
-          APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
-          PACKAGE_NAME="$(jq -r '.client[0].client_info.android_client_info.package_name // empty' app/google-services.json)"
+          EXPECTED_PACKAGE="com.openclaw.console"
+          APP_ID="${FIREBASE_ANDROID_APP_ID:-}"
+          if [ -z "$APP_ID" ]; then
+            APP_ID="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
+              .client[]?
+              | select(.client_info.android_client_info.package_name == $pkg)
+              | .client_info.mobilesdk_app_id // empty
+            ' app/google-services.json | head -n 1)"
+          fi
+          PACKAGE_NAME="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
+            .client[]?
+            | select(.client_info.android_client_info.package_name == $pkg)
+            | .client_info.android_client_info.package_name // empty
+          ' app/google-services.json | head -n 1)"
           PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
           PROJECT_NUMBER="$(jq -r '.project_info.project_number // empty' app/google-services.json)"
-          if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
-            APP_ID="$FIREBASE_ANDROID_APP_ID"
-          fi
           if [ -z "$APP_ID" ]; then
-            echo "❌ Could not resolve Firebase Android app id. Set FIREBASE_ANDROID_APP_ID or include mobilesdk_app_id in GOOGLE_SERVICES_JSON."
+            echo "❌ Could not resolve Firebase Android app id for package $EXPECTED_PACKAGE from FIREBASE_ANDROID_APP_ID/GOOGLE_SERVICES_JSON."
             exit 1
           fi
           if [ -z "$PACKAGE_NAME" ]; then
             echo "❌ Could not resolve package_name from GOOGLE_SERVICES_JSON."
-            exit 1
-          fi
-          if [ "$PACKAGE_NAME" != "com.openclaw.console" ]; then
-            echo "❌ GOOGLE_SERVICES_JSON package_name mismatch: expected com.openclaw.console, got $PACKAGE_NAME"
             exit 1
           fi
           if [ -z "$PROJECT_ID" ]; then
@@ -269,14 +317,23 @@ jobs:
           EXPECTED_PACKAGE: com.openclaw.console
           CONFIGURED_APP_ID: ${{ steps.firebase.outputs.app_id }}
           CONFIGURED_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           set -euo pipefail
+
+          run_firebase() {
+            if [ -n "${FIREBASE_TOKEN:-}" ]; then
+              firebase "$@" --token "$FIREBASE_TOKEN"
+            else
+              firebase "$@"
+            fi
+          }
 
           find_app_in_project() {
             local project_id="$1"
             local apps_json
             local app_id
-            apps_json="$(firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
+            apps_json="$(run_firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
             if [ -z "$apps_json" ]; then
               return 1
             fi
@@ -310,7 +367,7 @@ jobs:
           if [ -z "$DISCOVERED_APP_ID" ] && [ -n "${CONFIGURED_PROJECT_ID:-}" ]; then
             echo "No existing Android app found for $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
             echo "Attempting create in project: $CONFIGURED_PROJECT_ID"
-            CREATE_JSON="$(firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
+            CREATE_JSON="$(run_firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
             CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
               (.. | objects | .appId? // empty)
             ' 2>/dev/null | head -n 1 || true)"
@@ -322,22 +379,6 @@ jobs:
               echo "Firebase app create did not return app id for project: $CONFIGURED_PROJECT_ID"
               echo "$CREATE_JSON" | sed -n '1,5p'
             fi
-          fi
-
-          if [ -z "$DISCOVERED_APP_ID" ]; then
-            PROJECTS_JSON="$(firebase projects:list --json 2>/dev/null || true)"
-            PROJECT_IDS="$(echo "$PROJECTS_JSON" | jq -r '
-              [.. | objects | .projectId? // empty] | unique[]?
-            ' 2>/dev/null || true)"
-
-            for project_id in $PROJECT_IDS; do
-              app_id="$(find_app_in_project "$project_id" || true)"
-              if [ -n "$app_id" ]; then
-                DISCOVERED_APP_ID="$app_id"
-                DISCOVERED_PROJECT="$project_id"
-                break
-              fi
-            done
           fi
 
           FINAL_APP_ID="${DISCOVERED_APP_ID:-$CONFIGURED_APP_ID}"
