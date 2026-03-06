@@ -105,7 +105,7 @@ describe('RevenueCat Billing', () => {
     it('should deny pro features without subscription', async () => {
       // Mock getSubscriptionStatus to return free user
       const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockRejectedValue(new Error('API not available in test'));
+      global.fetch = jest.fn().mockRejectedValue(new Error('API not available in test')) as any;
 
       const hasAccess = await checkPremiumAccess('test-user', 'devops_integrations');
       expect(hasAccess).toBe(false);
@@ -123,7 +123,7 @@ describe('RevenueCat Billing', () => {
     it('should return default free status on API error', async () => {
       // Mock fetch to simulate API error
       const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error')) as any;
 
       const status = await getSubscriptionStatus('test-user-error');
 
