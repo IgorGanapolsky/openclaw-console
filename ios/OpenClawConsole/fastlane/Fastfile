@@ -114,11 +114,12 @@ platform :ios do
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
+      readonly_mode = ENV["CI"] == "true"
 
       match(
         type: "appstore",
         app_identifier: ["com.openclaw.console"],
-        readonly: false,
+        readonly: readonly_mode,
         api_key: api_key
       )
     else
