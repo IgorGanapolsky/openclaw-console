@@ -8,6 +8,8 @@ on:
     inputs:
       ref:
         description: "Git ref to distribute (optional, defaults to develop)"
+      apple_2fa_code:
+        description: "Optional one-time Apple 2FA code for Fastlane produce fallback"
 
 concurrency:
   group: internal-distribution-${{ github.event_name }}-${{ github.ref_name || inputs.ref || github.event.workflow_run.head_branch || 'manual' }}
@@ -115,6 +117,7 @@ jobs:
           FASTLANE_PASSWORD: ${{ secrets.FASTLANE_PASSWORD }}
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
           ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
+          SPACESHIP_2FA_CODE: ${{ inputs.apple_2fa_code }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
