@@ -51,7 +51,9 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | Secret/Variable | Description |
 |-----------------|-------------|
 | `FIREBASE_ANDROID_APP_ID` | Override Firebase app ID (normally auto-resolved from google-services.json) |
-| `FIREBASE_INTERNAL_TESTERS` (variable) | Comma-separated tester emails (defaults to `iganapolsky@gmail.com`) |
+| `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
+| `FIREBASE_INTERNAL_TESTERS` (secret or variable) | Comma-separated tester emails for Firebase App Distribution invites |
+| `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites |
 
 ## One-Time Setup Steps
 

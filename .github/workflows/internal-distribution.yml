@@ -355,19 +355,29 @@ jobs:
       - name: Distribute to internal Firebase tester(s)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS: ${{ secrets.FIREBASE_INTERNAL_TESTERS || vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS: ${{ secrets.FIREBASE_INTERNAL_GROUPS || vars.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
         run: |
           set -euo pipefail
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-iganapolsky@gmail.com}"
+          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
+          GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
           APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
           CMD=(
             firebase appdistribution:distribute
             "$APK_PATH"
             --app "$FIREBASE_APP_ID"
-            --testers "$TESTERS"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
+          if [ -n "$TESTERS" ]; then
+            CMD+=(--testers "$TESTERS")
+          fi
+          if [ -n "$GROUPS" ]; then
+            CMD+=(--groups "$GROUPS")
+          fi
+          if [ -z "$TESTERS" ] && [ -z "$GROUPS" ]; then
+            echo "No testers/groups configured. Uploading build without invite audience."
+          fi
           if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
             "${CMD[@]}"
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
