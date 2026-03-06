@@ -13,7 +13,9 @@
     "lint": "eslint src tests --ext .ts"
   },
   "dependencies": {
+    "@revenuecat/purchases-js": "^1.27.0",
     "express": "^5.2.1",
+    "redis": "^5.11.0",
     "uuid": "^13.0.0",
     "ws": "^8.16.0"
   },

@@ -23,6 +23,7 @@ import type {
   ApprovalResponse,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
+import { createBillingRouter } from '../billing/revenuecat.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -53,7 +54,7 @@ export function createGatewayServer(
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     next();
   });
-  app.options('*', (_req, res) => { res.sendStatus(204); });
+  // app.options('/*', (_req, res) => { res.sendStatus(204); }); // Disabled due to Express 5 path-to-regexp issue
 
   // ── Health ───────────────────────────────────────────────────────────────
 
@@ -184,6 +185,7 @@ export function createGatewayServer(
 
   app.post('/api/remote-control', auth, (req: Request, res: Response) => {
     const devToken = tokenManager.getDefaultDevToken();
+    // Development-only URL with temporary access token for mobile testing
     const sessionUrl = `http://${config.host}:${config.port}/api/health?token=${devToken}`;
     console.info('\n' + '='.repeat(40));
     console.info('📱 REMOTE CONTROL ACTIVE');
@@ -192,6 +194,11 @@ export function createGatewayServer(
     console.info('='.repeat(40) + '\n');
     res.json({ url: sessionUrl, expires_in: 600 });
   });
+
+  // ── Revenue Infrastructure ────────────────────────────────────────────────
+
+  // Mount billing endpoints (RevenueCat integration)
+  app.use('/api/billing', createBillingRouter());
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
