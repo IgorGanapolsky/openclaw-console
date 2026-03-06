@@ -185,14 +185,19 @@ jobs:
       - name: Resolve Firebase app metadata
         id: firebase
         working-directory: android
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
           EXPECTED_PACKAGE="com.openclaw.console"
-          APP_ID="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
-            .client[]?
-            | select(.client_info.android_client_info.package_name == $pkg)
-            | .client_info.mobilesdk_app_id // empty
-          ' app/google-services.json | head -n 1)"
+          APP_ID="${FIREBASE_ANDROID_APP_ID:-}"
+          if [ -z "$APP_ID" ]; then
+            APP_ID="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
+              .client[]?
+              | select(.client_info.android_client_info.package_name == $pkg)
+              | .client_info.mobilesdk_app_id // empty
+            ' app/google-services.json | head -n 1)"
+          fi
           PACKAGE_NAME="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
             .client[]?
             | select(.client_info.android_client_info.package_name == $pkg)
@@ -201,7 +206,7 @@ jobs:
           PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
           PROJECT_NUMBER="$(jq -r '.project_info.project_number // empty' app/google-services.json)"
           if [ -z "$APP_ID" ]; then
-            echo "❌ Could not resolve Firebase Android app id for package $EXPECTED_PACKAGE from GOOGLE_SERVICES_JSON."
+            echo "❌ Could not resolve Firebase Android app id for package $EXPECTED_PACKAGE from FIREBASE_ANDROID_APP_ID/GOOGLE_SERVICES_JSON."
             exit 1
           fi
           if [ -z "$PACKAGE_NAME" ]; then

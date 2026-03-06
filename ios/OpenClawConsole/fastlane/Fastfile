@@ -18,7 +18,7 @@ def ensure_app_store_connect_app!(api_key:, bundle_id:, app_name:, sku:, primary
   return unless api_key
 
   require "spaceship"
-  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(api_key)
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
 
   existing = Spaceship::ConnectAPI::App.all(filter: { bundleId: bundle_id }).find do |app|
     app.bundle_id == bundle_id
