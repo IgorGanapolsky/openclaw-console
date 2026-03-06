@@ -74,8 +74,8 @@ read -p "Path to AuthKey_*.p8 file (or 'skip'): " P8_PATH
 
 if [ "${P8_PATH:-skip}" != "skip" ] && [ -f "$P8_PATH" ]; then
     P8_CONTENT=$(cat "$P8_PATH")
-    echo "$P8_CONTENT" | gh secret set APPSTORE_CONNECT_API_KEY --repo="$REPO"
-    echo -e "${GREEN}  ✓ APPSTORE_CONNECT_API_KEY set${NC}"
+    echo "$P8_CONTENT" | gh secret set APPSTORE_PRIVATE_KEY --repo="$REPO"
+    echo -e "${GREEN}  ✓ APPSTORE_PRIVATE_KEY set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 
     read -p "Enter App Store Connect Issuer ID: " ISSUER_ID
@@ -111,7 +111,7 @@ else
 fi
 
 # ──────────────────────────────────
-# 4. Firebase Token + App IDs
+# 4. Firebase Token + App IDs + Audience
 # ──────────────────────────────────
 echo ""
 echo -e "${YELLOW}Step 4/7: Firebase Configuration${NC}"
@@ -146,15 +146,30 @@ echo ""
 echo "Find your Firebase App IDs at: https://console.firebase.google.com → Project Settings → Your Apps"
 read -p "Firebase iOS App ID (or 'skip'): " FB_IOS
 if [ "${FB_IOS:-skip}" != "skip" ] && [ -n "$FB_IOS" ]; then
-    echo "$FB_IOS" | gh secret set FIREBASE_APP_ID_IOS --repo="$REPO"
-    echo -e "${GREEN}  ✓ FIREBASE_APP_ID_IOS set${NC}"
+    echo "$FB_IOS" | gh secret set FIREBASE_IOS_APP_ID --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_IOS_APP_ID set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 read -p "Firebase Android App ID (or 'skip'): " FB_ANDROID
 if [ "${FB_ANDROID:-skip}" != "skip" ] && [ -n "$FB_ANDROID" ]; then
-    echo "$FB_ANDROID" | gh secret set FIREBASE_APP_ID_ANDROID --repo="$REPO"
-    echo -e "${GREEN}  ✓ FIREBASE_APP_ID_ANDROID set${NC}"
+    echo "$FB_ANDROID" | gh secret set FIREBASE_ANDROID_APP_ID --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_ANDROID_APP_ID set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+echo ""
+read -p "Firebase internal tester emails (comma-separated, or 'skip'): " FB_TESTERS
+if [ "${FB_TESTERS:-skip}" != "skip" ] && [ -n "$FB_TESTERS" ]; then
+    echo "$FB_TESTERS" | gh secret set FIREBASE_INTERNAL_TESTERS --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_TESTERS set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+read -p "Firebase internal groups (comma-separated, or 'skip'): " FB_GROUPS
+if [ "${FB_GROUPS:-skip}" != "skip" ] && [ -n "$FB_GROUPS" ]; then
+    echo "$FB_GROUPS" | gh secret set FIREBASE_INTERNAL_GROUPS --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_GROUPS set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
@@ -170,23 +185,23 @@ if [ "${KS_PATH:-skip}" = "create" ]; then
     KS_PATH="$HOME/openclaw-release.jks"
     read -sp "Choose a keystore password: " KS_PASS
     echo ""
-    keytool -genkeypair 
-        -v 
-        -keystore "$KS_PATH" 
-        -keyalg RSA 
-        -keysize 2048 
-        -validity 10000 
-        -alias openclaw 
-        -storepass "$KS_PASS" 
-        -keypass "$KS_PASS" 
+    keytool -genkeypair \
+        -v \
+        -keystore "$KS_PATH" \
+        -keyalg RSA \
+        -keysize 2048 \
+        -validity 10000 \
+        -alias openclaw \
+        -storepass "$KS_PASS" \
+        -keypass "$KS_PASS" \
         -dname "CN=OpenClaw, OU=Mobile, O=OpenClaw, L=Unknown, ST=Unknown, C=US"
     echo -e "${GREEN}  ✓ Keystore created at $KS_PATH${NC}"
 fi
 
 if [ "${KS_PATH:-skip}" != "skip" ] && [ -f "$KS_PATH" ]; then
     KS_BASE64=$(base64 -i "$KS_PATH")
-    echo "$KS_BASE64" | gh secret set KEYSTORE_FILE --repo="$REPO"
-    echo -e "${GREEN}  ✓ KEYSTORE_FILE set${NC}"
+    echo "$KS_BASE64" | gh secret set ANDROID_KEYSTORE_BASE64 --repo="$REPO"
+    echo -e "${GREEN}  ✓ ANDROID_KEYSTORE_BASE64 set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 
     if [ -z "${KS_PASS:-}" ]; then
@@ -222,8 +237,8 @@ read -p "Path to service account JSON (or 'skip'): " GPLAY_PATH
 
 if [ "${GPLAY_PATH:-skip}" != "skip" ] && [ -f "$GPLAY_PATH" ]; then
     GPLAY_JSON=$(cat "$GPLAY_PATH")
-    echo "$GPLAY_JSON" | gh secret set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON --repo="$REPO"
-    echo -e "${GREEN}  ✓ GOOGLE_PLAY_SERVICE_ACCOUNT_JSON set${NC}"
+    echo "$GPLAY_JSON" | gh secret set GOOGLE_PLAY_JSON_KEY --repo="$REPO"
+    echo -e "${GREEN}  ✓ GOOGLE_PLAY_JSON_KEY set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 else
     echo "  Skipped Google Play service account"
