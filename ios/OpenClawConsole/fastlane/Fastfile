@@ -41,10 +41,21 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       build_number: next_build_number
     )
+
+    if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: true,
+        targets: ["OpenClawConsole"],
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
+    end
+
     build_app(
       scheme: "OpenClawConsole",
       export_method: "app-store",
-      xcargs: "-allowProvisioningUpdates"
+      xcargs: "-allowProvisioningUpdates",
+      export_team_id: ENV["APPLE_TEAM_ID"]
     )
     upload_to_testflight(api_key: api_key)
   end
