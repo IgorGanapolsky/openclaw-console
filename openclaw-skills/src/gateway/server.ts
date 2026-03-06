@@ -24,6 +24,7 @@ import type {
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
 import { createBillingRouter } from '../billing/revenuecat.js';
+import { createAnalyticsRouter } from '../analytics/events.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -199,6 +200,9 @@ export function createGatewayServer(
 
   // Mount billing endpoints (RevenueCat integration)
   app.use('/api/billing', createBillingRouter());
+
+  // Mount analytics endpoints (conversion tracking)
+  app.use('/api/analytics', createAnalyticsRouter());
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
