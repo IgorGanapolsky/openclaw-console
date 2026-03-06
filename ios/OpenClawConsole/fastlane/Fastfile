@@ -51,6 +51,15 @@ platform :ios do
       build_number: next_build_number
     )
 
+    if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: true,
+        targets: ["OpenClawConsole"],
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
+    end
+
     if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
       # CI runners do not have Apple ID accounts configured; force manual signing
       # with match-managed App Store profiles for deterministic archives.
