@@ -96,7 +96,8 @@ jobs:
       - name: Swift project sanity check
         working-directory: ios/OpenClawConsole
         run: |
-          xcodebuild -list -project OpenClawConsole.xcodeproj
+          xcodebuild -version
+          swift package dump-package > /dev/null
 
   secrets-scan:
     name: Secrets Scan
