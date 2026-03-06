@@ -98,12 +98,16 @@ platform :ios do
     )
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
-      update_code_signing_settings(
-        path: "OpenClawConsole.xcodeproj",
-        use_automatic_signing: true,
-        targets: ["OpenClawConsole"],
-        team_id: ENV["APPLE_TEAM_ID"]
-      )
+      begin
+        update_code_signing_settings(
+          path: "OpenClawConsole.xcodeproj",
+          use_automatic_signing: true,
+          targets: ["OpenClawConsole"],
+          team_id: ENV["APPLE_TEAM_ID"]
+        )
+      rescue => e
+        UI.important("Skipping automatic-signing project mutation: #{e}")
+      end
     end
 
     if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
@@ -114,18 +118,26 @@ platform :ios do
 
         app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
 
-        update_code_signing_settings(
-          path: "OpenClawConsole.xcodeproj",
-          use_automatic_signing: false,
-          targets: ["OpenClawConsole"],
-          code_sign_identity: "Apple Distribution",
-          profile_name: app_profile,
-          team_id: ENV["APPLE_TEAM_ID"]
-        )
+        begin
+          update_code_signing_settings(
+            path: "OpenClawConsole.xcodeproj",
+            use_automatic_signing: false,
+            targets: ["OpenClawConsole"],
+            code_sign_identity: "Apple Distribution",
+            profile_name: app_profile,
+            team_id: ENV["APPLE_TEAM_ID"]
+          )
+        rescue => e
+          UI.important("Skipping manual-signing project mutation: #{e}")
+        end
 
         build_app(
           scheme: "OpenClawConsole",
           export_method: "app-store",
+          xcargs: [
+            ("DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?),
+            "-allowProvisioningUpdates"
+          ].compact.join(" "),
           export_options: {
             signingStyle: "manual",
             provisioningProfiles: {
@@ -141,7 +153,10 @@ platform :ios do
         build_app(
           scheme: "OpenClawConsole",
           export_method: "app-store",
-          xcargs: "-allowProvisioningUpdates"
+          xcargs: [
+            ("DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?),
+            "-allowProvisioningUpdates"
+          ].compact.join(" ")
         )
       end
     else
@@ -149,7 +164,10 @@ platform :ios do
       build_app(
         scheme: "OpenClawConsole",
         export_method: "app-store",
-        xcargs: "-allowProvisioningUpdates"
+        xcargs: [
+          ("DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?),
+          "-allowProvisioningUpdates"
+        ].compact.join(" ")
       )
     end
 
