@@ -107,6 +107,7 @@ jobs:
         if: steps.ios_project.outputs.present == 'true'
         env:
           CI: "true"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
@@ -308,14 +309,23 @@ jobs:
           EXPECTED_PACKAGE: com.openclaw.console
           CONFIGURED_APP_ID: ${{ steps.firebase.outputs.app_id }}
           CONFIGURED_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           set -euo pipefail
+
+          run_firebase() {
+            if [ -n "${FIREBASE_TOKEN:-}" ]; then
+              firebase "$@" --token "$FIREBASE_TOKEN"
+            else
+              firebase "$@"
+            fi
+          }
 
           find_app_in_project() {
             local project_id="$1"
             local apps_json
             local app_id
-            apps_json="$(firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
+            apps_json="$(run_firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
             if [ -z "$apps_json" ]; then
               return 1
             fi
@@ -349,7 +359,7 @@ jobs:
           if [ -z "$DISCOVERED_APP_ID" ] && [ -n "${CONFIGURED_PROJECT_ID:-}" ]; then
             echo "No existing Android app found for $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
             echo "Attempting create in project: $CONFIGURED_PROJECT_ID"
-            CREATE_JSON="$(firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
+            CREATE_JSON="$(run_firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
             CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
               (.. | objects | .appId? // empty)
             ' 2>/dev/null | head -n 1 || true)"
