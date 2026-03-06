@@ -236,12 +236,17 @@ jobs:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
-          APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
+          EXPECTED_PACKAGE="com.openclaw.console"
+          APP_ID="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
+            .client[]?
+            | select(.client_info.android_client_info.package_name == $pkg)
+            | .client_info.mobilesdk_app_id // empty
+          ' app/google-services.json | head -n 1)"
           if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
             APP_ID="$FIREBASE_ANDROID_APP_ID"
           fi
           if [ -z "$APP_ID" ]; then
-            echo "❌ Could not resolve Firebase Android app id. Set FIREBASE_ANDROID_APP_ID secret or include mobilesdk_app_id in GOOGLE_SERVICES_JSON."
+            echo "❌ Could not resolve Firebase Android app id for package ${EXPECTED_PACKAGE}. Set FIREBASE_ANDROID_APP_ID or include matching entry in GOOGLE_SERVICES_JSON."
             exit 1
           fi
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
