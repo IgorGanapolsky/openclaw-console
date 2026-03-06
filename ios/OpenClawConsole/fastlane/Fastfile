@@ -85,8 +85,12 @@ platform :ios do
     end
 
     upload_to_testflight(
-      skip_waiting_for_build_processing: true,
-      api_key: api_key
+      api_key: api_key,
+      groups: ["Internal"],
+      testers: ["ganapolsky_i@subway.com"],
+      skip_waiting_for_build_processing: false,
+      changelog: "Latest OpenClaw Console build from CI",
+      notify_external_testers: true
     )
   end
 
