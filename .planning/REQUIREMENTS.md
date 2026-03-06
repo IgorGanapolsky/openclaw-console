@@ -30,7 +30,7 @@ Requirements for unblocking testing builds and validating core biometric approva
 - [ ] **REV-01**: RevenueCat subscription billing integrated in skills gateway with webhooks and entitlement checking
 - [ ] **REV-02**: Analytics service tracks conversion funnel (install → signup → first approval → subscription)
 - [ ] **REV-03**: DevOps integrations hub with Slack and PagerDuty for premium value positioning
-- [ ] **REV-04**: Mobile apps integrate RevenueCat SDK for cross-platform subscription management
+- [x] **REV-04**: Mobile apps integrate RevenueCat SDK for cross-platform subscription management
 - [ ] **REV-05**: DevOps community positioning and app store optimization for customer acquisition
 
 ### Infrastructure Hardening
@@ -96,7 +96,7 @@ Coverage validated during roadmap creation (2026-03-02).
 | REV-01 | Phase 3 - Revenue Generation Infrastructure | Pending |
 | REV-02 | Phase 3 - Revenue Generation Infrastructure | Pending |
 | REV-03 | Phase 3 - Revenue Generation Infrastructure | Pending |
-| REV-04 | Phase 3 - Revenue Generation Infrastructure | Pending |
+| REV-04 | Phase 3 - Revenue Generation Infrastructure | Complete |
 | REV-05 | Phase 3 - Revenue Generation Infrastructure | Pending |
 | INFRA-01 | Phase 4 - Distribution Hardening | Pending |
 | INFRA-02 | Phase 4 - Distribution Hardening | Pending |
