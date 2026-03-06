@@ -98,7 +98,25 @@ platform :ios do
     setup_ci if ENV["CI"] == "true"
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
-      match(type: "appstore")
+      api_key = nil
+      if ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
+        key_content = ENV["APPSTORE_PRIVATE_KEY"]
+        is_base64 = key_content&.include?("-----BEGIN PRIVATE KEY-----") ? false : true
+
+        api_key = app_store_connect_api_key(
+          key_id: ENV["APPSTORE_KEY_ID"],
+          issuer_id: ENV["APPSTORE_ISSUER_ID"],
+          key_content: key_content,
+          is_key_content_base64: is_base64
+        )
+      end
+
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: false,
+        api_key: api_key
+      )
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
     end
