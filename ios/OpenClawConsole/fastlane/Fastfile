@@ -14,46 +14,6 @@ def app_store_api_key_from_env
   )
 end
 
-def ensure_app_store_connect_app!(api_key:, bundle_id:, app_name:, sku:, primary_locale: "en-US")
-  return unless api_key
-
-  require "spaceship"
-  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**api_key)
-
-  existing = Spaceship::ConnectAPI::App.all(filter: { bundleId: bundle_id }).find { |app| app.bundle_id == bundle_id }
-  return existing if existing
-
-  UI.important("App Store Connect app #{bundle_id} not found; creating it now.")
-  begin
-    Spaceship::ConnectAPI::App.create(
-      name: app_name,
-      bundle_id: bundle_id,
-      primary_locale: primary_locale,
-      sku: sku,
-      platforms: ["IOS"]
-    )
-  rescue => e
-    message = e.to_s
-    create_forbidden = message.include?("does not allow 'CREATE'")
-    has_apple_login = ENV["FASTLANE_USER"] && ENV["FASTLANE_PASSWORD"]
-    if create_forbidden && has_apple_login
-      UI.important("API key cannot create apps; retrying with Apple ID credentials via produce.")
-      produce(
-        username: ENV["FASTLANE_USER"],
-        app_identifier: bundle_id,
-        app_name: app_name,
-        sku: sku,
-        language: "English",
-        team_id: ENV["ITC_TEAM_ID"],
-        skip_devcenter: true,
-        skip_itc: false
-      )
-    else
-      raise
-    end
-  end
-end
-
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -61,12 +21,6 @@ platform :ios do
 
     # Use App Store Connect API key if available
     api_key = app_store_api_key_from_env
-    ensure_app_store_connect_app!(
-      api_key: api_key,
-      bundle_id: "com.openclaw.console",
-      app_name: "OpenClaw Console",
-      sku: "openclawconsole"
-    )
 
     marketing_version = get_version_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
