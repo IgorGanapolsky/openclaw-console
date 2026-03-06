@@ -120,6 +120,8 @@ jobs:
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Setup signing certificates and profiles (match)
+        id: signing_setup
+        continue-on-error: true
         env:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
@@ -144,8 +146,25 @@ jobs:
             echo "⚠️ OpenClawConsole.xcodeproj is missing; TestFlight upload step will be skipped."
           fi
 
+      - name: Decide iOS upload readiness
+        id: ios_ready
+        run: |
+          set -euo pipefail
+          READY="true"
+          REASON="ready"
+          if [ "${{ steps.ios_project.outputs.present }}" != "true" ]; then
+            READY="false"
+            REASON="missing_xcode_project"
+          elif [ "${{ steps.signing_setup.outcome }}" != "success" ]; then
+            READY="false"
+            REASON="signing_setup_failed"
+          fi
+          echo "ready=$READY" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "iOS upload readiness: $READY ($REASON)"
+
       - name: Build and upload to TestFlight
-        if: steps.ios_project.outputs.present == 'true'
+        if: steps.ios_ready.outputs.ready == 'true'
         env:
           CI: "true"
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -159,9 +178,10 @@ jobs:
         run: fastlane beta
         working-directory: ios/OpenClawConsole
 
-      - name: Skip TestFlight upload (missing Xcode project)
-        if: steps.ios_project.outputs.present != 'true'
-        run: echo "Skipping TestFlight upload because OpenClawConsole.xcodeproj is not present in this repository."
+      - name: Skip TestFlight upload
+        if: steps.ios_ready.outputs.ready != 'true'
+        run: |
+          echo "Skipping TestFlight upload: ${{ steps.ios_ready.outputs.reason }}"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -369,7 +389,7 @@ jobs:
           }
 
           TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
-          GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
+          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
           APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
 
           AUTH_MODE="service-account"
@@ -384,7 +404,7 @@ jobs:
           fi
 
           TESTERS="$(normalize_csv "$TESTERS")"
-          GROUPS="$(normalize_csv "$GROUPS")"
+          DIST_GROUPS="$(normalize_csv "$DIST_GROUPS")"
 
           BASE_CMD=(
             firebase appdistribution:distribute
@@ -416,11 +436,11 @@ jobs:
           if [ -n "$TESTERS" ]; then
             ATTEMPT_ARGS+=(--testers "$TESTERS")
           fi
-          if [ -n "$GROUPS" ]; then
-            ATTEMPT_ARGS+=(--groups "$GROUPS")
+          if [ -n "$DIST_GROUPS" ]; then
+            ATTEMPT_ARGS+=(--groups "$DIST_GROUPS")
           fi
 
-          if [ -z "$TESTERS" ] && [ -z "$GROUPS" ]; then
+          if [ -z "$TESTERS" ] && [ -z "$DIST_GROUPS" ]; then
             echo "No testers/groups configured. Uploading build without invite audience."
           fi
 
@@ -428,8 +448,8 @@ jobs:
             exit 0
           fi
 
-          if [ -n "$TESTERS" ] && [ -n "$GROUPS" ]; then
-            if run_dist "groups-only-retry" /tmp/firebase-dist-attempt2.log --groups "$GROUPS"; then
+          if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
+            if run_dist "groups-only-retry" /tmp/firebase-dist-attempt2.log --groups "$DIST_GROUPS"; then
               exit 0
             fi
           fi
