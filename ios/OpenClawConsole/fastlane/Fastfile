@@ -39,6 +39,32 @@ def app_store_api_key_from_env
   )
 end
 
+def sync_match_with_bootstrap(api_key:, app_identifiers:)
+  readonly_raw = (ENV["MATCH_READONLY"] || "true").downcase
+  preferred_readonly = %w[1 true yes on].include?(readonly_raw)
+
+  begin
+    match(
+      type: "appstore",
+      app_identifier: app_identifiers,
+      readonly: preferred_readonly,
+      api_key: api_key
+    )
+  rescue => e
+    if preferred_readonly
+      UI.important("Readonly match failed: #{e}. Retrying with readonly disabled to bootstrap signing assets.")
+      match(
+        type: "appstore",
+        app_identifier: app_identifiers,
+        readonly: false,
+        api_key: api_key
+      )
+    else
+      raise
+    end
+  end
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -89,11 +115,9 @@ platform :ios do
     if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
       # CI runners do not have Apple ID accounts configured; force manual signing
       # with match-managed App Store profiles for deterministic archives.
-      match(
-        type: "appstore",
-        app_identifier: ["com.openclaw.console"],
-        readonly: true,
-        api_key: api_key
+      sync_match_with_bootstrap(
+        api_key: api_key,
+        app_identifiers: ["com.openclaw.console"]
       )
 
       app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
@@ -141,13 +165,9 @@ platform :ios do
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
-      readonly_mode = ENV["CI"] == "true"
-
-      match(
-        type: "appstore",
-        app_identifier: ["com.openclaw.console"],
-        readonly: readonly_mode,
-        api_key: api_key
+      sync_match_with_bootstrap(
+        api_key: api_key,
+        app_identifiers: ["com.openclaw.console"]
       )
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
