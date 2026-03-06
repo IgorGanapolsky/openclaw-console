@@ -71,24 +71,27 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
-        if: matrix.language != 'swift'
+        if: matrix.language == 'javascript-typescript'
         uses: github/codeql-action/autobuild@v4
+
+      - name: Build Java/Kotlin for CodeQL
+        if: matrix.language == 'java-kotlin'
+        working-directory: android
+        run: |
+          ./gradlew :app:compileDebugKotlin :app:compileDebugJavaWithJavac --no-daemon --stacktrace
 
       - name: Build Swift for CodeQL
         if: matrix.language == 'swift'
         working-directory: ios/OpenClawConsole
         run: |
-          SIMULATOR_NAME=$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*/\1/p' | head -n 1)
-          if [ -n "$SIMULATOR_NAME" ]; then
-            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
-          else
-            DESTINATION="generic/platform=iOS Simulator"
-          fi
-          echo "Using destination: $DESTINATION"
+          DESTINATION="generic/platform=iOS Simulator"
+          echo "Using deterministic destination: $DESTINATION"
           xcodebuild build \
             -scheme OpenClawConsole \
             -destination "$DESTINATION" \
             -configuration Debug \
+            -skipPackagePluginValidation \
+            -disableAutomaticPackageResolution \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
