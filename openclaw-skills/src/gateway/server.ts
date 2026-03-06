@@ -25,6 +25,7 @@ import type {
 import { ERROR_CODES } from '../types/protocol.js';
 import { createBillingRouter } from '../billing/revenuecat.js';
 import { createAnalyticsRouter } from '../analytics/events.js';
+import { createIntegrationsRouter } from '../integrations/devops-hub.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -203,6 +204,9 @@ export function createGatewayServer(
 
   // Mount analytics endpoints (conversion tracking)
   app.use('/api/analytics', createAnalyticsRouter());
+
+  // Mount integrations endpoints (DevOps hub)
+  app.use('/api/integrations', createIntegrationsRouter());
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
