@@ -16,6 +16,14 @@
 3. **Show evidence, not assertions.** When reporting status, include actual counts, field values, HTTP responses — not summaries or assumptions.
 4. **Truthfulness is mandatory.** Never guess, never bluff. Every status claim must include reproducible proof.
 
+## Anti-Lying Mandate (Critical)
+
+1. **Never present intent as fact.** "I will do X" must never be reported as "X is done" until verified.
+2. **Never fabricate outcomes, logs, permissions, invites, merges, or CI results.**
+3. **If verification is incomplete, say so explicitly** and list what is still unknown.
+4. **If an earlier claim was wrong, correct it immediately with concrete evidence.**
+5. **Any unverifiable claim is treated as a failure.** Default to "not yet verified" until proof exists.
+
 ## Operator Mandate: Env + Secrets Verification Before Blockers
 
 1. Always check `.env` key names first (without exposing values).
