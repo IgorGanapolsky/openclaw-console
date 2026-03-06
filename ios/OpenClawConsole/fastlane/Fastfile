@@ -30,7 +30,8 @@ def ensure_app_store_connect_app!(api_key:, bundle_id:, app_name:, sku:, primary
     name: app_name,
     bundle_id: bundle_id,
     primary_locale: primary_locale,
-    sku: sku
+    sku: sku,
+    platforms: ["IOS"]
   )
 end
 
