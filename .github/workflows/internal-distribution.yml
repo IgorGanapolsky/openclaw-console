@@ -392,15 +392,18 @@ jobs:
           DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
           APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
 
-          AUTH_MODE="service-account"
-          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
-            # firebase-tools can implicitly prioritize FIREBASE_TOKEN if present.
-            unset FIREBASE_TOKEN
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+          AUTH_MODE=""
+          if [ -n "${FIREBASE_TOKEN:-}" ]; then
             AUTH_MODE="token"
+          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+            AUTH_MODE="service-account"
           else
             echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
             exit 1
+          fi
+
+          if [ "$AUTH_MODE" = "service-account" ]; then
+            unset FIREBASE_TOKEN
           fi
 
           TESTERS="$(normalize_csv "$TESTERS")"
