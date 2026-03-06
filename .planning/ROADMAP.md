@@ -2,13 +2,13 @@
 
 ## Overview
 
-This is a brownfield repair project, not a greenfield build. Substantial native iOS (SwiftUI) and Android (Kotlin/Compose) app code exists with a TypeScript skills gateway, but a broken CI/CD pipeline prevents signed builds from reaching devices. The work proceeds in a strict dependency chain: fix the CI layer first, then validate signing and distribution, then confirm the biometric approval workflow works on real hardware, then harden the distribution loop for sustainable beta testing. Every phase is a prerequisite for the next. Nothing can be parallelized until Phase 1 is green.
+This is a brownfield repair project, not a greenfield build. Substantial native iOS (SwiftUI) and Android (Kotlin/Compose) app code exists with a TypeScript skills gateway, but a broken CI/CD pipeline prevents signed builds from reaching devices. The work proceeds in a strict dependency chain: fix the CI layer first, then validate signing and distribution, then implement revenue generation infrastructure to achieve $100/day target, then harden the distribution loop for sustainable beta testing. Every phase is a prerequisite for the next. Nothing can be parallelized until Phase 1 is green.
 
 ## Phases
 
 - [x] **Phase 1: CI Pipeline Repair** - Fix all blocking CI failures so the pipeline runs green end-to-end on develop (completed 2026-03-02)
 - [ ] **Phase 2: Code Signing and Distribution** - Configure Fastlane match, keystore, and distribution lanes so signed builds reach Firebase and TestFlight automatically
-- [ ] **Phase 3: Device Testing Validation** - Confirm signed builds install and the biometric approval workflow works on real physical hardware
+- [ ] **Phase 3: Revenue Generation Infrastructure** - Implement subscription billing, analytics, and DevOps integrations to achieve $100/day target through Pro tier subscriptions
 - [ ] **Phase 4: Distribution Hardening** - Add certificate monitoring, release notes, build metadata validation, and status notifications for a sustainable beta loop
 
 ## Phase Details
@@ -49,22 +49,23 @@ Plans:
 - [x] 02-03-PLAN.md — iOS match cert repo + all iOS secrets (SIGN-02, SIGN-03)
 - [ ] 02-04-PLAN.md — apksigner verification + end-to-end distribution trigger (SIGN-04, SIGN-05) [paused at human-verify checkpoint]
 
-### Phase 3: Device Testing Validation
-**Goal**: Implement revenue generation infrastructure and community positioning to achieve $100/day target through subscription billing, analytics, and DevOps professional outreach while validating core device functionality — not just simulators — so the core product value proposition is validated before beta expansion
+### Phase 3: Revenue Generation Infrastructure
+**Goal**: Implement revenue generation infrastructure and community positioning to achieve $100/day target through subscription billing, analytics, and DevOps professional outreach targeting 150-300 Pro subscribers at $15-20/month
 **Depends on**: Phase 2
-**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
+**Requirements**: REV-01, REV-02, REV-03, REV-04, REV-05
 **Success Criteria** (what must be TRUE):
-  1. The Android APK installs on a physical Android device without an "unknown sources" warning and opens without crash
-  2. The iOS build installs on a real iPhone via TestFlight and Face ID biometric prompt appears with action-specific localizedReason text
-  3. A biometric approval request (Face ID on iPhone, fingerprint on Android) succeeds and sends the approval response to the skills gateway at localhost:18789
-  4. Both iOS and Android apps connect to localhost:18789 and display a live agent list from the skills gateway
-  5. A full end-to-end approval flow completes: agent requests action, notification appears, user reviews on device, biometric verifies, gateway receives approved response
+  1. RevenueCat subscription billing is functional in skills gateway with webhook validation and Pro feature gating
+  2. Analytics service captures conversion funnel events from app install to subscription signup for optimization
+  3. DevOps integrations hub provides Slack and PagerDuty integrations that justify Pro subscription pricing
+  4. Mobile apps integrate RevenueCat SDK and can process test subscriptions with biometric approval validation
+  5. Community positioning and app store listings target DevOps professionals for customer acquisition
 **Plans**: 3 plans
 
 Plans:
 - [ ] 03-01-PLAN.md — Revenue infrastructure (billing, analytics, integrations)
 - [ ] 03-02-PLAN.md — Mobile app subscription integration and device validation
 - [ ] 03-03-PLAN.md — DevOps community positioning and marketing foundation
+
 ### Phase 4: Distribution Hardening
 **Goal**: The beta testing loop is self-sustaining and resilient — certificate expiry is monitored proactively, release notes accompany every build, store metadata is validated before uploads, and build failures generate immediate notifications
 **Depends on**: Phase 3
@@ -77,9 +78,10 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Revenue infrastructure (billing, analytics, integrations)
-- [ ] 03-02-PLAN.md — Mobile app subscription integration and device validation
-- [ ] 03-03-PLAN.md — DevOps community positioning and marketing foundation
+- [ ] 04-01-PLAN.md — Distribution automation hardening
+- [ ] 04-02-PLAN.md — Certificate and release monitoring
+- [ ] 04-03-PLAN.md — Build notification system
+
 ## Progress
 
 **Execution Order:**
@@ -89,5 +91,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. CI Pipeline Repair | 4/4 | Complete    | 2026-03-02 |
 | 2. Code Signing and Distribution | 4/4 (paused at checkpoint) | In Progress|  |
-| 3. Device Testing Validation | 0/TBD | Not started | - |
-| 4. Distribution Hardening | 0/TBD | Not started | - |
+| 3. Revenue Generation Infrastructure | 0/3 | Not started | - |
+| 4. Distribution Hardening | 0/3 | Not started | - |
