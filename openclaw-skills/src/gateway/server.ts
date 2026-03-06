@@ -182,6 +182,17 @@ export function createGatewayServer(
     });
   });
 
+  app.post('/api/remote-control', auth, (req: Request, res: Response) => {
+    const devToken = tokenManager.getDefaultDevToken();
+    const sessionUrl = `http://${config.host}:${config.port}/api/health?token=${devToken}`;
+    console.info('\n' + '='.repeat(40));
+    console.info('📱 REMOTE CONTROL ACTIVE');
+    console.info('Scan to access from mobile:');
+    console.info(`URL: ${sessionUrl}`);
+    console.info('='.repeat(40) + '\n');
+    res.json({ url: sessionUrl, expires_in: 600 });
+  });
+
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
   const httpServer = http.createServer(app);

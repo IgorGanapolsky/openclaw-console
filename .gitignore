@@ -65,3 +65,7 @@ Thumbs.db
 .build/
 .kotlin/
 dist-tests/
+# Temp files and secrets
+firebase-debug.log
+.env.*
+*.png
