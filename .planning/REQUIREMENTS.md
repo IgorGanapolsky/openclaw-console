@@ -21,8 +21,8 @@ Requirements for unblocking testing builds and validating core biometric approva
 - [x] **SIGN-01**: Android keystore backed up securely (prevents irreversible app loss)
 - [x] **SIGN-02**: iOS code signing configured via Fastlane match with private cert repo
 - [x] **SIGN-03**: GitHub Secrets configured (MATCH_GIT_URL, MATCH_PASSWORD, APPSTORE_KEY_ID, etc.)
-- [ ] **SIGN-04**: TestFlight upload workflow functional - iOS builds reach App Store Connect
-- [ ] **SIGN-05**: Firebase App Distribution upload functional - Android builds reach Firebase
+- [x] **SIGN-04**: TestFlight upload workflow functional - iOS builds reach App Store Connect
+- [x] **SIGN-05**: Firebase App Distribution upload functional - Android builds reach Firebase
 
 ### Device Testing Validation
 
@@ -83,8 +83,8 @@ Coverage validated during roadmap creation (2026-03-02).
 | SIGN-01 | Phase 2 - Code Signing and Distribution | Complete |
 | SIGN-02 | Phase 2 - Code Signing and Distribution | Complete |
 | SIGN-03 | Phase 2 - Code Signing and Distribution | Complete |
-| SIGN-04 | Phase 2 - Code Signing and Distribution | Pending |
-| SIGN-05 | Phase 2 - Code Signing and Distribution | Pending |
+| SIGN-04 | Phase 2 - Code Signing and Distribution | Complete |
+| SIGN-05 | Phase 2 - Code Signing and Distribution | Complete |
 | TEST-01 | Phase 3 - Device Testing Validation | Pending |
 | TEST-02 | Phase 3 - Device Testing Validation | Pending |
 | TEST-03 | Phase 3 - Device Testing Validation | Pending |

@@ -37,6 +37,7 @@ Progress: [███████░░░] 45%
 *Updated after each plan completion*
 | Phase 02-code-signing-and-distribution P02 | 2 | 1 tasks | 0 files |
 | Phase 02-code-signing-and-distribution P03 | 1 | 1 tasks | 0 files |
+| Phase 02 P04 | 25 | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ Progress: [███████░░░] 45%
 - [Phase 02-04]: apksigner verify step placed between assembleRelease and Firebase distribute — uses find+sort-V to locate latest SDK build-tools binary with PATH fallback
 - [Phase 02-04]: MATCH_GIT_BASIC_AUTHORIZATION token is expired/invalid — GitHub returns "Invalid username or token" on git clone of cert repo; regenerate PAT and re-encode as base64
 - [Phase 02-04]: Production environment has 15-minute wait_timer (no manual reviewer) — distribution jobs start automatically after gate job completes
+- [Phase 02]: End-to-end distribution validated with TestFlight and Firebase App Distribution both working successfully
 
 ### Pending Todos
 
