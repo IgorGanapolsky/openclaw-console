@@ -113,33 +113,18 @@ jobs:
           echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
       - name: Configure git credentials for match
-        id: signing_mode
         env:
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          USE_MATCH="false"
-          if [ -n "${MATCH_GIT_URL:-}" ] && [ -n "${MATCH_PASSWORD:-}" ] && [ -n "${MATCH_GIT_BASIC_AUTHORIZATION:-}" ] && [ -n "${GIT_AUTH_TOKEN:-}" ]; then
-            if git -c http.extraheader="Authorization: Basic ${MATCH_GIT_BASIC_AUTHORIZATION}" ls-remote "${MATCH_GIT_URL}" >/dev/null 2>&1; then
-              git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
-              USE_MATCH="true"
-              echo "✅ Match repository is reachable; using match signing."
-            else
-              echo "⚠️ Match repository is not reachable with current credentials; falling back to automatic signing."
-            fi
-          else
-            echo "⚠️ MATCH_* secrets or ADMIN_TOKEN are incomplete; falling back to automatic signing."
-          fi
-          echo "use_match=$USE_MATCH" >> "$GITHUB_OUTPUT"
+          git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Setup signing certificates and profiles (match)
-        if: steps.signing_mode.outputs.use_match == 'true'
         env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
