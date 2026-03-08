@@ -39,3 +39,10 @@ paths = [
   '''openclaw-skills/dist/''',
   '''tests/.*\.test\.ts$''',
 ]
+regexes = [
+  '''Authorization:\s*Bearer\s*(YOUR_ADMIN_TOKEN|ocw_YOUR_DEV_TOKEN)''',
+]
+stopwords = [
+  '''YOUR_ADMIN_TOKEN''',
+  '''ocw_YOUR_DEV_TOKEN''',
+]
