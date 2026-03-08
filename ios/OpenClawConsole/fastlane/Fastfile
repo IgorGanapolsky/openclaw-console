@@ -51,6 +51,13 @@ def resolved_appstore_key_path
   File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
 end
 
+def parse_csv_env(name)
+  ENV.fetch(name, "")
+    .split(",")
+    .map { |v| v.strip }
+    .reject(&:empty?)
+end
+
 def signing_xcargs
   args = []
   args << "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" unless ENV["APPLE_TEAM_ID"].to_s.empty?
@@ -197,12 +204,31 @@ platform :ios do
       )
     end
 
-    upload_to_testflight(
+    tf_testers = parse_csv_env("TESTFLIGHT_TESTERS")
+    tf_groups = parse_csv_env("TESTFLIGHT_GROUPS")
+
+    upload_options = {
       skip_waiting_for_build_processing: true,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com"
-    )
+    }
+
+    unless tf_testers.empty?
+      upload_options[:testers] = tf_testers
+    end
+    unless tf_groups.empty?
+      upload_options[:groups] = tf_groups
+    end
+    if !tf_testers.empty? || !tf_groups.empty?
+      notify_external = ENV["TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS"].to_s.downcase == "true"
+      upload_options[:notify_external_testers] = notify_external
+    end
+    if ENV["TESTFLIGHT_DISTRIBUTE_EXTERNAL"].to_s.downcase == "true"
+      upload_options[:distribute_external] = true
+    end
+
+    upload_to_testflight(upload_options)
   end
 
   desc "Setup certificates and profiles via match"

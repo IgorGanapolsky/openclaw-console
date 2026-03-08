@@ -163,6 +163,8 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_TESTERS: ${{ secrets.TESTFLIGHT_TESTERS || vars.TESTFLIGHT_TESTERS }}
+          TESTFLIGHT_GROUPS: ${{ secrets.TESTFLIGHT_GROUPS || vars.TESTFLIGHT_GROUPS }}
         run: fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -360,6 +362,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ secrets.FIREBASE_INTERNAL_TESTERS || vars.FIREBASE_INTERNAL_TESTERS }}
           FIREBASE_INTERNAL_GROUPS: ${{ secrets.FIREBASE_INTERNAL_GROUPS || vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL || vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
         run: |
           set -Eeuo pipefail
@@ -391,6 +394,21 @@ jobs:
 
           TESTERS="$(normalize_csv "$TESTERS")"
           DIST_GROUPS="$(normalize_csv "$DIST_GROUPS")"
+          REQUIRED_TESTER="$(normalize_csv "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")"
+
+          if [ -n "$REQUIRED_TESTER" ]; then
+            case ",$TESTERS," in
+              *",$REQUIRED_TESTER,"*) ;;
+              *)
+                if [ -n "$TESTERS" ]; then
+                  TESTERS="${TESTERS},${REQUIRED_TESTER}"
+                else
+                  TESTERS="${REQUIRED_TESTER}"
+                fi
+                echo "Added required Firebase tester: ${REQUIRED_TESTER}"
+                ;;
+            esac
+          fi
 
           BASE_CMD=(
             firebase appdistribution:distribute

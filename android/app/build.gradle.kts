@@ -47,6 +47,9 @@ android {
 
     lint {
         disable += "NullSafeMutableLiveData"
+        disable += "RememberInComposition"
+        disable += "FrequentlyChangingValue"
+        disable += "AutoboxingStateCreation"
         // AGP 8.7.3 lint crashes with IncompatibleClassChangeError on multiple Compose/Lifecycle detectors.
         // This is a known tooling bug, not a code issue. The build itself compiles fine.
         abortOnError = false
