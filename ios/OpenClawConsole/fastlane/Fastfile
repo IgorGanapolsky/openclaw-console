@@ -58,6 +58,10 @@ def parse_csv_env(name)
     .reject(&:empty?)
 end
 
+def env_true?(name)
+  %w[1 true yes on].include?(ENV.fetch(name, "").strip.downcase)
+end
+
 def signing_xcargs
   args = []
   args << "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" unless ENV["APPLE_TEAM_ID"].to_s.empty?
@@ -204,31 +208,55 @@ platform :ios do
       )
     end
 
-    tf_testers = parse_csv_env("TESTFLIGHT_TESTERS")
-    tf_groups = parse_csv_env("TESTFLIGHT_GROUPS")
+    tf_testers = parse_csv_env("TESTFLIGHT_TESTERS").uniq
+    required_tf_testers = parse_csv_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL").uniq
+    required_tf_testers.each do |required_email|
+      next if tf_testers.include?(required_email)
+
+      tf_testers << required_email
+      UI.message("Added required TestFlight tester: #{required_email}")
+    end
+    tf_groups = parse_csv_env("TESTFLIGHT_GROUPS").uniq
+    distribute_external_requested = env_true?("TESTFLIGHT_DISTRIBUTE_EXTERNAL")
+    audience_configured = !tf_testers.empty? || !tf_groups.empty? || distribute_external_requested
 
     upload_options = {
-      skip_waiting_for_build_processing: true,
+      skip_waiting_for_build_processing: !audience_configured,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com"
     }
 
-    unless tf_testers.empty?
-      upload_options[:testers] = tf_testers
-    end
     unless tf_groups.empty?
       upload_options[:groups] = tf_groups
     end
-    if !tf_testers.empty? || !tf_groups.empty?
-      notify_external = ENV["TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS"].to_s.downcase == "true"
+    if audience_configured
+      notify_external = env_true?("TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS")
       upload_options[:notify_external_testers] = notify_external
     end
-    if ENV["TESTFLIGHT_DISTRIBUTE_EXTERNAL"].to_s.downcase == "true"
+    if distribute_external_requested
       upload_options[:distribute_external] = true
     end
 
     upload_to_testflight(upload_options)
+
+    if !tf_testers.empty? && tf_groups.empty?
+      UI.user_error!("TESTFLIGHT_TESTERS requires TESTFLIGHT_GROUPS so testers can be assigned to a beta group")
+    end
+
+    unless tf_testers.empty?
+      require "pilot/tester_manager"
+      tester_manager = Pilot::TesterManager.new
+
+      tf_testers.each do |email|
+        tester_manager.add_tester(
+          api_key: api_key,
+          app_identifier: "com.openclaw.console",
+          groups: tf_groups,
+          email: email
+        )
+      end
+    end
   end
 
   desc "Setup certificates and profiles via match"
