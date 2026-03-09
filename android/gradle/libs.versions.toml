@@ -21,7 +21,7 @@ posthog = "3.8.2"
 playReview = "2.0.2"
 playBilling = "7.1.1"
 firebaseBom = "33.7.0"
-googleServices = "4.4.2"
+googleServices = "4.4.4"
 crashlyticsPlugin = "3.0.2"
 media = "1.7.0"
 
