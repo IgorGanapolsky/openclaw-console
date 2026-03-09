@@ -237,6 +237,7 @@ platform :ios do
     if distribute_external_requested
       upload_options[:distribute_external] = true
     end
+    upload_options[:submit_beta_review] = env_true?("TESTFLIGHT_SUBMIT_BETA_REVIEW")
 
     upload_to_testflight(upload_options)
 
