@@ -1,6 +1,8 @@
+import { jest } from '@jest/globals';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import nodeFetch from 'node-fetch';
 import { StateManager } from '../../src/gateway/state.js';
 import { createGatewayServer } from '../../src/gateway/server.js';
 import type { GatewayServer } from '../../src/gateway/server.js';
@@ -195,6 +197,52 @@ describe('gateway server hardening', () => {
         });
       }
     } finally {
+      await gateway.stop();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('billing protected routes are rate-limited after authentication', async () => {
+    const originalFetch = global.fetch;
+    const originalMaxRequests = process.env.BILLING_RATE_LIMIT_MAX_REQUESTS;
+    const originalWindowMs = process.env.BILLING_RATE_LIMIT_WINDOW_MS;
+    process.env.BILLING_RATE_LIMIT_MAX_REQUESTS = '2';
+    process.env.BILLING_RATE_LIMIT_WINDOW_MS = '60000';
+    global.fetch = jest.fn(async () => ({
+      ok: false,
+      status: 503,
+      json: async () => ({}),
+      text: async () => 'upstream unavailable'
+    })) as any;
+
+    const { gateway, baseUrl, token, tempDir } = await startGateway();
+
+    try {
+      const request = () => nodeFetch(`${baseUrl}/api/billing/status/rate-limit-user`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      expect((await request()).status).toBe(200);
+      expect((await request()).status).toBe(200);
+
+      const limited = await request();
+      expect(limited.status).toBe(429);
+      await expect(limited.json()).resolves.toMatchObject({
+        success: false,
+        error: 'Too many requests'
+      });
+    } finally {
+      global.fetch = originalFetch;
+      if (originalMaxRequests === undefined) {
+        delete process.env.BILLING_RATE_LIMIT_MAX_REQUESTS;
+      } else {
+        process.env.BILLING_RATE_LIMIT_MAX_REQUESTS = originalMaxRequests;
+      }
+      if (originalWindowMs === undefined) {
+        delete process.env.BILLING_RATE_LIMIT_WINDOW_MS;
+      } else {
+        process.env.BILLING_RATE_LIMIT_WINDOW_MS = originalWindowMs;
+      }
       await gateway.stop();
       rmSync(tempDir, { recursive: true, force: true });
     }

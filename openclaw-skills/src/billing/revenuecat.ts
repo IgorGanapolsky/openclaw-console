@@ -70,6 +70,70 @@ const subscriptionCache = new Map<string, SubscriptionStatus>();
 // RevenueCat configuration
 const REVENUECAT_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY;
 const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET;
+const REVENUECAT_API_BASE_URL = 'https://api.revenuecat.com/v1';
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+function parsePositiveIntEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function getSubscriberUrl(userId: string): string {
+  return `${REVENUECAT_API_BASE_URL}/subscribers/${encodeURIComponent(userId)}`;
+}
+
+function buildSubscriptionStatus(userId: string, customerInfo: CustomerInfo): SubscriptionStatus {
+  return {
+    userId,
+    isPro: hasProEntitlement(customerInfo),
+    hasActiveSubscription: hasActiveSubscription(customerInfo),
+    subscriptionType: getSubscriptionType(customerInfo),
+    expirationDate: getExpirationDate(customerInfo),
+    willRenew: getWillRenew(customerInfo),
+    trialActive: hasActiveTrial(customerInfo)
+  };
+}
+
+function cacheSubscriptionStatus(userId: string, status: SubscriptionStatus): void {
+  subscriptionCache.set(userId, status);
+  const evictionTimer = setTimeout(() => subscriptionCache.delete(userId), 5 * 60 * 1000);
+  evictionTimer.unref?.();
+}
+
+function createProtectedBillingRateLimiter(): RequestHandler {
+  const windowMs = parsePositiveIntEnv('BILLING_RATE_LIMIT_WINDOW_MS', 60_000);
+  const maxRequests = parsePositiveIntEnv('BILLING_RATE_LIMIT_MAX_REQUESTS', 60);
+  const requests = new Map<string, RateLimitEntry>();
+
+  return (req, res, next) => {
+    const now = Date.now();
+    const clientKey = req.ip || req.socket.remoteAddress || 'unknown';
+    const entry = requests.get(clientKey);
+
+    if (!entry || entry.resetAt <= now) {
+      requests.set(clientKey, { count: 1, resetAt: now + windowMs });
+      next();
+      return;
+    }
+
+    if (entry.count >= maxRequests) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+      res.status(429).json({
+        success: false,
+        error: 'Too many requests'
+      });
+      return;
+    }
+
+    entry.count += 1;
+    next();
+  };
+}
 
 /**
  * Initialize RevenueCat configuration
@@ -96,13 +160,13 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   // Check cache first
   const cached = subscriptionCache.get(userId);
   if (cached) {
-    console.log(`[RevenueCat] Cache hit for user ${userId}`);
+    console.log('[RevenueCat] Cache hit', { userId });
     return cached;
   }
 
   try {
     // In production, make actual RevenueCat API call
-    const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${userId}`, {
+    const response = await fetch(getSubscriberUrl(userId), {
       headers: {
         'Authorization': `Bearer ${REVENUECAT_SECRET_KEY}`,
         'X-Platform': 'server'
@@ -114,26 +178,14 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     }
 
     const customerInfo = await response.json() as CustomerInfo;
+    const status = buildSubscriptionStatus(userId, customerInfo);
+    cacheSubscriptionStatus(userId, status);
 
-    const status: SubscriptionStatus = {
-      userId,
-      isPro: hasProEntitlement(customerInfo),
-      hasActiveSubscription: hasActiveSubscription(customerInfo),
-      subscriptionType: getSubscriptionType(customerInfo),
-      expirationDate: getExpirationDate(customerInfo),
-      willRenew: getWillRenew(customerInfo),
-      trialActive: hasActiveTrial(customerInfo)
-    };
-
-    // Cache for 5 minutes
-    subscriptionCache.set(userId, status);
-    setTimeout(() => subscriptionCache.delete(userId), 5 * 60 * 1000);
-
-    console.log(`[RevenueCat] Status retrieved for user ${userId}:`, status);
+    console.log('[RevenueCat] Status retrieved', { userId, status });
     return status;
 
   } catch (error) {
-    console.error(`[RevenueCat] Error fetching status for user ${userId}:`, error);
+    console.error('[RevenueCat] Error fetching status', { userId, error });
 
     // Return default free status on error
     const defaultStatus: SubscriptionStatus = {
@@ -155,7 +207,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
  */
 export async function purchaseSubscription(userId: string, productId: string, receipt: string): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`[RevenueCat] Processing purchase for user ${userId}, product ${productId}`);
+    console.log('[RevenueCat] Processing purchase', { userId, productId });
 
     const response = await fetch('https://api.revenuecat.com/v1/receipts', {
       method: 'POST',
@@ -180,7 +232,7 @@ export async function purchaseSubscription(userId: string, productId: string, re
     }
 
     await response.json(); // Purchase response data
-    console.log(`[RevenueCat] Purchase successful for user ${userId}`);
+    console.log('[RevenueCat] Purchase successful', { userId });
 
     // Invalidate cache to force refresh
     subscriptionCache.delete(userId);
@@ -188,7 +240,7 @@ export async function purchaseSubscription(userId: string, productId: string, re
     return { success: true };
 
   } catch (error) {
-    console.error(`[RevenueCat] Purchase error for user ${userId}:`, error);
+    console.error('[RevenueCat] Purchase error', { userId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown purchase error'
@@ -201,9 +253,9 @@ export async function purchaseSubscription(userId: string, productId: string, re
  */
 export async function restorePurchases(userId: string): Promise<{ success: boolean; customerInfo?: CustomerInfo; error?: string }> {
   try {
-    console.log(`[RevenueCat] Restoring purchases for user ${userId}`);
+    console.log('[RevenueCat] Restoring purchases', { userId });
 
-    const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${userId}`, {
+    const response = await fetch(getSubscriberUrl(userId), {
       headers: {
         'Authorization': `Bearer ${REVENUECAT_SECRET_KEY}`,
         'X-Platform': 'server'
@@ -216,14 +268,14 @@ export async function restorePurchases(userId: string): Promise<{ success: boole
 
     const customerInfo = await response.json() as CustomerInfo;
 
-    // Refresh cache
-    await getSubscriptionStatus(userId);
+    // Refresh cache using the restored customer info we already fetched.
+    cacheSubscriptionStatus(userId, buildSubscriptionStatus(userId, customerInfo));
 
-    console.log(`[RevenueCat] Purchases restored for user ${userId}`);
+    console.log('[RevenueCat] Purchases restored', { userId });
     return { success: true, customerInfo };
 
   } catch (error) {
-    console.error(`[RevenueCat] Restore error for user ${userId}:`, error);
+    console.error('[RevenueCat] Restore error', { userId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown restore error'
@@ -414,6 +466,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
 
   if (auth) {
     router.use(auth);
+    router.use(createProtectedBillingRateLimiter());
   }
 
   // Get subscription status

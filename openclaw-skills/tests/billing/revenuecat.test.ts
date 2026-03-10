@@ -2,6 +2,7 @@ import { describe, it, expect, jest } from '@jest/globals';
 import {
   initializeRevenueCat,
   getSubscriptionStatus,
+  restorePurchases,
   hasProEntitlement,
   checkPremiumAccess
 } from '../../src/billing/revenuecat.js';
@@ -11,6 +12,29 @@ process.env.REVENUECAT_PUBLIC_KEY = 'test_public_key_123';
 process.env.REVENUECAT_SECRET_KEY = 'test_secret_key_456';
 
 describe('RevenueCat Billing', () => {
+  function makeCustomerInfo(isActive: boolean) {
+    return {
+      id: 'test-user-123',
+      originalAppUserId: 'test-user-123',
+      entitlements: {
+        pro: {
+          isActive,
+          willRenew: isActive,
+          expirationDate: isActive ? '2026-04-06T12:00:00Z' : null,
+          productIdentifier: 'pro_monthly'
+        }
+      },
+      subscriptions: {
+        pro_monthly: {
+          isActive,
+          willRenew: isActive,
+          expirationDate: isActive ? '2026-04-06T12:00:00Z' : null,
+          productId: 'pro_monthly'
+        }
+      }
+    };
+  }
+
   describe('initializeRevenueCat', () => {
     const originalEnv = process.env;
 
@@ -139,6 +163,54 @@ describe('RevenueCat Billing', () => {
       expect(status.expirationDate).toBeNull();
       expect(status.willRenew).toBe(false);
       expect(status.trialActive).toBe(false);
+
+      global.fetch = originalFetch;
+    });
+
+    it('should encode the subscriber userId in the RevenueCat API URL', async () => {
+      const originalFetch = global.fetch;
+      const fetchMock = jest.fn(async () => ({
+        ok: true,
+        json: async () => makeCustomerInfo(true)
+      })) as any;
+      global.fetch = fetchMock;
+
+      await getSubscriptionStatus('user/with spaces?');
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.revenuecat.com/v1/subscribers/user%2Fwith%20spaces%3F',
+        expect.any(Object)
+      );
+
+      global.fetch = originalFetch;
+    });
+  });
+
+  describe('restorePurchases', () => {
+    it('should refresh cached subscription status from restored customer info', async () => {
+      const originalFetch = global.fetch;
+      const cachedUserId = 'restore-cache-user';
+      const fetchMock = jest.fn() as any;
+      fetchMock
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => makeCustomerInfo(false)
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => makeCustomerInfo(true)
+        });
+      global.fetch = fetchMock;
+
+      const initialStatus = await getSubscriptionStatus(cachedUserId);
+      expect(initialStatus.isPro).toBe(false);
+
+      const restoreResult = await restorePurchases(cachedUserId);
+      expect(restoreResult.success).toBe(true);
+
+      const refreshedStatus = await getSubscriptionStatus(cachedUserId);
+      expect(refreshedStatus.isPro).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
 
       global.fetch = originalFetch;
     });

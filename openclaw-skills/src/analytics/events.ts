@@ -163,11 +163,11 @@ export async function trackConversionEvent(
       await sendToFirebaseAnalytics(analyticsEvent);
     }
 
-    console.log(`[Analytics] Event tracked: ${event} for user ${userId}`);
+    console.log('[Analytics] Event tracked', { event, userId });
     return { success: true };
 
   } catch (error) {
-    console.error(`[Analytics] Error tracking event ${event}:`, error);
+    console.error('[Analytics] Error tracking event', { event, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Event tracking failed'
@@ -214,7 +214,7 @@ export async function trackRevenue(
       transaction_id: transactionId
     });
 
-    console.log(`[Analytics] Revenue tracked: $${revenue} ${currency} from ${userId}`);
+    console.log('[Analytics] Revenue tracked', { userId, revenue, currency });
     return { success: true };
 
   } catch (error) {
@@ -239,10 +239,13 @@ export async function identifyUser(
     signup_date?: string;
     [key: string]: any;
   }
-): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string }> {
   try {
     // Update user properties for future events
-    console.log(`[Analytics] User identified: ${userId}`, properties);
+    console.log('[Analytics] User identified', {
+      userId,
+      propertyKeys: Object.keys(properties)
+    });
 
     // Set cohort week based on signup date
     if (properties.signup_date) {
@@ -266,7 +269,7 @@ export async function identifyUser(
     return { success: true };
 
   } catch (error) {
-    console.error(`[Analytics] Error identifying user ${userId}:`, error);
+    console.error('[Analytics] Error identifying user', { userId, error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'User identification failed'
@@ -394,7 +397,7 @@ export function getABTestAssignment(userId: string, testName: string): {
   }
 
   // Use deterministic hash to assign user to variant
-  const hash = crypto.createHash('md5').update(`${userId}-${testName}`).digest('hex');
+  const hash = crypto.createHash('sha256').update(`${userId}-${testName}`).digest('hex');
   const hashInt = parseInt(hash.substring(0, 8), 16);
   const randomValue = (hashInt % 10000) / 10000; // 0-1 range
 
