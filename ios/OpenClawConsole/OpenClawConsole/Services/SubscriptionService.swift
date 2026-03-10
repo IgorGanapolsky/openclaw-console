@@ -67,6 +67,7 @@ public final class SubscriptionService: NSObject {
     private static let proEntitlementId = "pro"
     private static let proMonthlyProductId = "com.openclaw.console.pro.monthly"
     private static let proYearlyProductId = "com.openclaw.console.pro.yearly"
+    static let shared = SubscriptionService()
 
     // MARK: - Published Properties
 
@@ -387,7 +388,7 @@ public final class PurchaseManager {
     private let subscriptionService: SubscriptionService
 
     private init() {
-        self.subscriptionService = SubscriptionService()
+        self.subscriptionService = .shared
     }
 
     public func configure(apiKey: String, userId: String? = nil) {

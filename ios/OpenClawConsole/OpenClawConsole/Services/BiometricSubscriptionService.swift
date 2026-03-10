@@ -19,7 +19,7 @@ final class BiometricSubscriptionService {
 
     init(
         biometricService: BiometricService = BiometricService.shared,
-        subscriptionService: SubscriptionService = SubscriptionService()
+        subscriptionService: SubscriptionService = .shared
     ) {
         self.biometricService = biometricService
         self.subscriptionService = subscriptionService

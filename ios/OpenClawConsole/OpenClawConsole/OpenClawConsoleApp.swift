@@ -42,7 +42,7 @@ private final class AppServices {
         let ws = WebSocketService()
         webSocket = ws
         approvalViewModel = ApprovalViewModel(webSocket: ws)
-        subscriptionService = SubscriptionService()
+        subscriptionService = .shared
 
         // Initialize RevenueCat
         configureSubscriptionService()

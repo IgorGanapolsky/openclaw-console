@@ -16,6 +16,17 @@ concurrency:
 jobs:
   ios-testflight-internal:
     name: iOS TestFlight (Internal)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        (
+          github.event.workflow_run.head_branch == 'develop' ||
+          startsWith(github.event.workflow_run.head_branch, 'release/') ||
+          startsWith(github.event.workflow_run.head_branch, 'hotfix/')
+        )
+      )
     runs-on: macos-15
     environment: production
     steps:
@@ -130,6 +141,17 @@ jobs:
 
   android-firebase-internal:
     name: Android Firebase App Distribution (Internal)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        (
+          github.event.workflow_run.head_branch == 'develop' ||
+          startsWith(github.event.workflow_run.head_branch, 'release/') ||
+          startsWith(github.event.workflow_run.head_branch, 'hotfix/')
+        )
+      )
     runs-on: ubuntu-latest
     environment: production
     steps:
