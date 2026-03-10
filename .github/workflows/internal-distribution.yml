@@ -173,7 +173,7 @@ jobs:
         working-directory: ios/OpenClawConsole
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ios-ipa-internal
@@ -473,7 +473,7 @@ jobs:
           exit 1
 
       - name: Upload Android APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-apk-internal
