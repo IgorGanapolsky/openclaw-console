@@ -20,7 +20,8 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          if [[ "$PR_AUTHOR" == "app/dependabot" ]] && [[ "$HEAD_REF" == dependabot/* ]]; then
+          if [[ "$HEAD_REF" == dependabot/* ]] && \
+             { [[ "$PR_AUTHOR" == "dependabot[bot]" ]] || [[ "$PR_AUTHOR" == "app/dependabot" ]]; }; then
             echo "allowed=true" >> "$GITHUB_OUTPUT"
           else
             echo "allowed=false" >> "$GITHUB_OUTPUT"
