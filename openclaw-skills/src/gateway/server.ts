@@ -18,6 +18,7 @@ import type { GatewayConfig } from '../config/default.js';
 import { DockerContainerManager } from './container-manager.js';
 import { registerRemoteApi } from './remote-api.js';
 import { SkillGenerator } from './skill-generator.js';
+import { McpManager } from './mcp-manager.js';
 import type {
   ChatRequest,
   ApprovalRespondRequest,
@@ -35,6 +36,7 @@ export interface GatewayServer {
   state: StateManager;
   tokenManager: TokenManager;
   containerManager: DockerContainerManager;
+  mcpManager: McpManager;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -50,7 +52,8 @@ export function createGatewayServer(
   const tokenManager = new TokenManager(config.tokenStorePath);
   const auth = bearerAuthMiddleware(tokenManager);
   const containerManager = new DockerContainerManager(config);
-  const skillGenerator = new SkillGenerator(containerManager, state);
+  const mcpManager = new McpManager();
+  const skillGenerator = new SkillGenerator(containerManager, mcpManager, state);
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
@@ -234,6 +237,9 @@ export function createGatewayServer(
   // Mount integrations endpoints (DevOps hub)
   app.use('/api/integrations', createIntegrationsRouter());
 
+  // ── Git Operations ────────────────────────────────────────────────────────
+  // Note: gitApiHandler is initialized after wsManager is created below
+
   // ── Skill Generation ──────────────────────────────────────────────────────
 
   app.post('/api/skills/generate', auth, async (req: Request, res: Response) => {
@@ -284,6 +290,7 @@ export function createGatewayServer(
     state,
     tokenManager,
     containerManager,
+    mcpManager,
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {

@@ -22,7 +22,10 @@ import type {
  */
 export interface IStateManager {
   updateAgentStatus(agentId: string, status: AgentStatus): Promise<Agent | null | void>;
-  
+
+  getAgent(id: string): Promise<Agent | undefined> | Agent | undefined;
+  upsertAgent(agent: Agent): Promise<Agent>;
+
   createTask(params: {
     agent_id: string;
     title: string;

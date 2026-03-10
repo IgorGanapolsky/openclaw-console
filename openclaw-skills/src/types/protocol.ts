@@ -237,6 +237,9 @@ export type ServerEventType =
   | 'bridge_session_new'
   | 'bridge_session_update'
   | 'recurring_task_updated'
+  | 'git_state_update'
+  | 'git_conflict'
+  | 'git_operation_complete'
   | 'connected'
   | 'error';
 
@@ -245,7 +248,8 @@ export type ClientEventType =
   | 'subscribe'
   | 'unsubscribe'
   | 'approval_response'
-  | 'chat_message';
+  | 'chat_message'
+  | 'git_conflict_resolve';
 
 /** Generic WebSocket message envelope. */
 export interface WebSocketMessage<T = unknown> {
@@ -286,6 +290,44 @@ export interface ConnectedPayload {
 export interface ErrorPayload {
   code: number;
   message: string;
+}
+
+// ─── Git WebSocket Payloads ───────────────────────────────────────────────────
+
+/** git_state_update WebSocket event payload. */
+export interface GitStateUpdatePayload {
+  agent_id: string;
+  git_state: AgentGitState;
+  changes: string[];
+  requires_action: boolean;
+}
+
+/** git_conflict WebSocket event payload. */
+export interface GitConflictPayload {
+  agent_id: string;
+  repository_path: string;
+  conflicted_files: string[];
+  conflict_details: string;
+  resolution_suggestions: string[];
+  operation: GitOperation;
+}
+
+/** git_operation_complete WebSocket event payload. */
+export interface GitOperationCompletePayload {
+  agent_id: string;
+  operation: GitOperation;
+  success: boolean;
+  output: string;
+  error?: string;
+  approval_id?: string;
+}
+
+/** git_conflict_resolve client message payload. */
+export interface GitConflictResolvePayload {
+  agent_id: string;
+  conflict_id: string;
+  resolution: 'manual' | 'accept_theirs' | 'accept_ours' | 'abort';
+  resolved_files?: string[];
 }
 
 // ─── HTTP Request / Response Types ────────────────────────────────────────────

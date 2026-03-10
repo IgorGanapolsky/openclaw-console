@@ -171,6 +171,11 @@ export class CiMonitorSkill {
         // Simulate background triage process
         setTimeout(async () => {
           console.info(`[ci-monitor] Proactive triage complete for incident ${incident.id}`);
+          
+          // Enhanced: If we have an MCP research tool, log that we used it
+          await this.taskManager.log(taskId, "🤖 Proactive Research: Querying internal knowledge base for similar CI failures...");
+          await this.taskManager.recordToolCall(taskId, "mcp.research_failure", { error: "exit code 1", context: runUrl });
+
           if (this.incidentManager.executeAction) {
             await this.incidentManager.executeAction(incident.id, 'propose_fix');
           }

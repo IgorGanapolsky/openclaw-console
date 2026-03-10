@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { DockerContainerManager } from './container-manager.js';
+import { McpManager } from './mcp-manager.js';
 import type { IStateManager } from './state-interface.js';
 
 export interface GenerateSkillRequest {
@@ -19,6 +20,7 @@ export interface GenerateSkillResponse {
 export class SkillGenerator {
   constructor(
     _containerManager: DockerContainerManager,
+    private mcpManager: McpManager,
     private state: IStateManager
   ) {}
 
@@ -26,8 +28,10 @@ export class SkillGenerator {
     try {
       console.info(`[skill-generator] Generating new skill from prompt: "${req.prompt}"`);
 
-      // Mock AI Generation - in a real system we would use the Claude API here.
-      // We parse the prompt to find a suitable name, or just generate one.
+      // Discover available MCP tools to inform generation
+      const tools = await this.mcpManager.listAllTools();
+      const toolNames = tools.map(t => t.tool.name).join(', ') || 'none';
+      
       const sanitizedName = req.prompt
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -64,10 +68,10 @@ export class ${skillName.replace(/-/g, '_')}Skill {
   }
 
   private async tick() {
-    console.info('[${skillName}] Running proactive background check...');
-    // AI generated logic based on: ${req.prompt}
-  }
-}
+  console.info('[${skillName}] Running proactive background check...');
+  // Discovered Gateway Tools: ${toolNames}
+  // AI generated logic based on: ${req.prompt}
+  }}
       `.trim();
 
       fs.writeFileSync(skillPath, code, 'utf-8');

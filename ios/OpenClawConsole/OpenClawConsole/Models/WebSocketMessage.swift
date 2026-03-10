@@ -114,6 +114,7 @@ enum InboundEventType: String {
     case bridgeSessionNew = "bridge_session_new"
     case bridgeSessionUpdate = "bridge_session_update"
     case recurringTaskUpdated = "recurring_task_updated"
+    case gitStateChanged = "git_state_changed"
     case connected
     case error
 }
@@ -130,6 +131,7 @@ enum InboundEvent {
     case bridgeSessionNew(BridgeSession)
     case bridgeSessionUpdate(BridgeSession)
     case recurringTaskUpdated(RecurringTask)
+    case gitStateChanged(String, GitState)
     case connected(sessionId: String, gatewayVersion: String)
     case error(code: Int, message: String)
     case unknown(String)

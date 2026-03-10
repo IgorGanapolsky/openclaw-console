@@ -13,6 +13,7 @@ import { SEED_AGENTS, SEED_TASKS, SEED_INCIDENTS } from './config/seed-data.js';
 import { CiMonitorSkill } from './skills/ci-monitor.js';
 import { TradingMonitorSkill } from './skills/trading-monitor.js';
 import { DailyBriefSkill } from './skills/daily-brief.js';
+import { GitClawAgentSkill } from './skills/gitclaw-agent.js';
 import { AGENT_IDS } from './config/agents.js';
 
 async function main(): Promise<void> {
@@ -48,7 +49,21 @@ async function main(): Promise<void> {
   const gateway = createGatewayServer(DEFAULT_CONFIG, state);
   await gateway.start();
 
-  // ── 4. Nanoclaw Isolation Setup (Docker) ────────────────────────────────
+  // ── 4. MCP Ecosystem Setup ──────────────────────────────────────────────
+
+  for (const mcpCfg of DEFAULT_CONFIG.mcpServers) {
+    if (!mcpCfg) continue;
+    const [name, command, ...args] = mcpCfg.split(':');
+    if (name && command) {
+      try {
+        await gateway.mcpManager.connectServer(name, command, args);
+      } catch (err) {
+        console.warn(`[startup] Failed to connect to MCP server ${name}:`, err);
+      }
+    }
+  }
+
+  // ── 5. Nanoclaw Isolation Setup (Docker) ────────────────────────────────
 
   const isolatedSkills = new Set(DEFAULT_CONFIG.isolatedSkills);
   if (isolatedSkills.size > 0) {
@@ -119,6 +134,28 @@ async function main(): Promise<void> {
 
   // Mark Deploy Manager as online
   await state.updateAgentStatus(AGENT_IDS.DEPLOY_MANAGER, 'online');
+
+  // --- GitClaw Agent ---
+  if (enabledSkills.has('gitclaw-agent')) {
+    const gitclawAgent = new GitClawAgentSkill(state, DEFAULT_CONFIG, {
+      agentId: AGENT_IDS.GITCLAW_AGENT,
+      agentName: 'GitClaw Agent',
+      repositoryPath: process.cwd(),
+      repositoryUrl: 'https://github.com/openclaw/console', // Default, should be configurable
+      pollIntervalMs: 30_000,
+      enableMcp: true,
+      mcpServerCommand: ['git-mcp-server'],
+    });
+
+    try {
+      await gitclawAgent.start();
+      await state.updateAgentStatus(AGENT_IDS.GITCLAW_AGENT, 'online');
+      console.info('[startup] GitClaw Agent skill started');
+    } catch (error) {
+      console.warn('[startup] Failed to start GitClaw Agent:', error);
+      await state.updateAgentStatus(AGENT_IDS.GITCLAW_AGENT, 'offline');
+    }
+  }
 
   // --- Daily Brief Agent ---
   const dailyBrief = new DailyBriefSkill(state, {

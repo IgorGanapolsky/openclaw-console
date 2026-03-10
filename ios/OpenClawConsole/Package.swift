@@ -27,6 +27,11 @@ let package = Package(
             resources: [
                 // Info.plist managed by Xcode-SPM integration
             ]
+        ),
+        .testTarget(
+            name: "OpenClawConsoleTests",
+            dependencies: ["OpenClawConsole"],
+            path: "Tests"
         )
     ]
 )
