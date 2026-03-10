@@ -455,6 +455,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
   const router = Router();
   const webhookRateLimiter = createBillingRateLimiter();
   const protectedRateLimiter = createBillingRateLimiter();
+  const protectedRouter = Router();
 
   // RevenueCat webhook endpoint stays public but requires the raw body.
   router.post('/webhook', webhookRateLimiter, express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
@@ -485,12 +486,14 @@ export function createBillingRouter(auth?: RequestHandler): Router {
   });
 
   if (auth) {
-    router.use(auth);
+    protectedRouter.use(auth);
   }
-  router.use(protectedRateLimiter);
+  // Keep every non-webhook billing endpoint behind the same limiter so the
+  // protection is explicit to both reviewers and static analysis.
+  protectedRouter.use(protectedRateLimiter);
 
   // Get subscription status
-  router.get('/status/:userId', async (req: Request, res: Response) => {
+  protectedRouter.get('/status/:userId', async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       const userIdString = String(userId);
@@ -507,7 +510,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
   });
 
   // Purchase subscription
-  router.post('/subscribe', async (req: Request, res: Response) => {
+  protectedRouter.post('/subscribe', async (req: Request, res: Response) => {
     try {
       const { userId, productId, receipt } = req.body;
 
@@ -537,7 +540,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
   });
 
   // Restore purchases
-  router.post('/restore', async (req: Request, res: Response) => {
+  protectedRouter.post('/restore', async (req: Request, res: Response) => {
     try {
       const { userId } = req.body;
 
@@ -571,7 +574,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
   });
 
   // Check feature access
-  router.get('/access/:userId/:feature', async (req: Request, res: Response) => {
+  protectedRouter.get('/access/:userId/:feature', async (req: Request, res: Response) => {
     try {
       const { userId, feature } = req.params;
       const userIdString = String(userId);
@@ -595,6 +598,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
     }
   });
 
+  router.use(protectedRouter);
   return router;
 }
 

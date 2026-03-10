@@ -58,7 +58,7 @@ async function startGateway(): Promise<{
 }
 
 describe('gateway server hardening', () => {
-  test('remote-control returns 503 when the default dev token is unavailable', async () => {
+  test('remote-control returns a health URL without leaking a token', async () => {
     const { gateway, baseUrl, token, tempDir } = await startGateway();
 
     try {
@@ -70,10 +70,23 @@ describe('gateway server hardening', () => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      expect(response.status).toBe(503);
-      await expect(response.json()).resolves.toMatchObject({
-        error: { message: 'Default development token is unavailable' },
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        url: string;
+        auth: {
+          type: string;
+          reuse_authenticated_token: boolean;
+        };
+      };
+
+      expect(payload).toMatchObject({
+        url: `${baseUrl}/api/health`,
+        auth: {
+          type: 'bearer',
+          reuse_authenticated_token: true,
+        },
       });
+      expect(JSON.stringify(payload)).not.toContain('tkn=');
     } finally {
       await gateway.stop();
       rmSync(tempDir, { recursive: true, force: true });

@@ -48,9 +48,16 @@ export function createGatewayServer(
   state: StateManager,
 ): GatewayServer {
   const app = express();
+  const httpServer = http.createServer(app);
   const tokenManager = new TokenManager(config.tokenStorePath);
   const auth = bearerAuthMiddleware(tokenManager);
   const containerManager = new DockerContainerManager(config, tokenManager);
+
+  function getBoundHttpBaseUrl(): string {
+    const address = httpServer.address();
+    const boundPort = address && typeof address !== 'string' ? address.port : config.port;
+    return `http://${config.host}:${boundPort}`;
+  }
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
@@ -218,26 +225,20 @@ export function createGatewayServer(
   });
 
   app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
-    const devToken = tokenManager.getDefaultDevToken();
-    if (!devToken) {
-      res.status(503).json({
-        error: {
-          code: ERROR_CODES.GATEWAY_UNAVAILABLE,
-          message: 'Default development token is unavailable',
-        },
-      });
-      return;
-    }
-
-    // Development-only URL with temporary access token for mobile testing
-    const baseUrl = `http://${config.host}:${config.port}/api/health`;
-    const sessionUrl = `${baseUrl}?tkn=${devToken}`;
+    const healthUrl = `${getBoundHttpBaseUrl()}/api/health`;
     console.info('\n' + '='.repeat(40));
     console.info('📱 REMOTE CONTROL ACTIVE');
     console.info('Scan to access from mobile:');
-    console.info(`URL: ${sessionUrl}`);
+    console.info(`URL: ${healthUrl}`);
+    console.info('Reuse the same Bearer token that authenticated this request.');
     console.info('='.repeat(40) + '\n');
-    res.json({ url: sessionUrl, expires_in: 600 });
+    res.json({
+      url: healthUrl,
+      auth: {
+        type: 'bearer',
+        reuse_authenticated_token: true
+      }
+    });
   });
 
   // ── Revenue Infrastructure ────────────────────────────────────────────────
@@ -253,7 +254,6 @@ export function createGatewayServer(
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
-  const httpServer = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true });
   const wsManager = createWebSocketManager(wss, state, config);
 
@@ -283,9 +283,10 @@ export function createGatewayServer(
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {
-          console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
+          const httpBaseUrl = getBoundHttpBaseUrl();
+          console.info(`[gateway] OpenClaw gateway listening on ${httpBaseUrl}`); // local-dev-only
           // Dev hint: connect via WebSocket using your dev auth bearer credential
-          const wsEndpoint = `ws://${config.host}:${config.port}/ws`; // local-dev-only
+          const wsEndpoint = httpBaseUrl.replace('http://', 'ws://') + '/ws'; // local-dev-only
           console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
           const devToken = tokenManager.getDefaultDevToken();
           if (devToken) {
