@@ -138,7 +138,7 @@ On first run, the skills server generates a dev token printed to console. For pr
 ```bash
 # Generate a new token
 curl -X POST http://localhost:18789/api/tokens/generate \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+  -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
 
 ### Environment Variables

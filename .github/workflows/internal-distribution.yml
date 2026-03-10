@@ -8,20 +8,67 @@ on:
     inputs:
       ref:
         description: "Git ref to distribute (optional, defaults to develop)"
+        required: false
+        type: string
 
 concurrency:
-  group: internal-distribution-${{ github.event_name }}-${{ github.ref_name }}
+  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_branch || inputs.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Gate Internal Distribution
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+      ref: ${{ steps.decide.outputs.ref }}
+      sha: ${{ steps.decide.outputs.sha }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - name: Decide whether to run
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+
+          SHOULD_RUN="false"
+          REF=""
+          SHA=""
+          REASON="not_eligible"
+
+          # Allow manual dispatches from anywhere, or automatic runs from develop/main/feature branches
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            REF="${INPUT_REF:-$GITHUB_REF_NAME}"
+            SHOULD_RUN="true"
+            REASON="manual_dispatch"
+          elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" ]]; then
+            REF="$WORKFLOW_SHA"
+            SHA="$WORKFLOW_SHA"
+            SHOULD_RUN="true"
+            REASON="ci_green_on_${WORKFLOW_BRANCH}"
+          fi
+
+          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "gate: should_run=$SHOULD_RUN reason=$REASON ref=$REF sha=$SHA"
+
   ios-testflight-internal:
     name: iOS TestFlight (Internal)
+    needs: [gate]
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: macos-15
     environment: production
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}
+          ref: ${{ needs.gate.outputs.ref }}
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -46,12 +93,14 @@ jobs:
 
   android-firebase-internal:
     name: Android Firebase App Distribution (Internal)
+    needs: [gate]
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}
+          ref: ${{ needs.gate.outputs.ref }}
 
       - name: Setup Java
         uses: actions/setup-java@v4

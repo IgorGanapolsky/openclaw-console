@@ -16,7 +16,9 @@ import com.openclaw.console.ui.theme.OpenClawTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val appViewModel: AppViewModel by viewModels()
+    private val appViewModel: AppViewModel by viewModels {
+        AppViewModel.factory(application)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
