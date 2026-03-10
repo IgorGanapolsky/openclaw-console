@@ -248,6 +248,78 @@ describe('gateway server hardening', () => {
     }
   });
 
+  test('billing webhook is rate-limited', async () => {
+    const originalMaxRequests = process.env.BILLING_RATE_LIMIT_MAX_REQUESTS;
+    const originalWindowMs = process.env.BILLING_RATE_LIMIT_WINDOW_MS;
+    process.env.BILLING_RATE_LIMIT_MAX_REQUESTS = '1';
+    process.env.BILLING_RATE_LIMIT_WINDOW_MS = '60000';
+
+    const { gateway, baseUrl, tempDir } = await startGateway();
+
+    try {
+      const payload = JSON.stringify({
+        api_version: '1.0',
+        event: {
+          id: 'evt-rate-limit',
+          type: 'INITIAL_PURCHASE',
+          event_timestamp_ms: Date.now(),
+          app_id: 'app-1',
+          app_user_id: 'user-1',
+          original_app_user_id: 'user-1',
+          product_id: 'com.openclaw.console.pro.monthly',
+          period_type: 'NORMAL',
+          purchased_at_ms: Date.now(),
+          expiration_at_ms: Date.now() + 1000,
+          environment: 'SANDBOX',
+          entitlement_ids: ['pro'],
+          entitlement_id: 'pro',
+          commission_percentage: 0,
+          country_code: 'US',
+          currency: 'USD',
+          price: 9.99,
+          price_in_purchased_currency: 9.99,
+          subscriber_attributes: {},
+          store: 'APP_STORE',
+          takehome_percentage: 0,
+          tax_percentage: 0,
+          transaction_id: 'txn-rate-limit',
+          original_transaction_id: 'txn-rate-limit',
+        },
+      });
+
+      expect((await fetch(`${baseUrl}/api/billing/webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      })).status).toBe(200);
+
+      const limited = await fetch(`${baseUrl}/api/billing/webhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      });
+
+      expect(limited.status).toBe(429);
+      await expect(limited.json()).resolves.toMatchObject({
+        success: false,
+        error: 'Too many requests'
+      });
+    } finally {
+      if (originalMaxRequests === undefined) {
+        delete process.env.BILLING_RATE_LIMIT_MAX_REQUESTS;
+      } else {
+        process.env.BILLING_RATE_LIMIT_MAX_REQUESTS = originalMaxRequests;
+      }
+      if (originalWindowMs === undefined) {
+        delete process.env.BILLING_RATE_LIMIT_WINDOW_MS;
+      } else {
+        process.env.BILLING_RATE_LIMIT_WINDOW_MS = originalWindowMs;
+      }
+      await gateway.stop();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('remote state client authenticates isolated skill calls', async () => {
     const { gateway, baseUrl, token, tempDir } = await startGateway();
 

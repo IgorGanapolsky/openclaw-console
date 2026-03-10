@@ -104,7 +104,7 @@ function cacheSubscriptionStatus(userId: string, status: SubscriptionStatus): vo
   evictionTimer.unref?.();
 }
 
-function createProtectedBillingRateLimiter(): RequestHandler {
+function createBillingRateLimiter(): RequestHandler {
   const windowMs = parsePositiveIntEnv('BILLING_RATE_LIMIT_WINDOW_MS', 60_000);
   const maxRequests = parsePositiveIntEnv('BILLING_RATE_LIMIT_MAX_REQUESTS', 60);
   const requests = new Map<string, RateLimitEntry>();
@@ -435,9 +435,11 @@ async function processWebhookEvent(event: WebhookEvent): Promise<void> {
  */
 export function createBillingRouter(auth?: RequestHandler): Router {
   const router = Router();
+  const webhookRateLimiter = createBillingRateLimiter();
+  const protectedRateLimiter = createBillingRateLimiter();
 
   // RevenueCat webhook endpoint stays public but requires the raw body.
-  router.post('/webhook', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+  router.post('/webhook', webhookRateLimiter, express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
     try {
       const rawBody = req.body.toString('utf8');
       const signature = req.get('X-Revenuecat-Signature') || '';
@@ -466,7 +468,7 @@ export function createBillingRouter(auth?: RequestHandler): Router {
 
   if (auth) {
     router.use(auth);
-    router.use(createProtectedBillingRateLimiter());
+    router.use(protectedRateLimiter);
   }
 
   // Get subscription status

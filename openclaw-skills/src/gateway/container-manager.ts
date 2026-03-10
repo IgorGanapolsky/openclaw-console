@@ -85,11 +85,28 @@ export class DockerContainerManager {
 
     console.info(`[docker] Stopping isolated skill: ${skillName}`);
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const docker = spawn('docker', ['stop', containerId]);
-      docker.on('close', () => {
-        this.activeContainers.delete(skillName);
-        resolve();
+      let errorOutput = '';
+
+      docker.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      docker.on('error', (err) => {
+        console.error(`[docker] System error stopping skill ${skillName}: ${err.message}`);
+        reject(err);
+      });
+
+      docker.on('close', (code) => {
+        if (code === 0) {
+          this.activeContainers.delete(skillName);
+          resolve();
+          return;
+        }
+
+        const message = errorOutput.trim() || `Failed to stop skill ${skillName}`;
+        reject(new Error(message));
       });
     });
   }
