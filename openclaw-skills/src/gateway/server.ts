@@ -136,6 +136,17 @@ export function createGatewayServer(
     res.json(state.listPendingApprovals());
   });
 
+  // ── Bridge Sessions ───────────────────────────────────────────────────────
+
+  app.get('/api/bridges', auth, (_req: Request, res: Response) => {
+    res.json(state.listBridgeSessions());
+  });
+
+  app.post('/api/bridges/upsert', auth, async (req: Request, res: Response) => {
+    const session = await state.upsertBridgeSession(req.body);
+    res.json(session);
+  });
+
   app.post('/api/approvals/:id/respond', auth, (req: Request, res: Response) => {
     const approvalId = String(req.params['id'] ?? '');
     const pending = state.getPendingApproval(approvalId);

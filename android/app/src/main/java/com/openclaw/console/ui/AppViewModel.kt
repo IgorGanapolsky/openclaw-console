@@ -34,6 +34,9 @@ class AppViewModel(application: Application) : ViewModel() {
     private val _incidentRepository = MutableStateFlow<IncidentRepository?>(null)
     val incidentRepository: StateFlow<IncidentRepository?> = _incidentRepository
 
+    private val _bridgeRepository = MutableStateFlow<BridgeRepository?>(null)
+    val bridgeRepository: StateFlow<BridgeRepository?> = _bridgeRepository
+
     private val _approvalRepository = MutableStateFlow<ApprovalRepository?>(null)
     val approvalRepository: StateFlow<ApprovalRepository?> = _approvalRepository
 
@@ -76,6 +79,7 @@ class AppViewModel(application: Application) : ViewModel() {
         _agentRepository.value = AgentRepository(api, ws)
         _taskRepository.value = TaskRepository(api, ws)
         _incidentRepository.value = IncidentRepository(api, ws)
+        _bridgeRepository.value = BridgeRepository(api, ws)
         _approvalRepository.value = ApprovalRepository(api, ws)
 
         ws.connect()
@@ -84,6 +88,7 @@ class AppViewModel(application: Application) : ViewModel() {
         viewModelScope.launch {
             _agentRepository.value?.refreshAgents()
             _incidentRepository.value?.refreshIncidents()
+            _bridgeRepository.value?.refreshBridges()
             _approvalRepository.value?.refreshPendingApprovals()
         }
 
@@ -98,6 +103,7 @@ class AppViewModel(application: Application) : ViewModel() {
         _agentRepository.value = null
         _taskRepository.value = null
         _incidentRepository.value = null
+        _bridgeRepository.value = null
         _approvalRepository.value = null
     }
 

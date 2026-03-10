@@ -119,6 +119,36 @@ async function main(): Promise<void> {
   // Mark Deploy Manager as online
   await state.updateAgentStatus(AGENT_IDS.DEPLOY_MANAGER, 'online');
 
+  // --- Simulated Bridge Sessions (Demo) ---
+  if (DEFAULT_CONFIG.simulateBridges) {
+    console.info('[startup] Loading simulated bridge sessions...');
+    const now = new Date().toISOString();
+    
+    await state.upsertBridgeSession({
+      id: 'bridge-codex-001',
+      agent_id: AGENT_IDS.GITHUB_OPS,
+      type: 'codex',
+      title: 'Codex: claw-console',
+      cwd: '/Users/steipete/claw-console',
+      closed: false,
+      created_at: now,
+      updated_at: now,
+      metadata: { acpxRecordId: '2446f9c7-5923-4d6d-89ee-f7b0e28c8456' }
+    });
+
+    await state.upsertBridgeSession({
+      id: 'bridge-term-001',
+      agent_id: AGENT_IDS.DEPLOY_MANAGER,
+      type: 'terminal',
+      title: 'Terminal: infra-k8s',
+      cwd: '/work/infra/k8s',
+      closed: false,
+      created_at: new Date(Date.now() - 3600_000).toISOString(),
+      updated_at: now,
+      metadata: { shell: 'zsh' }
+    });
+  }
+
   console.info('[startup] All skills initialized. Gateway ready.');
   console.info('');
 

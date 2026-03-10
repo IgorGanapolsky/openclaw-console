@@ -383,3 +383,39 @@ describe('Task lifecycle (create → steps → complete)', () => {
     expect(state.getAgent('agent-e')?.active_tasks).toBe(1);
   });
 });
+
+// ── Bridge Session management ──────────────────────────────────────────────────
+
+describe('Bridge Session management', () => {
+  test('Bridge session creation and update', async () => {
+    const state = new StateManager();
+    const sessionId = 'bridge-001';
+    
+    const handlerNew = jest.fn();
+    const handlerUpdate = jest.fn();
+    state.events.on('bridge_session_new', handlerNew);
+    state.events.on('bridge_session_update', handlerUpdate);
+
+    const session = {
+      id: sessionId,
+      agent_id: 'agent-a',
+      type: 'codex' as const,
+      title: 'Codex Bridge',
+      cwd: '/path/to/project',
+      closed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      metadata: {},
+    };
+
+    await state.upsertBridgeSession(session);
+    expect(handlerNew).toHaveBeenCalledTimes(1);
+    expect(state.listBridgeSessions()).toHaveLength(1);
+
+    // Update
+    const updated = { ...session, title: 'Updated Title' };
+    await state.upsertBridgeSession(updated);
+    expect(handlerUpdate).toHaveBeenCalledTimes(1);
+    expect(state.listBridgeSessions()[0]?.title).toBe('Updated Title');
+  });
+});

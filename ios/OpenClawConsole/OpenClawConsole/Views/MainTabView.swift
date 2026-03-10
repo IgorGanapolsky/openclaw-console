@@ -13,9 +13,10 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .agents
     @State private var agentListVM: AgentListViewModel?
     @State private var incidentListVM: IncidentListViewModel?
+    @State private var bridgeListVM: BridgeListViewModel?
 
     enum Tab: Int {
-        case agents, incidents, settings
+        case agents, incidents, bridges, settings
     }
 
     var body: some View {
@@ -47,6 +48,19 @@ struct MainTabView: View {
                 }
                 .badge(incidentListVM?.openCount ?? 0)
                 .tag(Tab.incidents)
+
+                // MARK: Bridges Tab
+                NavigationStack {
+                    if let vm = bridgeListVM {
+                        BridgeListView(viewModel: vm)
+                    } else {
+                        ProgressView()
+                    }
+                }
+                .tabItem {
+                    Label("Bridges", systemImage: "app.connected.to.app.below.fill")
+                }
+                .tag(Tab.bridges)
 
                 // MARK: Settings Tab
                 NavigationStack {
@@ -83,9 +97,11 @@ struct MainTabView: View {
 
         let agentVM = AgentListViewModel(webSocket: webSocket)
         let incidentVM = IncidentListViewModel(webSocket: webSocket)
+        let bridgeVM = BridgeListViewModel(webSocket: webSocket)
 
         agentListVM = agentVM
         incidentListVM = incidentVM
+        bridgeListVM = bridgeVM
 
         // Connect WebSocket
         webSocket.connect(baseURL: gateway.baseURL, token: token)
@@ -94,6 +110,7 @@ struct MainTabView: View {
         _Concurrency.Task {
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
+            await bridgeVM.fetchBridges()
             await approvalViewModel.fetchPendingApprovals()
         }
     }

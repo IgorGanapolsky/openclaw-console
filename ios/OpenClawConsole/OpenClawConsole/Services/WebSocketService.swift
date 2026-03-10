@@ -184,6 +184,14 @@ final class WebSocketService: NSObject {
             if let obj = try? decoder.decode(ChatMessage.self, from: payloadData) {
                 event = .chatResponse(obj)
             }
+        case .bridgeSessionNew:
+            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
+                event = .bridgeSessionNew(obj)
+            }
+        case .bridgeSessionUpdate:
+            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
+                event = .bridgeSessionUpdate(obj)
+            }
         case .connected:
             if let obj = try? decoder.decode(ConnectedPayload.self, from: payloadData) {
                 event = .connected(sessionId: obj.sessionId, gatewayVersion: obj.gatewayVersion)

@@ -111,6 +111,8 @@ enum InboundEventType: String {
     case incidentUpdate = "incident_update"
     case approvalRequest = "approval_request"
     case chatResponse = "chat_response"
+    case bridgeSessionNew = "bridge_session_new"
+    case bridgeSessionUpdate = "bridge_session_update"
     case connected
     case error
 }
@@ -124,9 +126,37 @@ enum InboundEvent {
     case incidentUpdate(IncidentUpdate)
     case approvalRequest(ApprovalRequest)
     case chatResponse(ChatMessage)
+    case bridgeSessionNew(BridgeSession)
+    case bridgeSessionUpdate(BridgeSession)
     case connected(sessionId: String, gatewayVersion: String)
     case error(code: Int, message: String)
     case unknown(String)
+}
+
+// MARK: - Bridge Session
+
+struct BridgeSession: Codable, Identifiable {
+    let id: String
+    let agentId: String
+    let type: String // codex, terminal, other
+    let title: String
+    let cwd: String
+    let closed: Bool
+    let createdAt: Date
+    let updatedAt: Date
+    let metadata: [String: AnyCodable]
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case agentId = "agent_id"
+        case type
+        case title
+        case cwd
+        case closed
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case metadata
+    }
 }
 
 // MARK: - Connected Payload

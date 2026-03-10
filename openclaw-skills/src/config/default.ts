@@ -25,6 +25,8 @@ export interface GatewayConfig {
   isolatedSkills: string[];
   /** Whether to load seed data on startup */
   loadSeedData: boolean;
+  /** Whether to simulate bridge sessions for demo */
+  simulateBridges: boolean;
   /** CORS allowed origins ('*' for all) */
   corsOrigins: string;
 }
@@ -41,6 +43,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
   enabledSkills: ['ci-monitor', 'incident-manager', 'approval-gate', 'task-manager', 'trading-monitor'],
   isolatedSkills: process.env['ISOLATED_SKILLS']?.split(',') ?? [],
   loadSeedData: process.env['LOAD_SEED_DATA'] !== 'false',
+  simulateBridges: process.env['SIMULATE_BRIDGES'] !== 'false',
   corsOrigins: process.env['CORS_ORIGINS'] ?? '*',
 };
 

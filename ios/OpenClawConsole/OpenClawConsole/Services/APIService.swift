@@ -165,6 +165,12 @@ final class APIService {
         )
     }
 
+    // MARK: - Bridges
+
+    func fetchBridges() async throws -> [BridgeSession] {
+        try await request(path: "/api/bridges")
+    }
+
     // MARK: - Chat
 
     func sendChatMessage(_ request: ChatMessageRequest) async throws -> ChatMessage {

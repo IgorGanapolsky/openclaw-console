@@ -37,6 +37,8 @@ export interface StateEvents {
   approval_created: [approval: ApprovalRequest];
   approval_responded: [response: ApprovalResponse, approval: ApprovalRequest];
   approval_expired: [approval: ApprovalRequest];
+  bridge_session_new: [session: import('../types/protocol.js').BridgeSession];
+  bridge_session_update: [session: import('../types/protocol.js').BridgeSession];
 }
 
 export type StateEventName = keyof StateEvents;
@@ -77,6 +79,7 @@ export class StateManager implements IStateManager {
   private tasks: Map<string, Task> = new Map();
   private incidents: Map<string, Incident> = new Map();
   private approvals: Map<string, PendingApproval> = new Map();
+  private bridgeSessions: Map<string, import('../types/protocol.js').BridgeSession> = new Map();
 
   // ── Agent ─────────────────────────────────────────────────────────────────
 
@@ -255,6 +258,28 @@ export class StateManager implements IStateManager {
 
   public listIncidents(): Incident[] {
     return Array.from(this.incidents.values());
+  }
+
+  // ── Bridge Session ────────────────────────────────────────────────────────
+
+  /**
+   * Register or update an external bridge session (IDE/terminal).
+   */
+  public async upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession> {
+    const exists = this.bridgeSessions.has(session.id);
+    this.bridgeSessions.set(session.id, session);
+    
+    if (exists) {
+      this.events.emit('bridge_session_update', session);
+    } else {
+      this.events.emit('bridge_session_new', session);
+    }
+    
+    return session;
+  }
+
+  public listBridgeSessions(): import('../types/protocol.js').BridgeSession[] {
+    return Array.from(this.bridgeSessions.values());
   }
 
   // ── Approval ──────────────────────────────────────────────────────────────

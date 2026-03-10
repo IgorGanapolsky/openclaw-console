@@ -56,4 +56,7 @@ export interface IStateManager {
   listTasksForAgent?(agentId: string): Promise<Task[]> | Task[];
   getIncident?(incidentId: string): Promise<Incident | undefined> | Incident | undefined;
   listIncidents?(): Promise<Incident[]> | Incident[];
+
+  upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession>;
+  listBridgeSessions?(): Promise<import('../types/protocol.js').BridgeSession[]> | import('../types/protocol.js').BridgeSession[];
 }

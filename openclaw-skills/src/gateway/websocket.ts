@@ -25,6 +25,7 @@ import type {
   ApprovalRequest,
   ChatMessage,
   ApprovalResponse,
+  BridgeSession,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
 import type { StateManager } from './state.js';
@@ -105,6 +106,14 @@ export class WebSocketManager {
 
     this.state.events.on('approval_created', (approval: ApprovalRequest) => {
       this.broadcastToSubscribers(approval.agent_id, 'approval_request', approval);
+    });
+
+    this.state.events.on('bridge_session_new', (session: BridgeSession) => {
+      this.broadcastToAll('bridge_session_new', session);
+    });
+
+    this.state.events.on('bridge_session_update', (session: BridgeSession) => {
+      this.broadcastToAll('bridge_session_update', session);
     });
   }
 

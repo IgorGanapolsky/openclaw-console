@@ -9,6 +9,17 @@
 /** Operational status of an agent. */
 export type AgentStatus = 'online' | 'offline' | 'busy';
 
+/** Git repository state for an agent. */
+export interface AgentGitState {
+  repository_url: string;
+  current_branch: string;
+  current_commit: string;
+  uncommitted_changes: number;
+  ahead_by: number;
+  behind_by: number;
+  last_sync: string; // ISO8601
+}
+
 /** An OpenClaw agent registered on the gateway. */
 export interface Agent {
   id: string;
@@ -20,6 +31,7 @@ export interface Agent {
   last_active: string; // ISO8601
   active_tasks: number;
   pending_approvals: number;
+  git_state?: AgentGitState;
 }
 
 // ─── Task ─────────────────────────────────────────────────────────────────────
@@ -112,10 +124,25 @@ export type ActionType =
   | 'destructive'
   | 'ask_root_cause'
   | 'propose_fix'
-  | 'acknowledge';
+  | 'acknowledge'
+  | 'git_commit'
+  | 'git_merge'
+  | 'git_push'
+  | 'agent_skill_install'
+  | 'agent_rollback';
 
 /** Risk classification of an approval context. */
 export type RiskLevel = 'high' | 'critical';
+
+/** Git operation details for approval requests. */
+export interface GitOperation {
+  operation_type: 'commit' | 'merge' | 'push' | 'rollback';
+  branch_from?: string;
+  branch_to?: string;
+  commit_message?: string;
+  file_changes?: string[];
+  diff_summary?: string;
+}
 
 /** Context metadata for an approval request. */
 export interface ApprovalContext {
@@ -123,6 +150,7 @@ export interface ApprovalContext {
   environment: string;
   repository: string;
   risk_level: RiskLevel;
+  git_operation?: GitOperation;
 }
 
 /** An approval request pending human decision. */
@@ -159,6 +187,21 @@ export interface ChatMessage {
   timestamp: string; // ISO8601
 }
 
+// ─── Bridge Session ───────────────────────────────────────────────────────────
+
+/** Metadata for an external IDE or terminal bridge session (e.g. Codex/acpx) */
+export interface BridgeSession {
+  id: string;
+  agent_id: string;
+  type: 'codex' | 'terminal' | 'other';
+  title: string;
+  cwd: string;
+  closed: boolean;
+  created_at: string; // ISO8601
+  updated_at: string; // ISO8601
+  metadata: Record<string, unknown>;
+}
+
 // ─── WebSocket Message Envelope ───────────────────────────────────────────────
 
 /** All server→client WebSocket event type names. */
@@ -170,6 +213,8 @@ export type ServerEventType =
   | 'incident_update'
   | 'approval_request'
   | 'chat_response'
+  | 'bridge_session_new'
+  | 'bridge_session_update'
   | 'connected'
   | 'error';
 

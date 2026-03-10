@@ -124,6 +124,16 @@ class ApiService(
         }
     }
 
+    suspend fun getBridges(): Result<List<BridgeSession>> {
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/bridges")
+            .get()
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<List<BridgeSession>>(body)
+        }
+    }
+
     suspend fun respondToApproval(approvalId: String, response: ApprovalResponse): Result<Unit> {
         val jsonBody = json.encodeToString(response)
         val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
