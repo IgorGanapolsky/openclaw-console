@@ -6,7 +6,7 @@
  */
 
 import type { Task, TaskStatus, TaskStep, StepType, ResourceLink } from '../types/protocol.js';
-import type { StateManager } from '../gateway/state.js';
+import type { IStateManager } from '../gateway/state-interface.js';
 
 export interface CreateTaskOptions {
   agentId: string;
@@ -29,14 +29,14 @@ export interface AddStepOptions {
  * Other skills should use this instead of calling StateManager directly.
  */
 export class TaskManagerSkill {
-  constructor(private readonly state: StateManager) {}
+  constructor(private readonly state: IStateManager) {}
 
   /**
    * Create a new task associated with an agent.
    * Optionally set its initial status (defaults to 'queued').
    */
-  public createTask(options: CreateTaskOptions): Task {
-    const task = this.state.createTask({
+  public async createTask(options: CreateTaskOptions): Promise<Task> {
+    const task = await this.state.createTask({
       agent_id: options.agentId,
       title: options.title,
       description: options.description,
@@ -44,7 +44,8 @@ export class TaskManagerSkill {
     });
 
     if (options.initialStatus && options.initialStatus !== 'queued') {
-      return this.state.updateTaskStatus(task.id, options.initialStatus) ?? task;
+      const updated = await this.state.updateTaskStatus(task.id, options.initialStatus);
+      return updated ?? task;
     }
 
     return task;
@@ -53,14 +54,14 @@ export class TaskManagerSkill {
   /**
    * Transition a task to a new status.
    */
-  public setStatus(taskId: string, status: TaskStatus): Task | null {
+  public async setStatus(taskId: string, status: TaskStatus): Promise<Task | null> {
     return this.state.updateTaskStatus(taskId, status);
   }
 
   /**
    * Append a step to a task's timeline.
    */
-  public addStep(options: AddStepOptions): TaskStep | null {
+  public async addStep(options: AddStepOptions): Promise<TaskStep | null> {
     return this.state.addTaskStep({
       task_id: options.taskId,
       type: options.type,
@@ -72,18 +73,18 @@ export class TaskManagerSkill {
   /**
    * Convenience: log a plain text message to a task.
    */
-  public log(taskId: string, content: string, metadata?: Record<string, unknown>): TaskStep | null {
+  public async log(taskId: string, content: string, metadata?: Record<string, unknown>): Promise<TaskStep | null> {
     return this.addStep({ taskId, type: 'log', content, metadata });
   }
 
   /**
    * Convenience: record a tool call on a task.
    */
-  public recordToolCall(
+  public async recordToolCall(
     taskId: string,
     toolName: string,
     args: Record<string, unknown>,
-  ): TaskStep | null {
+  ): Promise<TaskStep | null> {
     return this.addStep({
       taskId,
       type: 'tool_call',
@@ -95,28 +96,30 @@ export class TaskManagerSkill {
   /**
    * Convenience: record an error on a task and mark it failed.
    */
-  public recordError(taskId: string, message: string): void {
-    this.addStep({ taskId, type: 'error', content: message });
-    this.state.updateTaskStatus(taskId, 'failed');
+  public async recordError(taskId: string, message: string): Promise<void> {
+    await this.addStep({ taskId, type: 'error', content: message });
+    await this.state.updateTaskStatus(taskId, 'failed');
   }
 
   /**
    * Convenience: mark task done with an optional output message.
    */
-  public complete(taskId: string, output?: string): void {
+  public async complete(taskId: string, output?: string): Promise<void> {
     if (output) {
-      this.addStep({ taskId, type: 'output', content: output });
+      await this.addStep({ taskId, type: 'output', content: output });
     }
-    this.state.updateTaskStatus(taskId, 'done');
+    await this.state.updateTaskStatus(taskId, 'done');
   }
 
   /** Retrieve a task by ID. */
-  public getTask(taskId: string): Task | undefined {
+  public async getTask(taskId: string): Promise<Task | undefined> {
+    if (!this.state.getTask) return undefined;
     return this.state.getTask(taskId);
   }
 
   /** List all tasks for an agent. */
-  public listForAgent(agentId: string): Task[] {
+  public async listForAgent(agentId: string): Promise<Task[]> {
+    if (!this.state.listTasksForAgent) return [];
     return this.state.listTasksForAgent(agentId);
   }
 }

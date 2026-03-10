@@ -16,6 +16,8 @@ import type { StateManager } from './state.js';
 import type { WebSocketManager } from './websocket.js';
 import { createWebSocketManager } from './websocket.js';
 import type { GatewayConfig } from '../config/default.js';
+import { DockerContainerManager } from './container-manager.js';
+import { registerRemoteApi } from './remote-api.js';
 import type {
   ChatRequest,
   ApprovalRespondRequest,
@@ -32,6 +34,7 @@ export interface GatewayServer {
   wsManager: WebSocketManager;
   state: StateManager;
   tokenManager: TokenManager;
+  containerManager: DockerContainerManager;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -46,10 +49,14 @@ export function createGatewayServer(
   const app = express();
   const tokenManager = new TokenManager(config.tokenStorePath);
   const auth = bearerAuthMiddleware(tokenManager);
+  const containerManager = new DockerContainerManager(config);
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
   app.use(express.json());
+  
+  // Register Remote API for isolated skills
+  registerRemoteApi(app, state);
   app.use((_req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', config.corsOrigins);
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -185,10 +192,11 @@ export function createGatewayServer(
     });
   });
 
-  app.post('/api/remote-control', auth, (req: Request, res: Response) => {
+  app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
     const devToken = tokenManager.getDefaultDevToken();
     // Development-only URL with temporary access token for mobile testing
-    const sessionUrl = `http://${config.host}:${config.port}/api/health?token=${devToken}`;
+    const baseUrl = `http://${config.host}:${config.port}/api/health`;
+    const sessionUrl = `${baseUrl}?tkn=${devToken}`;
     console.info('\n' + '='.repeat(40));
     console.info('📱 REMOTE CONTROL ACTIVE');
     console.info('Scan to access from mobile:');
@@ -236,6 +244,7 @@ export function createGatewayServer(
     wsManager,
     state,
     tokenManager,
+    containerManager,
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {

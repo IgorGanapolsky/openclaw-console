@@ -12,26 +12,31 @@ process.env.REVENUECAT_SECRET_KEY = 'test_secret_key_456';
 
 describe('RevenueCat Billing', () => {
   describe('initializeRevenueCat', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      jest.resetModules();
+      process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+      process.env = originalEnv;
+    });
+
     it('should initialize successfully with valid keys', () => {
-      // Environment variables are set at the top of the file
+      process.env.REVENUECAT_PUBLIC_KEY = 'test_public_key_123';
+      process.env.REVENUECAT_SECRET_KEY = 'test_secret_key_456';
+      
       const result = initializeRevenueCat();
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
     });
 
-    it('should fail without API keys', async () => {
-      // Since env vars are captured at module load, we'll test the logic inline
-      const mockInit = (): { success: boolean; error?: string } => {
-        if (!undefined || !undefined) {
-          return {
-            success: false,
-            error: 'RevenueCat API keys not configured. Set REVENUECAT_PUBLIC_KEY and REVENUECAT_SECRET_KEY'
-          };
-        }
-        return { success: true };
-      };
-
-      const result = mockInit();
+    it('should fail without API keys', () => {
+      delete process.env.REVENUECAT_PUBLIC_KEY;
+      delete process.env.REVENUECAT_SECRET_KEY;
+      
+      const result = initializeRevenueCat();
       expect(result.success).toBe(false);
       expect(result.error).toContain('RevenueCat API keys not configured');
     });
@@ -53,7 +58,7 @@ describe('RevenueCat Billing', () => {
         subscriptions: {}
       };
 
-      expect(hasProEntitlement(customerInfo)).toBe(true);
+      expect(hasProEntitlement(customerInfo as any)).toBe(true);
     });
 
     it('should return false for inactive pro entitlement', () => {
@@ -71,7 +76,7 @@ describe('RevenueCat Billing', () => {
         subscriptions: {}
       };
 
-      expect(hasProEntitlement(customerInfo)).toBe(false);
+      expect(hasProEntitlement(customerInfo as any)).toBe(false);
     });
 
     it('should return false for missing pro entitlement', () => {
@@ -82,7 +87,7 @@ describe('RevenueCat Billing', () => {
         subscriptions: {}
       };
 
-      expect(hasProEntitlement(customerInfo)).toBe(false);
+      expect(hasProEntitlement(customerInfo as any)).toBe(false);
     });
   });
 
@@ -105,7 +110,7 @@ describe('RevenueCat Billing', () => {
     it('should deny pro features without subscription', async () => {
       // Mock getSubscriptionStatus to return free user
       const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockRejectedValue(new Error('API not available in test')) as any;
+      global.fetch = jest.fn(() => Promise.reject(new Error('API not available in test'))) as any;
 
       const hasAccess = await checkPremiumAccess('test-user', 'devops_integrations');
       expect(hasAccess).toBe(false);
@@ -123,7 +128,7 @@ describe('RevenueCat Billing', () => {
     it('should return default free status on API error', async () => {
       // Mock fetch to simulate API error
       const originalFetch = global.fetch;
-      global.fetch = jest.fn().mockRejectedValue(new Error('Network error')) as any;
+      global.fetch = jest.fn(() => Promise.reject(new Error('Network error'))) as any;
 
       const status = await getSubscriptionStatus('test-user-error');
 

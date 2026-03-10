@@ -127,7 +127,7 @@ export class TradingMonitorSkill {
   private handleAnomaly(anomaly: TradingAnomaly): void {
     console.info(`[trading-monitor] Anomaly detected: ${anomaly.type} on ${anomaly.symbol}`);
 
-    this.incidentManager.createIncident({
+    void this.incidentManager.createIncident({
       agentId: this.options.agentId,
       agentName: this.options.agentName,
       severity: anomaly.severity,
@@ -161,7 +161,7 @@ export class TradingMonitorSkill {
     const notionalValue = trade.quantity * trade.price;
     const needsApproval = notionalValue > 50_000; // Trades over $50k need human sign-off
 
-    const task = this.taskManager.createTask({
+    const task = await this.taskManager.createTask({
       agentId: this.options.agentId,
       title: `${trade.side.toUpperCase()} ${trade.quantity} ${trade.symbol} @ $${trade.price.toFixed(2)}`,
       description: `Strategy: ${trade.strategy} — ${trade.rationale}`,
@@ -175,13 +175,13 @@ export class TradingMonitorSkill {
       initialStatus: 'running',
     });
 
-    this.taskManager.log(task.id, `Trade proposal: ${trade.side} ${trade.quantity} ${trade.symbol}`);
-    this.taskManager.log(task.id, `Notional value: $${notionalValue.toFixed(2)}`);
-    this.taskManager.log(task.id, `Strategy: ${trade.strategy}`);
-    this.taskManager.log(task.id, `Rationale: ${trade.rationale}`);
+    await this.taskManager.log(task.id, `Trade proposal: ${trade.side} ${trade.quantity} ${trade.symbol}`);
+    await this.taskManager.log(task.id, `Notional value: $${notionalValue.toFixed(2)}`);
+    await this.taskManager.log(task.id, `Strategy: ${trade.strategy}`);
+    await this.taskManager.log(task.id, `Rationale: ${trade.rationale}`);
 
     if (needsApproval) {
-      this.taskManager.log(task.id, `Order exceeds $50,000 threshold — requesting human approval`, { requires_approval: true });
+      await this.taskManager.log(task.id, `Order exceeds $50,000 threshold — requesting human approval`, { requires_approval: true });
 
       const result = await this.approvalGate.requestApproval({
         agentId: this.options.agentId,
@@ -209,16 +209,16 @@ export class TradingMonitorSkill {
       });
 
       if (!result.approved) {
-        this.taskManager.log(task.id, result.timedOut ? 'Trade approval timed out — order cancelled' : 'Trade denied by operator — order cancelled');
-        this.taskManager.setStatus(task.id, 'done');
+        await this.taskManager.log(task.id, result.timedOut ? 'Trade approval timed out — order cancelled' : 'Trade denied by operator — order cancelled');
+        await this.taskManager.setStatus(task.id, 'done');
         return;
       }
 
-      this.taskManager.log(task.id, `Trade approved — submitting order`);
+      await this.taskManager.log(task.id, `Trade approved — submitting order`);
     }
 
     // Simulate order execution
-    this.taskManager.recordToolCall(task.id, 'trading_engine.submit_order', {
+    await this.taskManager.recordToolCall(task.id, 'trading_engine.submit_order', {
       trade_id: trade.id,
       symbol: trade.symbol,
       side: trade.side,
@@ -228,10 +228,10 @@ export class TradingMonitorSkill {
 
     // Simulate fill (80% success rate)
     if (Math.random() > 0.2) {
-      this.taskManager.complete(task.id, `Order filled: ${trade.side} ${trade.quantity} ${trade.symbol} @ $${trade.price.toFixed(2)}`);
+      await this.taskManager.complete(task.id, `Order filled: ${trade.side} ${trade.quantity} ${trade.symbol} @ $${trade.price.toFixed(2)}`);
     } else {
-      this.taskManager.recordError(task.id, `Order rejected by exchange: insufficient liquidity at $${trade.price.toFixed(2)}`);
-      this.incidentManager.createIncident({
+      await this.taskManager.recordError(task.id, `Order rejected by exchange: insufficient liquidity at $${trade.price.toFixed(2)}`);
+      void this.incidentManager.createIncident({
         agentId: this.options.agentId,
         agentName: this.options.agentName,
         severity: 'warning',

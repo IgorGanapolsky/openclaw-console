@@ -67,7 +67,6 @@ export interface WebhookEvent {
 const subscriptionCache = new Map<string, SubscriptionStatus>();
 
 // RevenueCat configuration
-const REVENUECAT_PUBLIC_KEY = process.env.REVENUECAT_PUBLIC_KEY;
 const REVENUECAT_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY;
 const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET;
 
@@ -75,14 +74,17 @@ const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET;
  * Initialize RevenueCat configuration
  */
 export function initializeRevenueCat(): { success: boolean; error?: string } {
-  if (!REVENUECAT_PUBLIC_KEY || !REVENUECAT_SECRET_KEY) {
+  const publicKey = process.env.REVENUECAT_PUBLIC_KEY;
+  const secretKey = process.env.REVENUECAT_SECRET_KEY;
+
+  if (!publicKey || !secretKey) {
     return {
       success: false,
       error: 'RevenueCat API keys not configured. Set REVENUECAT_PUBLIC_KEY and REVENUECAT_SECRET_KEY'
     };
   }
 
-  console.log('[RevenueCat] Initialized with public key:', REVENUECAT_PUBLIC_KEY.slice(0, 20) + '...');
+  console.log('[RevenueCat] Initialized with public key:', publicKey.slice(0, 20) + '...');
   return { success: true };
 }
 

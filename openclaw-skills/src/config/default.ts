@@ -21,6 +21,8 @@ export interface GatewayConfig {
   requireBiometric: boolean;
   /** Enabled skill names */
   enabledSkills: string[];
+  /** Isolated skill names (Nanoclaw mode) */
+  isolatedSkills: string[];
   /** Whether to load seed data on startup */
   loadSeedData: boolean;
   /** CORS allowed origins ('*' for all) */
@@ -37,6 +39,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
   approvalTimeoutMs: 5 * 60 * 1000, // 5 minutes
   requireBiometric: process.env['REQUIRE_BIOMETRIC'] !== 'false',
   enabledSkills: ['ci-monitor', 'incident-manager', 'approval-gate', 'task-manager', 'trading-monitor'],
+  isolatedSkills: process.env['ISOLATED_SKILLS']?.split(',') ?? [],
   loadSeedData: process.env['LOAD_SEED_DATA'] !== 'false',
   corsOrigins: process.env['CORS_ORIGINS'] ?? '*',
 };

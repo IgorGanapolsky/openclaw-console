@@ -7,7 +7,7 @@
  */
 
 import type { Incident, IncidentSeverity, IncidentStatus, ActionType } from '../types/protocol.js';
-import type { StateManager } from '../gateway/state.js';
+import type { IStateManager } from '../gateway/state-interface.js';
 
 export interface CreateIncidentOptions {
   agentId: string;
@@ -29,12 +29,12 @@ export interface ActionResult {
  * Manages incident lifecycle and action handling.
  */
 export class IncidentManagerSkill {
-  constructor(private readonly state: StateManager) {}
+  constructor(private readonly state: IStateManager) {}
 
   /**
    * Open a new incident.
    */
-  public createIncident(options: CreateIncidentOptions): Incident {
+  public async createIncident(options: CreateIncidentOptions): Promise<Incident> {
     return this.state.createIncident({
       agent_id: options.agentId,
       agent_name: options.agentName,
@@ -50,7 +50,9 @@ export class IncidentManagerSkill {
    * Returns a structured result with the action's output narrative.
    */
   public async executeAction(incidentId: string, action: ActionType): Promise<ActionResult | null> {
-    const incident = this.state.getIncident(incidentId);
+    if (!this.state.getIncident || !this.state.updateIncidentStatus) return null;
+    
+    const incident = await this.state.getIncident(incidentId);
     if (!incident) return null;
 
     let output = ''; // eslint-disable-line no-useless-assignment
@@ -72,7 +74,7 @@ export class IncidentManagerSkill {
     }
 
     if (newStatus) {
-      this.state.updateIncidentStatus(incidentId, newStatus);
+      await this.state.updateIncidentStatus(incidentId, newStatus);
     }
 
     return {
@@ -86,25 +88,30 @@ export class IncidentManagerSkill {
   /**
    * Mark an incident as resolved.
    */
-  public resolve(incidentId: string): Incident | null {
+  public async resolve(incidentId: string): Promise<Incident | null> {
+    if (!this.state.updateIncidentStatus) return null;
     return this.state.updateIncidentStatus(incidentId, 'resolved');
   }
 
   /**
    * Acknowledge an incident.
    */
-  public acknowledge(incidentId: string): Incident | null {
+  public async acknowledge(incidentId: string): Promise<Incident | null> {
+    if (!this.state.updateIncidentStatus) return null;
     return this.state.updateIncidentStatus(incidentId, 'acknowledged');
   }
 
   /** List all incidents. */
-  public listAll(): Incident[] {
+  public async listAll(): Promise<Incident[]> {
+    if (!this.state.listIncidents) return [];
     return this.state.listIncidents();
   }
 
   /** List open incidents only. */
-  public listOpen(): Incident[] {
-    return this.state.listIncidents().filter((i) => i.status === 'open');
+  public async listOpen(): Promise<Incident[]> {
+    if (!this.state.listIncidents) return [];
+    const incidents = await this.state.listIncidents();
+    return incidents.filter((i) => i.status === 'open');
   }
 
   // ── Action implementations ────────────────────────────────────────────────

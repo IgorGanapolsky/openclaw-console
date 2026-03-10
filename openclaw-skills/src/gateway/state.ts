@@ -23,6 +23,7 @@ import type {
   ApprovalResponse,
   ResourceLink,
 } from '../types/protocol.js';
+import type { IStateManager } from './state-interface.js';
 
 // ── Event map for type-safe EventEmitter ─────────────────────────────────────
 
@@ -69,7 +70,7 @@ interface PendingApproval {
 // ── StateManager ─────────────────────────────────────────────────────────────
 
 /** Centralized in-memory store with event emission on mutations. */
-export class StateManager {
+export class StateManager implements IStateManager {
   public readonly events: TypedStateEmitter = new TypedStateEmitter();
 
   private agents: Map<string, Agent> = new Map();
@@ -82,7 +83,7 @@ export class StateManager {
   /**
    * Register or fully replace an agent in the registry.
    */
-  public upsertAgent(agent: Agent): Agent {
+  public async upsertAgent(agent: Agent): Promise<Agent> {
     this.agents.set(agent.id, agent);
     this.events.emit('agent_updated', agent);
     return agent;
@@ -91,7 +92,7 @@ export class StateManager {
   /**
    * Update specific fields on an agent. Emits agent_updated.
    */
-  public updateAgentStatus(agentId: string, status: AgentStatus): Agent | null {
+  public async updateAgentStatus(agentId: string, status: AgentStatus): Promise<Agent | null> {
     const agent = this.agents.get(agentId);
     if (!agent) return null;
     agent.status = status;
@@ -128,12 +129,12 @@ export class StateManager {
   /**
    * Create a new task and emit task_created.
    */
-  public createTask(params: {
+  public async createTask(params: {
     agent_id: string;
     title: string;
     description: string;
     links?: ResourceLink[];
-  }): Task {
+  }): Promise<Task> {
     const now = new Date().toISOString();
     const task: Task = {
       id: uuidv4(),
@@ -155,7 +156,7 @@ export class StateManager {
   /**
    * Update the status of a task. Emits task_updated.
    */
-  public updateTaskStatus(taskId: string, status: TaskStatus): Task | null {
+  public async updateTaskStatus(taskId: string, status: TaskStatus): Promise<Task | null> {
     const task = this.tasks.get(taskId);
     if (!task) return null;
     task.status = status;
@@ -169,12 +170,12 @@ export class StateManager {
   /**
    * Append a step to a task timeline. Emits task_step_added.
    */
-  public addTaskStep(params: {
+  public async addTaskStep(params: {
     task_id: string;
     type: StepType;
     content: string;
     metadata?: Record<string, unknown>;
-  }): TaskStep | null {
+  }): Promise<TaskStep | null> {
     const task = this.tasks.get(params.task_id);
     if (!task) return null;
     const step: TaskStep = {
@@ -209,14 +210,14 @@ export class StateManager {
   /**
    * Create a new incident. Emits incident_created.
    */
-  public createIncident(params: {
+  public async createIncident(params: {
     agent_id: string;
     agent_name: string;
     severity: IncidentSeverity;
     title: string;
     description: string;
     actions?: ActionType[];
-  }): Incident {
+  }): Promise<Incident> {
     const now = new Date().toISOString();
     const incident: Incident = {
       id: uuidv4(),
@@ -238,7 +239,7 @@ export class StateManager {
   /**
    * Update an incident's status. Emits incident_updated.
    */
-  public updateIncidentStatus(incidentId: string, status: IncidentStatus): Incident | null {
+  public async updateIncidentStatus(incidentId: string, status: IncidentStatus): Promise<Incident | null> {
     const incident = this.incidents.get(incidentId);
     if (!incident) return null;
     incident.status = status;
