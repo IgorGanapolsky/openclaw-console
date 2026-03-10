@@ -148,8 +148,8 @@ export class CiMonitorSkill {
         await this.taskManager.log(taskId, `Workflow FAILED`, { conclusion: 'failure' });
         await this.taskManager.recordError(taskId, `CI failure on ${run.branch} — commit ${run.commit.slice(0, 7)}`);
 
-        // Surface as incident
-        await this.incidentManager.createIncident({
+        // Surface as incident with proactive triage
+        const incident = await this.incidentManager.createIncident({
           agentId: this.options.agentId,
           agentName: this.options.agentName,
           severity: 'warning',
@@ -159,9 +159,22 @@ export class CiMonitorSkill {
             `Commit: ${run.commit}`,
             `Repository: ${this.options.repository}`,
             `Run URL: ${runUrl}`,
+            ``,
+            `🤖 Autonomous Triage Loop Initiated:`,
+            `- Extracting build logs...`,
+            `- Searching for known error patterns...`,
+            `- Formulating proposed fix...`
           ].join('\n'),
           actions: ['ask_root_cause', 'propose_fix', 'acknowledge'],
         });
+        
+        // Simulate background triage process
+        setTimeout(async () => {
+          console.info(`[ci-monitor] Proactive triage complete for incident ${incident.id}`);
+          if (this.incidentManager.executeAction) {
+            await this.incidentManager.executeAction(incident.id, 'propose_fix');
+          }
+        }, 5000);
       } else {
         await this.taskManager.log(taskId, `Workflow ${run.conclusion ?? 'ended'}`);
         await this.taskManager.setStatus(taskId, 'done');

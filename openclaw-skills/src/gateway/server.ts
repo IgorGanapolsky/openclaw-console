@@ -9,15 +9,15 @@
 import http from 'node:http';
 import express from 'express';
 import { WebSocketServer } from 'ws';
-import { parse as parseQs } from 'node:url';
 import type { Request, Response } from 'express';
-import { bearerAuthMiddleware, validateWsToken, TokenManager } from './auth.js';
+import { bearerAuthMiddleware, TokenManager } from './auth.js';
 import type { StateManager } from './state.js';
 import type { WebSocketManager } from './websocket.js';
 import { createWebSocketManager } from './websocket.js';
 import type { GatewayConfig } from '../config/default.js';
 import { DockerContainerManager } from './container-manager.js';
 import { registerRemoteApi } from './remote-api.js';
+import { SkillGenerator } from './skill-generator.js';
 import type {
   ChatRequest,
   ApprovalRespondRequest,
@@ -50,6 +50,7 @@ export function createGatewayServer(
   const tokenManager = new TokenManager(config.tokenStorePath);
   const auth = bearerAuthMiddleware(tokenManager);
   const containerManager = new DockerContainerManager(config);
+  const skillGenerator = new SkillGenerator(containerManager, state);
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
@@ -227,6 +228,21 @@ export function createGatewayServer(
   // Mount integrations endpoints (DevOps hub)
   app.use('/api/integrations', createIntegrationsRouter());
 
+  // ── Skill Generation ──────────────────────────────────────────────────────
+
+  app.post('/api/skills/generate', auth, async (req: Request, res: Response) => {
+    try {
+      const response = await skillGenerator.generateAndDeploy(req.body);
+      if (response.success) {
+        res.json(response);
+      } else {
+        res.status(500).json({ error: response.error });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
   const httpServer = http.createServer(app);
@@ -235,9 +251,15 @@ export function createGatewayServer(
 
   // Upgrade HTTP connections to WebSocket with token auth
   httpServer.on('upgrade', (request, socket, head) => {
-    const { query } = parseQs(request.url ?? '');
-    const qs = (query ?? {}) as Record<string, string | string[] | undefined>;
-    const token = validateWsToken(tokenManager, qs);
+    let tokenStr: string | null = null;
+    try {
+      const url = new URL(request.url ?? '', `http://${request.headers.host || 'localhost'}`);
+      tokenStr = url.searchParams.get('token');
+    } catch {
+      // Ignore URL parse errors
+    }
+
+    const token = tokenStr ? tokenManager.validate(tokenStr) ? tokenStr : null : null;
 
     if (!token) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
