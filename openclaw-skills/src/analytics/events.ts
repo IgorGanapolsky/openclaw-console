@@ -247,7 +247,14 @@ export async function identifyUser(
     // Set cohort week based on signup date
     if (properties.signup_date) {
       const signupDate = new Date(properties.signup_date);
-      const cohortWeek = `${signupDate.getFullYear()}-W${Math.ceil(signupDate.getDate() / 7)}`;
+      // Correct ISO week calculation
+      const d = new Date(Date.UTC(signupDate.getFullYear(), signupDate.getMonth(), signupDate.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+      
+      const cohortWeek = `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
       properties.cohort_week = cohortWeek;
     }
 
