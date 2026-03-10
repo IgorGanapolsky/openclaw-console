@@ -1,6 +1,6 @@
-import express, { Router, Request, Response } from 'express';
-import type { RequestHandler } from 'express';
+import express, { Router } from 'express';
 import crypto from 'crypto';
+import type { Request, RequestHandler, Response } from 'express';
 
 // RevenueCat types
 export interface CustomerInfo {
@@ -55,7 +55,7 @@ export interface WebhookEvent {
     currency: string;
     price: number;
     price_in_purchased_currency: number;
-    subscriber_attributes: Record<string, any>;
+    subscriber_attributes: Record<string, unknown>;
     store: 'APP_STORE' | 'PLAY_STORE' | 'STRIPE' | 'PROMOTIONAL';
     takehome_percentage: number;
     tax_percentage: number;

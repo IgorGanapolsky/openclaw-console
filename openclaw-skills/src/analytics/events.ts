@@ -1,5 +1,11 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import crypto from 'crypto';
+import type { Request, Response } from 'express';
+
+type AnalyticsValue = string | number | boolean;
+type AnalyticsProperties = Record<string, AnalyticsValue>;
+type AnalyticsUserPropertyValue = AnalyticsValue | undefined;
+type AnalyticsUserProperties = Record<string, AnalyticsUserPropertyValue>;
 
 // Analytics event types for conversion funnel
 export type ConversionEvent =
@@ -71,7 +77,7 @@ interface ABTestConfig {
   variants: {
     [key: string]: {
       weight: number;
-      properties: { [key: string]: any };
+      properties: AnalyticsProperties;
     };
   };
 }
@@ -136,8 +142,8 @@ function initializeFirebaseAnalytics(): { success: boolean; error?: string } {
 export async function trackConversionEvent(
   event: ConversionEvent,
   userId: string,
-  properties: { [key: string]: any } = {},
-  userProperties?: { [key: string]: any }
+  properties: AnalyticsProperties = {},
+  userProperties?: AnalyticsUserProperties
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const analyticsEvent: AnalyticsEvent = {
@@ -218,7 +224,7 @@ export async function trackRevenue(
     return { success: true };
 
   } catch (error) {
-    console.error(`[Analytics] Error tracking revenue:`, error);
+    console.error('[Analytics] Error tracking revenue', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Revenue tracking failed'
@@ -237,7 +243,7 @@ export async function identifyUser(
     device_type?: 'ios' | 'android' | 'web';
     email?: string;
     signup_date?: string;
-    [key: string]: any;
+    [key: string]: AnalyticsUserPropertyValue;
   }
   ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -389,7 +395,7 @@ export function getConversionAnalytics(
  */
 export function getABTestAssignment(userId: string, testName: string): {
   variant: string;
-  properties: { [key: string]: any };
+  properties: AnalyticsProperties;
 } {
   const test = AB_TESTS[testName];
   if (!test) {
@@ -439,14 +445,14 @@ async function sendToFirebaseAnalytics(event: AnalyticsEvent): Promise<void> {
 /**
  * Validate event data
  */
-function validateEvent(event: ConversionEvent, userId: string, properties: any): boolean {
+function validateEvent(event: ConversionEvent, userId: string, properties: unknown): boolean {
   if (!event || typeof event !== 'string') {
     return false;
   }
   if (!userId || typeof userId !== 'string') {
     return false;
   }
-  if (properties && typeof properties !== 'object') {
+  if (properties !== undefined && (properties === null || typeof properties !== 'object')) {
     return false;
   }
   return true;

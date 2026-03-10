@@ -183,7 +183,7 @@ export class ApprovalGateSkill {
     const result = await this.requestApproval({
       agentId,
       agentName,
-      action_type: 'deploy',
+      actionType: 'deploy',
       title: `Deploy ${service} ${version} to ${environment}`,
       description: `Agent "${agentName}" is about to deploy version ${version} of ${service} to ${environment}.`,
       command: `kubectl set image deployment/${service} ${service}=${service}:${version} -n ${environment}`,
@@ -193,7 +193,7 @@ export class ApprovalGateSkill {
         repository,
         riskLevel: environment === 'production' ? 'critical' : 'high',
       },
-    } as any); // Type cast due to small differences in options naming in protocol
+    });
     return result.approved;
   }
 

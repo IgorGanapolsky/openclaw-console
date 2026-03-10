@@ -1,7 +1,10 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import crypto from 'crypto';
 import { WebClient as SlackWebClient } from '@slack/web-api';
 import fetch from 'node-fetch';
+import type { Request, Response } from 'express';
+import type { ConversationsListResponse } from '@slack/web-api';
+import type { Block, KnownBlock } from '@slack/types';
 
 // Integration types
 export type IntegrationType = 'slack' | 'pagerduty' | 'webhook' | 'datadog' | 'grafana';
@@ -13,7 +16,7 @@ export interface Integration {
   description: string;
   status: 'connected' | 'disconnected' | 'error';
   config: {
-    [key: string]: any;
+    [key: string]: unknown;
   };
   createdAt: string;
   lastUsed?: string;
@@ -52,6 +55,15 @@ export interface WebhookIntegrationConfig extends Integration {
     secret?: string;
     events: string[];
   };
+}
+
+type SlackMessageBlock = Block | KnownBlock;
+type PagerDutyIncident = Record<string, unknown> & { id?: string };
+interface PagerDutyIncidentsResponse {
+  incidents?: PagerDutyIncident[];
+}
+interface PagerDutyCreateIncidentResponse {
+  incident?: PagerDutyIncident;
 }
 
 // Integration storage (replace with database in production)
@@ -151,7 +163,7 @@ export async function createIntegration(
   userId: string,
   type: IntegrationType,
   name: string,
-  config: any
+  config: Integration['config']
 ): Promise<{ success: boolean; integration?: Integration; error?: string }> {
   try {
     const integrationId = crypto.randomUUID();
@@ -230,7 +242,7 @@ export class SlackIntegration {
     this.client = new SlackWebClient(integration.config.accessToken);
   }
 
-  async postMessage(channel: string, text: string, blocks?: any[]): Promise<{ success: boolean; error?: string }> {
+  async postMessage(channel: string, text: string, blocks?: SlackMessageBlock[]): Promise<{ success: boolean; error?: string }> {
     try {
       const result = await this.client.chat.postMessage({
         channel,
@@ -301,7 +313,7 @@ export class SlackIntegration {
     return this.postMessage(channel, title, blocks);
   }
 
-  async getChannels(): Promise<{ success: boolean; channels?: any[]; error?: string }> {
+  async getChannels(): Promise<{ success: boolean; channels?: ConversationsListResponse['channels']; error?: string }> {
     try {
       const result = await this.client.conversations.list({
         types: 'public_channel,private_channel'
@@ -336,7 +348,7 @@ export class PagerDutyIntegration {
     };
   }
 
-  async getIncidents(status: string = 'open'): Promise<{ success: boolean; incidents?: any[]; error?: string }> {
+  async getIncidents(status: string = 'open'): Promise<{ success: boolean; incidents?: PagerDutyIncident[]; error?: string }> {
     try {
       const url = `${this.baseUrl}/incidents?status=${status}`;
       const response = await fetch(url, {
@@ -344,7 +356,7 @@ export class PagerDutyIntegration {
       });
 
       if (response.ok) {
-        const data = await response.json() as any;
+        const data = await response.json() as PagerDutyIncidentsResponse;
 
         // Update last used timestamp
         this.integration.lastUsed = new Date().toISOString();
@@ -397,7 +409,7 @@ export class PagerDutyIntegration {
     description: string,
     serviceId: string,
     urgency: 'high' | 'low' = 'high'
-  ): Promise<{ success: boolean; incident?: any; error?: string }> {
+  ): Promise<{ success: boolean; incident?: PagerDutyIncident; error?: string }> {
     try {
       const url = `${this.baseUrl}/incidents`;
       const response = await fetch(url, {
@@ -424,7 +436,7 @@ export class PagerDutyIntegration {
       });
 
       if (response.ok) {
-        const data = await response.json() as any;
+        const data = await response.json() as PagerDutyCreateIncidentResponse;
         console.log(`[PagerDuty] Incident created: ${data.incident?.id}`);
         return { success: true, incident: data.incident };
       } else {
@@ -445,7 +457,7 @@ export class PagerDutyIntegration {
 export class WebhookHandler {
   constructor(private integration: WebhookIntegrationConfig) {}
 
-  async sendWebhook(event: string, payload: any): Promise<{ success: boolean; error?: string }> {
+  async sendWebhook(event: string, payload: unknown): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if this event should be sent
       if (this.integration.config.events.length > 0 && !this.integration.config.events.includes(event)) {
@@ -778,15 +790,17 @@ export function createIntegrationsRouter(): Router {
       let testResult: { success: boolean; error?: string };
 
       switch (integration.type) {
-        case 'slack':
+        case 'slack': {
           const slack = new SlackIntegration(integration as SlackIntegrationConfig);
           testResult = await slack.postMessage('#general', 'OpenClaw Console test message 🚀');
           break;
+        }
 
-        case 'webhook':
+        case 'webhook': {
           const webhook = new WebhookHandler(integration as WebhookIntegrationConfig);
           testResult = await webhook.sendWebhook('test', { message: 'OpenClaw Console test' });
           break;
+        }
 
         default:
           testResult = { success: false, error: 'Integration type not supported for testing' };

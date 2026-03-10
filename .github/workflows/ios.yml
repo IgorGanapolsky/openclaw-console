@@ -19,17 +19,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 15.2
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
 
       - name: Resolve Swift packages
-        run: xcodebuild -resolvePackageDependencies -scheme OpenClawConsole -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2'
+        run: xcodebuild -resolvePackageDependencies -scheme OpenClawConsole
 
       - name: Build
         run: |
           xcodebuild build \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -destination 'generic/platform=iOS Simulator' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty
@@ -38,7 +38,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty

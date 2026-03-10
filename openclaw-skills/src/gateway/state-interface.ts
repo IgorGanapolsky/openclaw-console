@@ -12,6 +12,7 @@ import type {
   ActionType,
   ApprovalRequest,
   ApprovalResponse,
+  BridgeSession,
 } from '../types/protocol.js';
 
 /**
@@ -57,6 +58,6 @@ export interface IStateManager {
   getIncident?(incidentId: string): Promise<Incident | undefined> | Incident | undefined;
   listIncidents?(): Promise<Incident[]> | Incident[];
 
-  upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession>;
-  listBridgeSessions?(): Promise<import('../types/protocol.js').BridgeSession[]> | import('../types/protocol.js').BridgeSession[];
+  upsertBridgeSession(session: BridgeSession): Promise<BridgeSession>;
+  listBridgeSessions?(): Promise<BridgeSession[]> | BridgeSession[];
 }

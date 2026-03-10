@@ -44,6 +44,7 @@
 		D28CC7C4AE2D6D5A8F0AC782 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654A4451670E3B268745438C /* BiometricService.swift */; };
 		D369415E9A00CD7B87587BE7 /* ResourceLinkChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ACE84DE106112376EC9414 /* ResourceLinkChip.swift */; };
 		D40205F968C7C6DE0109D155 /* BridgeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 581A0864C079D5632FA9CC66 /* BridgeListView.swift */; };
+		DA966159D01E763EECDFA12A /* SubscriptionFeatureComparisonGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E30E235CF02E14EE9805A30 /* SubscriptionFeatureComparisonGrid.swift */; };
 		E26DC6695FC47994160F67D4 /* AddGatewayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D0C1CA37A1215F789DAE /* AddGatewayView.swift */; };
 		E4CC40270CBEEB0BA9686BDA /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC76505A1ACB7BAEF914F07 /* StatusDot.swift */; };
 		E7E99A351D5E3574C0B2CA1E /* AgentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16BEA5AD6F77FE5CBD437E1E /* AgentListViewModel.swift */; };
@@ -72,6 +73,7 @@
 		7465BA19A6F55111388C81A8 /* ApprovalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalViewModel.swift; sourceTree = "<group>"; };
 		7AF605A05582ADBC8D33C238 /* ApprovalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalRequest.swift; sourceTree = "<group>"; };
 		7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenClawConsoleApp.swift; sourceTree = "<group>"; };
+		7E30E235CF02E14EE9805A30 /* SubscriptionFeatureComparisonGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionFeatureComparisonGrid.swift; sourceTree = "<group>"; };
 		842FD483A26BED5A85DC4F7C /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		84E514BCE93EB1F89A2190D0 /* WebSocketService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketService.swift; sourceTree = "<group>"; };
 		8A2AD462AAE57779B0DE9F4E /* SeverityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeverityBadge.swift; sourceTree = "<group>"; };
@@ -115,6 +117,7 @@
 			children = (
 				3999F387613A839206EB5B56 /* ContentView.swift */,
 				C61E89ABC4C29C3008787294 /* MainTabView.swift */,
+				7E30E235CF02E14EE9805A30 /* SubscriptionFeatureComparisonGrid.swift */,
 				8CCD823833E5603691F188F1 /* SubscriptionView.swift */,
 				0B7400156998A215FDD3F85F /* Agents */,
 				2261603496B3CF0F0F6A0D1F /* Approvals */,
@@ -378,6 +381,7 @@
 				D369415E9A00CD7B87587BE7 /* ResourceLinkChip.swift in Sources */,
 				20557B9A641A9353044D4921 /* SeverityBadge.swift in Sources */,
 				E4CC40270CBEEB0BA9686BDA /* StatusDot.swift in Sources */,
+				DA966159D01E763EECDFA12A /* SubscriptionFeatureComparisonGrid.swift in Sources */,
 				7CD68F82EB8F9F585D8B8323 /* SubscriptionService.swift in Sources */,
 				E89001E0283D9DFA4AC44D9C /* SubscriptionView.swift in Sources */,
 				084298497D1A6D9535FCE569 /* TaskDetailView.swift in Sources */,

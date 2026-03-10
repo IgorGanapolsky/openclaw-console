@@ -10,9 +10,11 @@ struct BridgeListView: View {
     var body: some View {
         List {
             if viewModel.sessions.isEmpty && !viewModel.isLoading {
-                ContentUnavailableView("No Active Bridges", 
-                                     systemImage: "link.badge.plus", 
-                                     description: Text("Connect an IDE or terminal using acpx to see it here."))
+                ContentUnavailableView(
+                    "No Active Bridges",
+                    systemImage: "link.badge.plus",
+                    description: Text("Connect an IDE or terminal using acpx to see it here.")
+                )
             } else {
                 ForEach(viewModel.sessions) { session in
                     BridgeSessionRow(session: session)
@@ -49,17 +51,17 @@ struct BridgeSessionRow: View {
             HStack {
                 Label(session.title, systemImage: iconName(for: session.type))
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 StatusBadge(closed: session.closed)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("Agent: \(session.agentId)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                
+
                 Text("CWD: \(session.cwd)")
                     .font(.caption2)
                     .monospaced()
@@ -68,7 +70,7 @@ struct BridgeSessionRow: View {
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
             }
-            
+
             Text("Created: \(session.createdAt.formatted(date: .abbreviated, time: .shortened))")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -87,7 +89,7 @@ struct BridgeSessionRow: View {
 
 struct StatusBadge: View {
     let closed: Bool
-    
+
     var body: some View {
         Text(closed ? "Closed" : "Active")
             .font(.caption2.bold())

@@ -22,6 +22,7 @@ import type {
   ApprovalRequest,
   ApprovalResponse,
   ResourceLink,
+  BridgeSession,
 } from '../types/protocol.js';
 import type { IStateManager } from './state-interface.js';
 
@@ -37,8 +38,8 @@ export interface StateEvents {
   approval_created: [approval: ApprovalRequest];
   approval_responded: [response: ApprovalResponse, approval: ApprovalRequest];
   approval_expired: [approval: ApprovalRequest];
-  bridge_session_new: [session: import('../types/protocol.js').BridgeSession];
-  bridge_session_update: [session: import('../types/protocol.js').BridgeSession];
+  bridge_session_new: [session: BridgeSession];
+  bridge_session_update: [session: BridgeSession];
 }
 
 export type StateEventName = keyof StateEvents;
@@ -79,7 +80,7 @@ export class StateManager implements IStateManager {
   private tasks: Map<string, Task> = new Map();
   private incidents: Map<string, Incident> = new Map();
   private approvals: Map<string, PendingApproval> = new Map();
-  private bridgeSessions: Map<string, import('../types/protocol.js').BridgeSession> = new Map();
+  private bridgeSessions: Map<string, BridgeSession> = new Map();
 
   // ── Agent ─────────────────────────────────────────────────────────────────
 
@@ -265,7 +266,7 @@ export class StateManager implements IStateManager {
   /**
    * Register or update an external bridge session (IDE/terminal).
    */
-  public async upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession> {
+  public async upsertBridgeSession(session: BridgeSession): Promise<BridgeSession> {
     const exists = this.bridgeSessions.has(session.id);
     this.bridgeSessions.set(session.id, session);
     
@@ -278,7 +279,7 @@ export class StateManager implements IStateManager {
     return session;
   }
 
-  public listBridgeSessions(): import('../types/protocol.js').BridgeSession[] {
+  public listBridgeSessions(): BridgeSession[] {
     return Array.from(this.bridgeSessions.values());
   }
 
