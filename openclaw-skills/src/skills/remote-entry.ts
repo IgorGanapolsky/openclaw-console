@@ -14,16 +14,17 @@ async function main(): Promise<void> {
   const agentId = process.env['AGENT_ID'];
   const skillName = process.env['SKILL_NAME'];
   const gatewayUrl = process.env['GATEWAY_URL'] || 'http://host.docker.internal:18789';
+  const gatewayToken = process.env['GATEWAY_TOKEN'];
 
-  if (!agentId || !skillName) {
-    console.error('[remote] Missing AGENT_ID or SKILL_NAME environment variables');
+  if (!agentId || !skillName || !gatewayToken) {
+    console.error('[remote] Missing AGENT_ID, SKILL_NAME, or GATEWAY_TOKEN environment variables');
     process.exit(1);
   }
 
   console.info(`[remote] Booting isolated skill: ${skillName} for agent ${agentId}`);
   console.info(`[remote] Gateway URL: ${gatewayUrl}`);
 
-  const state = new RemoteStateManager(gatewayUrl);
+  const state = new RemoteStateManager(gatewayUrl, gatewayToken);
 
   // Skill Factory
   let skill: { start(): void; stop(): void };

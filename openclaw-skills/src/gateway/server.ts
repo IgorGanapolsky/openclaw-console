@@ -9,16 +9,17 @@
 import http from 'node:http';
 import express from 'express';
 import { WebSocketServer } from 'ws';
+import { parse as parseQs } from 'node:url';
 import type { Request, Response } from 'express';
-import { bearerAuthMiddleware, TokenManager } from './auth.js';
+import { bearerAuthMiddleware, validateWsToken, TokenManager } from './auth.js';
 import type { StateManager } from './state.js';
 import type { WebSocketManager } from './websocket.js';
 import { createWebSocketManager } from './websocket.js';
 import type { GatewayConfig } from '../config/default.js';
 import { DockerContainerManager } from './container-manager.js';
 import { registerRemoteApi } from './remote-api.js';
-import { SkillGenerator } from './skill-generator.js';
 import type {
+  BridgeSession,
   ChatRequest,
   ApprovalRespondRequest,
   HealthResponse,
@@ -49,15 +50,22 @@ export function createGatewayServer(
   const app = express();
   const tokenManager = new TokenManager(config.tokenStorePath);
   const auth = bearerAuthMiddleware(tokenManager);
-  const containerManager = new DockerContainerManager(config);
-  const skillGenerator = new SkillGenerator(containerManager, state);
+  const containerManager = new DockerContainerManager(config, tokenManager);
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
-  app.use(express.json());
+  const jsonBodyParser = express.json();
+  app.use((req, res, next) => {
+    if (req.originalUrl.startsWith('/api/billing/webhook')) {
+      next();
+      return;
+    }
+
+    jsonBodyParser(req, res, next);
+  });
   
   // Register Remote API for isolated skills
-  registerRemoteApi(app, state);
+  registerRemoteApi(app, state, auth);
   app.use((_req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', config.corsOrigins);
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
@@ -144,6 +152,11 @@ export function createGatewayServer(
   });
 
   app.post('/api/bridges/upsert', auth, async (req: Request, res: Response) => {
+    if (!isBridgeSessionPayload(req.body)) {
+      res.status(400).json({ error: { code: 4000, message: 'Invalid bridge session payload' } });
+      return;
+    }
+
     const session = await state.upsertBridgeSession(req.body);
     res.json(session);
   });
@@ -206,6 +219,16 @@ export function createGatewayServer(
 
   app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
     const devToken = tokenManager.getDefaultDevToken();
+    if (!devToken) {
+      res.status(503).json({
+        error: {
+          code: ERROR_CODES.GATEWAY_UNAVAILABLE,
+          message: 'Default development token is unavailable',
+        },
+      });
+      return;
+    }
+
     // Development-only URL with temporary access token for mobile testing
     const baseUrl = `http://${config.host}:${config.port}/api/health`;
     const sessionUrl = `${baseUrl}?tkn=${devToken}`;
@@ -220,28 +243,13 @@ export function createGatewayServer(
   // ── Revenue Infrastructure ────────────────────────────────────────────────
 
   // Mount billing endpoints (RevenueCat integration)
-  app.use('/api/billing', createBillingRouter());
+  app.use('/api/billing', createBillingRouter(auth));
 
   // Mount analytics endpoints (conversion tracking)
-  app.use('/api/analytics', createAnalyticsRouter());
+  app.use('/api/analytics', auth, createAnalyticsRouter());
 
   // Mount integrations endpoints (DevOps hub)
-  app.use('/api/integrations', createIntegrationsRouter());
-
-  // ── Skill Generation ──────────────────────────────────────────────────────
-
-  app.post('/api/skills/generate', auth, async (req: Request, res: Response) => {
-    try {
-      const response = await skillGenerator.generateAndDeploy(req.body);
-      if (response.success) {
-        res.json(response);
-      } else {
-        res.status(500).json({ error: response.error });
-      }
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+  app.use('/api/integrations', auth, createIntegrationsRouter());
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
@@ -251,15 +259,9 @@ export function createGatewayServer(
 
   // Upgrade HTTP connections to WebSocket with token auth
   httpServer.on('upgrade', (request, socket, head) => {
-    let tokenStr: string | null = null;
-    try {
-      const url = new URL(request.url ?? '', `http://${request.headers.host || 'localhost'}`);
-      tokenStr = url.searchParams.get('token');
-    } catch {
-      // Ignore URL parse errors
-    }
-
-    const token = tokenStr ? tokenManager.validate(tokenStr) ? tokenStr : null : null;
+    const { query } = parseQs(request.url ?? '');
+    const qs = (query ?? {}) as Record<string, string | string[] | undefined>;
+    const token = validateWsToken(tokenManager, qs);
 
     if (!token) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
@@ -303,4 +305,26 @@ export function createGatewayServer(
       });
     },
   };
+}
+
+function isBridgeSessionPayload(value: unknown): value is BridgeSession {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const session = value as Partial<BridgeSession>;
+  return (
+    typeof session.id === 'string' &&
+    session.id.length > 0 &&
+    typeof session.agent_id === 'string' &&
+    session.agent_id.length > 0 &&
+    (session.type === 'codex' || session.type === 'terminal' || session.type === 'other') &&
+    typeof session.title === 'string' &&
+    typeof session.cwd === 'string' &&
+    typeof session.closed === 'boolean' &&
+    typeof session.created_at === 'string' &&
+    typeof session.updated_at === 'string' &&
+    session.metadata !== null &&
+    typeof session.metadata === 'object'
+  );
 }

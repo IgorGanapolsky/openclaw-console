@@ -20,13 +20,19 @@ import type {
  * to synchronize state with the main gateway process.
  */
 export class RemoteStateManager {
-  constructor(private gatewayUrl: string) {}
+  constructor(
+    private gatewayUrl: string,
+    private gatewayToken: string,
+  ) {}
 
   private async post<T>(path: string, body: Record<string, unknown>): Promise<T> {
     const url = `${this.gatewayUrl}${path}`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.gatewayToken}`,
+      },
       body: JSON.stringify(body),
     });
 

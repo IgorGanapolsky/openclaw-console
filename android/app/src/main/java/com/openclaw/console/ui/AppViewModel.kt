@@ -2,6 +2,7 @@ package com.openclaw.console.ui
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.openclaw.console.data.model.GatewayConnection
 import com.openclaw.console.data.network.ApiService
@@ -110,5 +111,18 @@ class AppViewModel(application: Application) : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         _wsClient.value?.dispose()
+    }
+
+    companion object {
+        fun factory(application: Application): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    require(modelClass.isAssignableFrom(AppViewModel::class.java)) {
+                        "Unknown ViewModel class: ${modelClass.name}"
+                    }
+                    return AppViewModel(application) as T
+                }
+            }
     }
 }

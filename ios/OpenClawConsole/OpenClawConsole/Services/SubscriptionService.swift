@@ -5,7 +5,7 @@ import LocalAuthentication
 
 /// Subscription tiers supported by OpenClaw Console
 @available(iOS 17.0, *)
-public enum SubscriptionTier: String, CaseIterable {
+public enum SubscriptionTier: String, CaseIterable, Codable {
     case free = "free"
     case proMonthly = "pro_monthly"
     case proYearly = "pro_yearly"
@@ -60,7 +60,7 @@ public enum PurchaseResult {
 /// Main subscription service managing RevenueCat integration
 @available(iOS 17.0, *)
 @Observable
-public final class SubscriptionService {
+public final class SubscriptionService: NSObject {
 
     // MARK: - Constants
 
@@ -81,8 +81,9 @@ public final class SubscriptionService {
 
     // MARK: - Initialization
 
-    public init(keychainService: KeychainService = KeychainService.shared) {
+    init(keychainService: KeychainService = KeychainService.shared) {
         self.keychainService = keychainService
+        super.init()
         setupRevenueCat()
     }
 
@@ -94,7 +95,7 @@ public final class SubscriptionService {
             Purchases.logLevel = .debug
 
             let configuration = Configuration.Builder(withAPIKey: apiKey)
-                .with(userId: userId)
+                .with(appUserID: userId)
                 .build()
 
             Purchases.configure(with: configuration)
@@ -297,7 +298,12 @@ public final class SubscriptionService {
     private func cacheSubscriptionStatus(_ status: SubscriptionStatus) {
         do {
             let data = try JSONEncoder().encode(status)
-            try keychainService.store(data, key: "subscription_status")
+            guard let payload = String(data: data, encoding: .utf8) else {
+                print("[SubscriptionService] Failed to encode subscription status as UTF-8")
+                return
+            }
+
+            try keychainService.save(token: payload, for: "subscription_status")
             print("[SubscriptionService] Subscription status cached")
 
         } catch {
@@ -308,7 +314,8 @@ public final class SubscriptionService {
     @MainActor
     private func loadCachedSubscriptionStatus() {
         do {
-            guard let data = try keychainService.retrieve(key: "subscription_status") else {
+            guard let payload = keychainService.retrieve(for: "subscription_status"),
+                  let data = payload.data(using: .utf8) else {
                 print("[SubscriptionService] No cached subscription status found")
                 return
             }

@@ -1,7 +1,6 @@
 # Requirements: OpenClaw Console
 
 **Defined:** 2026-03-02
-**Updated:** 2026-03-06 — Phase 3 pivoted to revenue generation focus
 **Core Value:** Users can install and use the mobile console to approve real OpenClaw agent actions on their phone with biometric verification
 
 ## v1 Requirements
@@ -22,16 +21,16 @@ Requirements for unblocking testing builds and validating core biometric approva
 - [x] **SIGN-01**: Android keystore backed up securely (prevents irreversible app loss)
 - [x] **SIGN-02**: iOS code signing configured via Fastlane match with private cert repo
 - [x] **SIGN-03**: GitHub Secrets configured (MATCH_GIT_URL, MATCH_PASSWORD, APPSTORE_KEY_ID, etc.)
-- [x] **SIGN-04**: TestFlight upload workflow functional - iOS builds reach App Store Connect
-- [x] **SIGN-05**: Firebase App Distribution upload functional - Android builds reach Firebase
+- [ ] **SIGN-04**: TestFlight upload workflow functional - iOS builds reach App Store Connect
+- [ ] **SIGN-05**: Firebase App Distribution upload functional - Android builds reach Firebase
 
-### Revenue Generation Infrastructure
+### Device Testing Validation
 
-- [ ] **REV-01**: RevenueCat subscription billing integrated in skills gateway with webhooks and entitlement checking
-- [ ] **REV-02**: Analytics service tracks conversion funnel (install → signup → first approval → subscription)
-- [ ] **REV-03**: DevOps integrations hub with Slack and PagerDuty for premium value positioning
-- [x] **REV-04**: Mobile apps integrate RevenueCat SDK for cross-platform subscription management
-- [ ] **REV-05**: DevOps community positioning and app store optimization for customer acquisition
+- [ ] **TEST-01**: Android debug APK builds and installs on physical devices/emulators
+- [ ] **TEST-02**: iOS debug build installs on real iOS devices (not just simulator)
+- [ ] **TEST-03**: Biometric approval workflow tested on real hardware (Face ID/TouchID/Fingerprint)
+- [ ] **TEST-04**: You can install both apps and connect to localhost:18789 skills gateway
+- [ ] **TEST-05**: Full end-to-end agent approval flow works from real mobile devices
 
 ### Infrastructure Hardening
 
@@ -43,13 +42,6 @@ Requirements for unblocking testing builds and validating core biometric approva
 ## v2 Requirements
 
 Deferred to future release after core approval workflow validated.
-
-### Device Testing Validation (moved to v2)
-- **TEST-01**: Android debug APK builds and installs on physical devices/emulators
-- **TEST-02**: iOS debug build installs on real iOS devices (not just simulator)
-- **TEST-03**: Biometric approval workflow tested on real hardware (Face ID/TouchID/Fingerprint)
-- **TEST-04**: You can install both apps and connect to localhost:18789 skills gateway
-- **TEST-05**: Full end-to-end agent approval flow works from real mobile devices
 
 ### Production Release
 - **PROD-01**: App Store production upload lane (native-release.yml)
@@ -91,13 +83,13 @@ Coverage validated during roadmap creation (2026-03-02).
 | SIGN-01 | Phase 2 - Code Signing and Distribution | Complete |
 | SIGN-02 | Phase 2 - Code Signing and Distribution | Complete |
 | SIGN-03 | Phase 2 - Code Signing and Distribution | Complete |
-| SIGN-04 | Phase 2 - Code Signing and Distribution | Complete |
-| SIGN-05 | Phase 2 - Code Signing and Distribution | Complete |
-| REV-01 | Phase 3 - Revenue Generation Infrastructure | Pending |
-| REV-02 | Phase 3 - Revenue Generation Infrastructure | Pending |
-| REV-03 | Phase 3 - Revenue Generation Infrastructure | Pending |
-| REV-04 | Phase 3 - Revenue Generation Infrastructure | Complete |
-| REV-05 | Phase 3 - Revenue Generation Infrastructure | Pending |
+| SIGN-04 | Phase 2 - Code Signing and Distribution | Pending |
+| SIGN-05 | Phase 2 - Code Signing and Distribution | Pending |
+| TEST-01 | Phase 3 - Device Testing Validation | Pending |
+| TEST-02 | Phase 3 - Device Testing Validation | Pending |
+| TEST-03 | Phase 3 - Device Testing Validation | Pending |
+| TEST-04 | Phase 3 - Device Testing Validation | Pending |
+| TEST-05 | Phase 3 - Device Testing Validation | Pending |
 | INFRA-01 | Phase 4 - Distribution Hardening | Pending |
 | INFRA-02 | Phase 4 - Distribution Hardening | Pending |
 | INFRA-03 | Phase 4 - Distribution Hardening | Pending |
@@ -110,4 +102,4 @@ Coverage validated during roadmap creation (2026-03-02).
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-06 — Phase 3 pivoted to revenue generation focus per user decision*
+*Last updated: 2026-03-02 — CI-03 and CI-06 marked complete after plan 01-02 execution*

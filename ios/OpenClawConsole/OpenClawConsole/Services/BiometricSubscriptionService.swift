@@ -5,6 +5,7 @@
 
 import Foundation
 import LocalAuthentication
+import SwiftUI
 
 /// Enhanced biometric service with subscription validation
 /// Ensures Pro features require active subscription before biometric approval

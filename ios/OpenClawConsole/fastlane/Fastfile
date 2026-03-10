@@ -1,20 +1,26 @@
 default_platform(:ios)
 
+def app_store_api_key_from_env
+  return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
+
+  key_content = ENV["APPSTORE_PRIVATE_KEY"]
+  is_base64 = key_content&.include?("-----BEGIN PRIVATE KEY-----") ? false : true
+
+  app_store_connect_api_key(
+    key_id: ENV["APPSTORE_KEY_ID"],
+    issuer_id: ENV["APPSTORE_ISSUER_ID"],
+    key_content: key_content,
+    is_key_content_base64: is_base64
+  )
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
     setup_ci if ENV["CI"] == "true"
 
     # Use App Store Connect API key if available
-    api_key = nil
-    if ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"]
-      api_key = app_store_connect_api_key(
-        key_id: ENV["APPSTORE_KEY_ID"],
-        issuer_id: ENV["APPSTORE_ISSUER_ID"],
-        key_content: ENV["APPSTORE_PRIVATE_KEY"],
-        is_key_content_base64: false
-      )
-    end
+    api_key = app_store_api_key_from_env
 
     marketing_version = get_version_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
@@ -45,6 +51,15 @@ platform :ios do
       build_number: next_build_number
     )
 
+    if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: true,
+        targets: ["OpenClawConsole"],
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
+    end
+
     if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
       # CI runners do not have Apple ID accounts configured; force manual signing
       # with match-managed App Store profiles for deterministic archives.
@@ -62,7 +77,8 @@ platform :ios do
         use_automatic_signing: false,
         targets: ["OpenClawConsole"],
         code_sign_identity: "Apple Distribution",
-        profile_name: app_profile
+        profile_name: app_profile,
+        team_id: ENV["APPLE_TEAM_ID"]
       )
 
       build_app(
@@ -85,12 +101,10 @@ platform :ios do
     end
 
     upload_to_testflight(
+      skip_waiting_for_build_processing: true,
       api_key: api_key,
-      groups: ["Internal"],
-      testers: ["ganapolsky_i@subway.com"],
-      skip_waiting_for_build_processing: false,
-      changelog: "Latest OpenClaw Console build from CI",
-      notify_external_testers: true
+      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
+      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com"
     )
   end
 
@@ -99,7 +113,14 @@ platform :ios do
     setup_ci if ENV["CI"] == "true"
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
-      match(type: "appstore")
+      api_key = app_store_api_key_from_env
+
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: false,
+        api_key: api_key
+      )
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
     end

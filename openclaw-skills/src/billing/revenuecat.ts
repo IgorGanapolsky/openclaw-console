@@ -1,4 +1,5 @@
 import express, { Router, Request, Response } from 'express';
+import type { RequestHandler } from 'express';
 import crypto from 'crypto';
 
 // RevenueCat types
@@ -380,11 +381,40 @@ async function processWebhookEvent(event: WebhookEvent): Promise<void> {
 /**
  * Create Express router with RevenueCat billing endpoints
  */
-export function createBillingRouter(): Router {
+export function createBillingRouter(auth?: RequestHandler): Router {
   const router = Router();
 
-  // Middleware to capture raw body for webhook signature verification
-  router.use('/webhook', express.raw({ type: 'application/json' }));
+  // RevenueCat webhook endpoint stays public but requires the raw body.
+  router.post('/webhook', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      const rawBody = req.body.toString('utf8');
+      const signature = req.get('X-Revenuecat-Signature') || '';
+
+      // Verify webhook signature
+      if (!verifyWebhookSignature(rawBody, signature)) {
+        console.error('[RevenueCat] Invalid webhook signature');
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+
+      const event: WebhookEvent = JSON.parse(rawBody);
+
+      // Process webhook event
+      await processWebhookEvent(event);
+
+      res.json({ received: true });
+      return;
+    } catch (error) {
+      console.error('[RevenueCat] Webhook processing error:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Webhook processing failed'
+      });
+      return;
+    }
+  });
+
+  if (auth) {
+    router.use(auth);
+  }
 
   // Get subscription status
   router.get('/status/:userId', async (req: Request, res: Response) => {
@@ -487,34 +517,6 @@ export function createBillingRouter(): Router {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error'
-      });
-      return;
-    }
-  });
-
-  // RevenueCat webhook endpoint
-  router.post('/webhook', async (req: Request, res: Response) => {
-    try {
-      const rawBody = req.body.toString('utf8');
-      const signature = req.get('X-Revenuecat-Signature') || '';
-
-      // Verify webhook signature
-      if (!verifyWebhookSignature(rawBody, signature)) {
-        console.error('[RevenueCat] Invalid webhook signature');
-        return res.status(401).json({ error: 'Invalid signature' });
-      }
-
-      const event: WebhookEvent = JSON.parse(rawBody);
-
-      // Process webhook event
-      await processWebhookEvent(event);
-
-      res.json({ received: true });
-      return;
-    } catch (error) {
-      console.error('[RevenueCat] Webhook processing error:', error);
-      res.status(500).json({
-        error: error instanceof Error ? error.message : 'Webhook processing failed'
       });
       return;
     }

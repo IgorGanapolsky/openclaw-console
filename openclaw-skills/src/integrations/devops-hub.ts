@@ -463,16 +463,23 @@ export class WebhookHandler {
       headers['Content-Type'] = 'application/json';
       headers['User-Agent'] = 'OpenClaw-Console/1.0';
 
-      const response = await fetch(this.integration.config.url, {
-        method: this.integration.config.method,
-        headers,
-        body: JSON.stringify({
-          event,
-          payload,
-          timestamp: new Date().toISOString(),
-          source: 'openclaw_console'
-        })
+      const method = this.integration.config.method.toUpperCase();
+      const requestBody = JSON.stringify({
+        event,
+        payload,
+        timestamp: new Date().toISOString(),
+        source: 'openclaw_console'
       });
+      const requestInit: Parameters<typeof fetch>[1] = {
+        method,
+        headers,
+      };
+
+      if (method !== 'GET' && method !== 'HEAD') {
+        requestInit.body = requestBody;
+      }
+
+      const response = await fetch(this.integration.config.url, requestInit);
 
       if (response.ok) {
         // Update last used timestamp

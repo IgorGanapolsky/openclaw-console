@@ -8,8 +8,6 @@ import LocalAuthentication
 struct SubscriptionView: View {
 
     @Environment(SubscriptionService.self) private var subscriptionService
-    @Environment(BiometricService.self) private var biometricService
-
     @State private var showingRestoreAlert = false
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
@@ -519,7 +517,6 @@ extension SubscriptionView {
 #Preview("Subscription View") {
     SubscriptionView()
         .environment(SubscriptionService())
-        .environment(BiometricService())
 }
 
 @available(iOS 17.0, *)

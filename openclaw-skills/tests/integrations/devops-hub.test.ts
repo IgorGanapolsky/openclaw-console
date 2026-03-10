@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import crypto from 'crypto';
+import { createServer } from 'node:http';
 import {
   getAvailableIntegrations,
   createIntegration,
@@ -177,6 +178,73 @@ describe('DevOps Integrations Hub', () => {
 
       // Test with just the hash
       expect(WebhookHandler.verifySignature(payload, correctSignature, secret)).toBe(true);
+    });
+
+    it('should omit the body for GET webhooks', async () => {
+      let resolveRequest!: (request: { method?: string; body: string }) => void;
+      const requestPromise = new Promise<{ method?: string; body: string }>((resolve) => {
+        resolveRequest = resolve;
+      });
+
+      const server = createServer((req, res) => {
+        const chunks: Buffer[] = [];
+        req.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        req.on('end', () => {
+          res.statusCode = 200;
+          res.end('ok');
+          resolveRequest({
+            method: req.method,
+            body: Buffer.concat(chunks).toString('utf8'),
+          });
+        });
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', () => resolve());
+      });
+
+      try {
+        const address = server.address();
+        if (!address || typeof address === 'string') {
+          throw new Error('Test server did not bind to a TCP port');
+        }
+
+        const handler = new WebhookHandler({
+          id: 'webhook-test-get',
+          type: 'webhook',
+          name: 'GET Webhook',
+          description: 'GET webhook integration',
+          status: 'connected',
+          config: {
+            url: `http://127.0.0.1:${address.port}/webhook`,
+            method: 'GET',
+            headers: {},
+            events: ['test_event'],
+          },
+          createdAt: new Date().toISOString(),
+          userId: 'test-user',
+        });
+
+        const [request, result] = await Promise.all([
+          requestPromise,
+          handler.sendWebhook('test_event', { ok: true }),
+        ]);
+
+        expect(result).toMatchObject({ success: true });
+        expect(request.method).toBe('GET');
+        expect(request.body).toBe('');
+      } finally {
+        await new Promise<void>((resolve, reject) => {
+          server.close((error?: Error) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve();
+          });
+        });
+      }
     });
   });
 

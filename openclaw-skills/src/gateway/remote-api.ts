@@ -1,14 +1,14 @@
-import type { Express, Request, Response } from 'express';
+import type { Express, Request, RequestHandler, Response } from 'express';
 import type { StateManager } from './state.js';
 import type { AgentStatus, TaskStatus, StepType } from '../types/protocol.js';
 
 /**
  * remoteApi — Express router to expose StateManager for remote/containerized skills.
  */
-export function registerRemoteApi(app: Express, state: StateManager): void {
+export function registerRemoteApi(app: Express, state: StateManager, auth: RequestHandler): void {
   
   // Update Agent Status
-  app.post('/api/remote/agents/:id/status', async (req: Request, res: Response) => {
+  app.post('/api/remote/agents/:id/status', auth, async (req: Request, res: Response) => {
     const id = String(req.params['id'] ?? '');
     const { status } = req.body as { status: AgentStatus };
     const agent = await state.updateAgentStatus(id, status);
@@ -16,13 +16,13 @@ export function registerRemoteApi(app: Express, state: StateManager): void {
   });
 
   // Create Task
-  app.post('/api/remote/tasks', async (req: Request, res: Response) => {
+  app.post('/api/remote/tasks', auth, async (req: Request, res: Response) => {
     const task = await state.createTask(req.body);
     res.json(task);
   });
 
   // Update Task Status
-  app.post('/api/remote/tasks/:id/status', async (req: Request, res: Response) => {
+  app.post('/api/remote/tasks/:id/status', auth, async (req: Request, res: Response) => {
     const id = String(req.params['id'] ?? '');
     const { status } = req.body as { status: TaskStatus };
     const task = await state.updateTaskStatus(id, status);
@@ -30,7 +30,7 @@ export function registerRemoteApi(app: Express, state: StateManager): void {
   });
 
   // Add Task Step
-  app.post('/api/remote/tasks/:id/steps', async (req: Request, res: Response) => {
+  app.post('/api/remote/tasks/:id/steps', auth, async (req: Request, res: Response) => {
     const id = String(req.params['id'] ?? '');
     const { type, content, metadata } = req.body as { type: StepType; content: string; metadata?: Record<string, unknown> };
     const step = await state.addTaskStep({ task_id: id, type, content, metadata });
@@ -38,13 +38,13 @@ export function registerRemoteApi(app: Express, state: StateManager): void {
   });
 
   // Create Incident
-  app.post('/api/remote/incidents', async (req: Request, res: Response) => {
+  app.post('/api/remote/incidents', auth, async (req: Request, res: Response) => {
     const incident = await state.createIncident(req.body);
     res.json(incident);
   });
 
   // Update Incident Status
-  app.post('/api/remote/incidents/:id/status', async (req: Request, res: Response) => {
+  app.post('/api/remote/incidents/:id/status', auth, async (req: Request, res: Response) => {
     const id = String(req.params['id'] ?? '');
     const { status } = req.body;
     const incident = await state.updateIncidentStatus(id, status);
@@ -52,7 +52,7 @@ export function registerRemoteApi(app: Express, state: StateManager): void {
   });
 
   // Queue Approval (Long-polling)
-  app.post('/api/remote/approvals/queue', async (req: Request, res: Response) => {
+  app.post('/api/remote/approvals/queue', auth, async (req: Request, res: Response) => {
     try {
       const { request, timeoutMs } = req.body;
       const response = await state.queueApproval(request, timeoutMs);

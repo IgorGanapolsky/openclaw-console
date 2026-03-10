@@ -41,16 +41,11 @@ jobs:
   codeql:
     name: CodeQL Analysis (${{ matrix.language }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: javascript-typescript
-            os: ubuntu-latest
-          - language: java-kotlin
-            os: ubuntu-latest
-          - language: swift
-            os: macos-latest
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"language":"javascript-typescript","os":"ubuntu-latest"}]' || '[{"language":"javascript-typescript","os":"ubuntu-latest"},{"language":"java-kotlin","os":"ubuntu-latest"},{"language":"swift","os":"macos-latest"}]') }}
     permissions:
       security-events: write
       actions: read
@@ -71,8 +66,13 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
-        if: matrix.language != 'swift'
+        if: matrix.language == 'javascript-typescript'
         uses: github/codeql-action/autobuild@v4
+
+      - name: Build Android for CodeQL
+        if: matrix.language == 'java-kotlin'
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Build Swift for CodeQL
         if: matrix.language == 'swift'

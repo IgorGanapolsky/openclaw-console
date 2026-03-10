@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import type { GatewayConfig } from '../config/default.js';
+import type { TokenManager } from './auth.js';
 
 export interface ContainerOptions {
   agentId: string;
@@ -14,13 +15,21 @@ export interface ContainerOptions {
 export class DockerContainerManager {
   private activeContainers: Map<string, string> = new Map(); // skillName -> containerId
 
-  constructor(private config: GatewayConfig) {}
+  constructor(
+    private config: GatewayConfig,
+    private tokenManager: TokenManager,
+  ) {}
 
   /**
    * Start a skill in a dedicated Docker container.
    */
   public async startSkill(options: ContainerOptions): Promise<void> {
     const { skillName, agentId, env = {} } = options;
+    const gatewayToken = this.tokenManager.getDefaultDevToken();
+
+    if (!gatewayToken) {
+      throw new Error('Default development token is unavailable');
+    }
     
     console.info(`[docker] Starting isolated skill: ${skillName} for agent ${agentId}`);
 
@@ -35,6 +44,7 @@ export class DockerContainerManager {
       '-e', `AGENT_ID=${agentId}`,
       '-e', `SKILL_NAME=${skillName}`,
       '-e', `GATEWAY_URL=${gatewayUrl}`,
+      '-e', `GATEWAY_TOKEN=${gatewayToken}`,
       ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]),
       'openclaw-skill-base' // We'll need to build this image
     ];

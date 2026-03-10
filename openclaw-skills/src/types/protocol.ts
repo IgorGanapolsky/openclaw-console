@@ -202,27 +202,6 @@ export interface BridgeSession {
   metadata: Record<string, unknown>;
 }
 
-// ─── Scheduled Loops ──────────────────────────────────────────────────────────
-
-/** Schedule definition for recurring tasks. */
-export interface Schedule {
-  type: 'cron' | 'interval';
-  value: string | number; // cron expression or ms interval
-}
-
-/** A background loop/cron assigned to an agent. */
-export interface RecurringTask {
-  id: string;
-  agent_id: string;
-  name: string;
-  description: string;
-  schedule: Schedule;
-  last_run: string | null; // ISO8601
-  next_run: string | null; // ISO8601
-  status: 'active' | 'paused' | 'failed';
-  error_count: number;
-}
-
 // ─── WebSocket Message Envelope ───────────────────────────────────────────────
 
 /** All server→client WebSocket event type names. */
@@ -236,7 +215,6 @@ export type ServerEventType =
   | 'chat_response'
   | 'bridge_session_new'
   | 'bridge_session_update'
-  | 'recurring_task_updated'
   | 'connected'
   | 'error';
 
