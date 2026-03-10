@@ -70,7 +70,7 @@ const subscriptionCache = new Map<string, SubscriptionStatus>();
 // RevenueCat configuration
 const REVENUECAT_SECRET_KEY = process.env.REVENUECAT_SECRET_KEY;
 const REVENUECAT_WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET;
-const REVENUECAT_API_BASE_URL = 'https://api.revenuecat.com/v1';
+const REVENUECAT_API_BASE_URL = new URL('https://api.revenuecat.com/v1/');
 
 interface RateLimitEntry {
   count: number;
@@ -82,8 +82,23 @@ function parsePositiveIntEnv(name: string, fallback: number): number {
   return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
+function normalizeRevenueCatUserId(userId: string): string {
+  const normalizedUserId = String(userId);
+  const hasControlCharacters = Array.from(normalizedUserId).some((character) => {
+    const codePoint = character.charCodeAt(0);
+    return codePoint < 32 || codePoint === 127;
+  });
+
+  if (!normalizedUserId || normalizedUserId.length > 128 || hasControlCharacters) {
+    throw new Error('Invalid RevenueCat userId');
+  }
+
+  return normalizedUserId;
+}
+
 function getSubscriberUrl(userId: string): string {
-  return `${REVENUECAT_API_BASE_URL}/subscribers/${encodeURIComponent(userId)}`;
+  const normalizedUserId = normalizeRevenueCatUserId(userId);
+  return new URL(`subscribers/${encodeURIComponent(normalizedUserId)}`, REVENUECAT_API_BASE_URL).toString();
 }
 
 function buildSubscriptionStatus(userId: string, customerInfo: CustomerInfo): SubscriptionStatus {
@@ -149,7 +164,7 @@ export function initializeRevenueCat(): { success: boolean; error?: string } {
     };
   }
 
-  console.log('[RevenueCat] Initialized with public key:', publicKey.slice(0, 20) + '...');
+  console.info('[RevenueCat] Initialized');
   return { success: true };
 }
 
@@ -157,16 +172,18 @@ export function initializeRevenueCat(): { success: boolean; error?: string } {
  * Get subscription status for a user
  */
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
+  const normalizedUserId = normalizeRevenueCatUserId(userId);
+
   // Check cache first
-  const cached = subscriptionCache.get(userId);
+  const cached = subscriptionCache.get(normalizedUserId);
   if (cached) {
-    console.log('[RevenueCat] Cache hit', { userId });
+    console.info('[RevenueCat] Cache hit');
     return cached;
   }
 
   try {
     // In production, make actual RevenueCat API call
-    const response = await fetch(getSubscriberUrl(userId), {
+    const response = await fetch(getSubscriberUrl(normalizedUserId), {
       headers: {
         'Authorization': `Bearer ${REVENUECAT_SECRET_KEY}`,
         'X-Platform': 'server'
@@ -178,18 +195,18 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     }
 
     const customerInfo = await response.json() as CustomerInfo;
-    const status = buildSubscriptionStatus(userId, customerInfo);
-    cacheSubscriptionStatus(userId, status);
+    const status = buildSubscriptionStatus(normalizedUserId, customerInfo);
+    cacheSubscriptionStatus(normalizedUserId, status);
 
-    console.log('[RevenueCat] Status retrieved', { userId, status });
+    console.info('[RevenueCat] Status retrieved');
     return status;
 
   } catch (error) {
-    console.error('[RevenueCat] Error fetching status', { userId, error });
+    console.error('[RevenueCat] Error fetching status', { error });
 
     // Return default free status on error
     const defaultStatus: SubscriptionStatus = {
-      userId,
+      userId: normalizedUserId,
       isPro: false,
       hasActiveSubscription: false,
       subscriptionType: 'free',
@@ -205,9 +222,10 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 /**
  * Purchase subscription (mobile apps call this via HTTP)
  */
-export async function purchaseSubscription(userId: string, productId: string, receipt: string): Promise<{ success: boolean; error?: string }> {
+export async function purchaseSubscription(userId: string, _productId: string, receipt: string): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('[RevenueCat] Processing purchase', { userId, productId });
+    const normalizedUserId = normalizeRevenueCatUserId(userId);
+    console.info('[RevenueCat] Processing purchase');
 
     const response = await fetch('https://api.revenuecat.com/v1/receipts', {
       method: 'POST',
@@ -217,7 +235,7 @@ export async function purchaseSubscription(userId: string, productId: string, re
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        app_user_id: userId,
+        app_user_id: normalizedUserId,
         fetch_token: receipt,
         attributes: {
           install_source: 'openclaw_console',
@@ -227,20 +245,19 @@ export async function purchaseSubscription(userId: string, productId: string, re
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Purchase failed: ${error}`);
+      throw new Error(`Purchase failed with status ${response.status}`);
     }
 
     await response.json(); // Purchase response data
-    console.log('[RevenueCat] Purchase successful', { userId });
+    console.info('[RevenueCat] Purchase successful');
 
     // Invalidate cache to force refresh
-    subscriptionCache.delete(userId);
+    subscriptionCache.delete(normalizedUserId);
 
     return { success: true };
 
   } catch (error) {
-    console.error('[RevenueCat] Purchase error', { userId, error });
+    console.error('[RevenueCat] Purchase error', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown purchase error'
@@ -253,9 +270,10 @@ export async function purchaseSubscription(userId: string, productId: string, re
  */
 export async function restorePurchases(userId: string): Promise<{ success: boolean; customerInfo?: CustomerInfo; error?: string }> {
   try {
-    console.log('[RevenueCat] Restoring purchases', { userId });
+    const normalizedUserId = normalizeRevenueCatUserId(userId);
+    console.info('[RevenueCat] Restoring purchases');
 
-    const response = await fetch(getSubscriberUrl(userId), {
+    const response = await fetch(getSubscriberUrl(normalizedUserId), {
       headers: {
         'Authorization': `Bearer ${REVENUECAT_SECRET_KEY}`,
         'X-Platform': 'server'
@@ -269,13 +287,13 @@ export async function restorePurchases(userId: string): Promise<{ success: boole
     const customerInfo = await response.json() as CustomerInfo;
 
     // Refresh cache using the restored customer info we already fetched.
-    cacheSubscriptionStatus(userId, buildSubscriptionStatus(userId, customerInfo));
+    cacheSubscriptionStatus(normalizedUserId, buildSubscriptionStatus(normalizedUserId, customerInfo));
 
-    console.log('[RevenueCat] Purchases restored', { userId });
+    console.info('[RevenueCat] Purchases restored');
     return { success: true, customerInfo };
 
   } catch (error) {
-    console.error('[RevenueCat] Restore error', { userId, error });
+    console.error('[RevenueCat] Restore error', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown restore error'
@@ -322,7 +340,7 @@ export async function checkPremiumAccess(userId: string, feature: string): Promi
   }
 
   // Unknown feature defaults to free
-  console.warn(`[RevenueCat] Unknown feature access check: ${feature}`);
+  console.warn('[RevenueCat] Unknown feature access check');
   return true;
 }
 
@@ -396,37 +414,37 @@ function verifyWebhookSignature(rawBody: string, signature: string): boolean {
  * Process RevenueCat webhook event
  */
 async function processWebhookEvent(event: WebhookEvent): Promise<void> {
-  const { app_user_id, type, product_id, expiration_at_ms } = event.event;
+  const { app_user_id, type } = event.event;
 
-  console.log(`[RevenueCat] Processing webhook event: ${type} for user ${app_user_id}`);
+  console.info('[RevenueCat] Processing webhook event', { type });
 
   // Invalidate cache for affected user
   subscriptionCache.delete(app_user_id);
 
   switch (type) {
     case 'INITIAL_PURCHASE':
-      console.log(`[RevenueCat] New subscription: ${app_user_id} -> ${product_id}`);
+      console.info('[RevenueCat] New subscription received');
       // Trigger welcome flow, analytics event, etc.
       break;
 
     case 'RENEWAL':
-      console.log(`[RevenueCat] Subscription renewed: ${app_user_id} -> ${product_id}`);
+      console.info('[RevenueCat] Subscription renewed');
       break;
 
     case 'CANCELLATION':
-      console.log(`[RevenueCat] Subscription cancelled: ${app_user_id} (expires: ${new Date(expiration_at_ms || 0)})`);
+      console.info('[RevenueCat] Subscription cancelled');
       break;
 
     case 'EXPIRATION':
-      console.log(`[RevenueCat] Subscription expired: ${app_user_id}`);
+      console.info('[RevenueCat] Subscription expired');
       break;
 
     case 'BILLING_ISSUE':
-      console.log(`[RevenueCat] Billing issue: ${app_user_id} -> ${product_id}`);
+      console.info('[RevenueCat] Billing issue received');
       break;
 
     default:
-      console.warn(`[RevenueCat] Unknown webhook event type: ${type}`);
+      console.warn('[RevenueCat] Unknown webhook event type');
   }
 }
 
@@ -468,8 +486,8 @@ export function createBillingRouter(auth?: RequestHandler): Router {
 
   if (auth) {
     router.use(auth);
-    router.use(protectedRateLimiter);
   }
+  router.use(protectedRateLimiter);
 
   // Get subscription status
   router.get('/status/:userId', async (req: Request, res: Response) => {

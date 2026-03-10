@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import type { Request, Response } from 'express';
 
 type AnalyticsValue = string | number | boolean;
@@ -126,7 +125,7 @@ function initializeFirebaseAnalytics(): { success: boolean; error?: string } {
 
   try {
     // In production, this would initialize Firebase Admin SDK
-    console.log('[Analytics] Firebase Analytics initialized for project:', FIREBASE_PROJECT_ID);
+    console.info('[Analytics] Firebase Analytics initialized');
     return { success: true };
   } catch (error) {
     return {
@@ -169,11 +168,11 @@ export async function trackConversionEvent(
       await sendToFirebaseAnalytics(analyticsEvent);
     }
 
-    console.log('[Analytics] Event tracked', { event, userId });
+    console.info('[Analytics] Event tracked');
     return { success: true };
 
   } catch (error) {
-    console.error('[Analytics] Error tracking event', { event, error });
+    console.error('[Analytics] Error tracking event', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Event tracking failed'
@@ -220,7 +219,7 @@ export async function trackRevenue(
       transaction_id: transactionId
     });
 
-    console.log('[Analytics] Revenue tracked', { userId, revenue, currency });
+    console.info('[Analytics] Revenue tracked');
     return { success: true };
 
   } catch (error) {
@@ -248,10 +247,7 @@ export async function identifyUser(
   ): Promise<{ success: boolean; error?: string }> {
   try {
     // Update user properties for future events
-    console.log('[Analytics] User identified', {
-      userId,
-      propertyKeys: Object.keys(properties)
-    });
+    console.info('[Analytics] User identified');
 
     // Set cohort week based on signup date
     if (properties.signup_date) {
@@ -275,7 +271,7 @@ export async function identifyUser(
     return { success: true };
 
   } catch (error) {
-    console.error('[Analytics] Error identifying user', { userId, error });
+    console.error('[Analytics] Error identifying user', { error });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'User identification failed'
@@ -402,9 +398,7 @@ export function getABTestAssignment(userId: string, testName: string): {
     return { variant: 'control', properties: {} };
   }
 
-  // Use deterministic hash to assign user to variant
-  const hash = crypto.createHash('sha256').update(`${userId}-${testName}`).digest('hex');
-  const hashInt = parseInt(hash.substring(0, 8), 16);
+  const hashInt = deterministicBucket(`${userId}-${testName}`);
   const randomValue = (hashInt % 10000) / 10000; // 0-1 range
 
   let cumulativeWeight = 0;
@@ -432,14 +426,21 @@ export function getABTestAssignment(userId: string, testName: string): {
 async function sendToFirebaseAnalytics(event: AnalyticsEvent): Promise<void> {
   // In production, this would use Firebase Admin SDK to send events
   // For now, we'll just log the event structure
-  console.log('[Analytics] Firebase event:', {
+  console.info('[Analytics] Firebase event ready', {
     name: event.event,
-    parameters: {
-      user_id: event.userId,
-      ...event.properties
-    },
-    user_properties: event.userProperties
+    propertyKeys: Object.keys(event.properties),
+    hasUserProperties: Boolean(event.userProperties)
   });
+}
+
+function deterministicBucket(input: string): number {
+  let hash = 2166136261;
+  for (const character of input) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
 }
 
 /**
