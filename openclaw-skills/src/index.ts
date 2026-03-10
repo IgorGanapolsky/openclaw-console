@@ -12,6 +12,7 @@ import { AGENT_CONFIGS, agentConfigToAgent } from './config/agents.js';
 import { SEED_AGENTS, SEED_TASKS, SEED_INCIDENTS } from './config/seed-data.js';
 import { CiMonitorSkill } from './skills/ci-monitor.js';
 import { TradingMonitorSkill } from './skills/trading-monitor.js';
+import { DailyBriefSkill } from './skills/daily-brief.js';
 import { AGENT_IDS } from './config/agents.js';
 
 async function main(): Promise<void> {
@@ -118,6 +119,14 @@ async function main(): Promise<void> {
 
   // Mark Deploy Manager as online
   await state.updateAgentStatus(AGENT_IDS.DEPLOY_MANAGER, 'online');
+
+  // --- Daily Brief Agent ---
+  const dailyBrief = new DailyBriefSkill(state, {
+    agentId: AGENT_IDS.DEPLOY_MANAGER, // Reuse deploy manager as the executive assistant for now
+    agentName: 'Executive Assistant',
+    intervalMs: 86400000 // 24 hours
+  });
+  void dailyBrief.start();
 
   // --- Simulated Bridge Sessions (Demo) ---
   if (DEFAULT_CONFIG.simulateBridges) {

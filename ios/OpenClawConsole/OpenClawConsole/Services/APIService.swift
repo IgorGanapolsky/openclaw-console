@@ -171,6 +171,32 @@ final class APIService {
         try await request(path: "/api/bridges")
     }
 
+    // MARK: - Loops / Skills
+
+    func fetchLoops() async throws -> [RecurringTask] {
+        try await request(path: "/api/loops")
+    }
+
+    struct GenerateSkillRequest: Codable {
+        let prompt: String
+        let agentId: String
+    }
+
+    struct GenerateSkillResponse: Codable {
+        let success: Bool
+        let skillName: String?
+        let message: String?
+        let error: String?
+    }
+
+    func generateSkill(prompt: String, agentId: String) async throws -> GenerateSkillResponse {
+        try await request(
+            method: "POST",
+            path: "/api/skills/generate",
+            body: ["prompt": prompt, "agentId": agentId]
+        )
+    }
+
     // MARK: - Chat
 
     func sendChatMessage(_ request: ChatMessageRequest) async throws -> ChatMessage {

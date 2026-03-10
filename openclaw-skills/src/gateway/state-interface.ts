@@ -59,4 +59,7 @@ export interface IStateManager {
 
   upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession>;
   listBridgeSessions?(): Promise<import('../types/protocol.js').BridgeSession[]> | import('../types/protocol.js').BridgeSession[];
+
+  upsertRecurringTask?(task: import('../types/protocol.js').RecurringTask): Promise<import('../types/protocol.js').RecurringTask>;
+  listRecurringTasks?(): Promise<import('../types/protocol.js').RecurringTask[]> | import('../types/protocol.js').RecurringTask[];
 }

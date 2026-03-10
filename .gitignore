@@ -69,3 +69,6 @@ dist-tests/
 firebase-debug.log
 .env.*
 *.png
+
+# ralphex progress logs
+.ralphex/progress/

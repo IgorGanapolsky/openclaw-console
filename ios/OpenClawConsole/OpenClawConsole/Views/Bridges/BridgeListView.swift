@@ -94,7 +94,7 @@ struct StatusBadge: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
             .background(closed ? Color.secondary.opacity(0.2) : Color.green.opacity(0.2))
-            .foregroundStyle(closed ? .secondary : .green)
+            .foregroundStyle(closed ? Color.secondary : Color.green)
             .clipShape(Capsule())
     }
 }

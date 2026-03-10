@@ -148,6 +148,12 @@ export function createGatewayServer(
     res.json(session);
   });
 
+  // ── Recurring Tasks (Loops) ───────────────────────────────────────────────
+
+  app.get('/api/loops', auth, (_req: Request, res: Response) => {
+    res.json(state.listRecurringTasks());
+  });
+
   app.post('/api/approvals/:id/respond', auth, (req: Request, res: Response) => {
     const approvalId = String(req.params['id'] ?? '');
     const pending = state.getPendingApproval(approvalId);

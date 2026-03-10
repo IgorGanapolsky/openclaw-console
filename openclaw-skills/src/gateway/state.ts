@@ -39,6 +39,7 @@ export interface StateEvents {
   approval_expired: [approval: ApprovalRequest];
   bridge_session_new: [session: import('../types/protocol.js').BridgeSession];
   bridge_session_update: [session: import('../types/protocol.js').BridgeSession];
+  recurring_task_updated: [task: import('../types/protocol.js').RecurringTask];
 }
 
 export type StateEventName = keyof StateEvents;
@@ -80,6 +81,7 @@ export class StateManager implements IStateManager {
   private incidents: Map<string, Incident> = new Map();
   private approvals: Map<string, PendingApproval> = new Map();
   private bridgeSessions: Map<string, import('../types/protocol.js').BridgeSession> = new Map();
+  private recurringTasks: Map<string, import('../types/protocol.js').RecurringTask> = new Map();
 
   // ── Agent ─────────────────────────────────────────────────────────────────
 
@@ -280,6 +282,18 @@ export class StateManager implements IStateManager {
 
   public listBridgeSessions(): import('../types/protocol.js').BridgeSession[] {
     return Array.from(this.bridgeSessions.values());
+  }
+
+  // ── Recurring Tasks ───────────────────────────────────────────────────────
+
+  public async upsertRecurringTask(task: import('../types/protocol.js').RecurringTask): Promise<import('../types/protocol.js').RecurringTask> {
+    this.recurringTasks.set(task.id, task);
+    this.events.emit('recurring_task_updated', task);
+    return task;
+  }
+
+  public listRecurringTasks(): import('../types/protocol.js').RecurringTask[] {
+    return Array.from(this.recurringTasks.values());
   }
 
   // ── Approval ──────────────────────────────────────────────────────────────

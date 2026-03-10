@@ -113,6 +113,7 @@ enum InboundEventType: String {
     case chatResponse = "chat_response"
     case bridgeSessionNew = "bridge_session_new"
     case bridgeSessionUpdate = "bridge_session_update"
+    case recurringTaskUpdated = "recurring_task_updated"
     case connected
     case error
 }
@@ -128,9 +129,41 @@ enum InboundEvent {
     case chatResponse(ChatMessage)
     case bridgeSessionNew(BridgeSession)
     case bridgeSessionUpdate(BridgeSession)
+    case recurringTaskUpdated(RecurringTask)
     case connected(sessionId: String, gatewayVersion: String)
     case error(code: Int, message: String)
     case unknown(String)
+}
+
+// MARK: - Recurring Task
+
+struct Schedule: Codable {
+    let type: String
+    let value: AnyCodable
+}
+
+struct RecurringTask: Codable, Identifiable {
+    let id: String
+    let agentId: String
+    let name: String
+    let description: String
+    let schedule: Schedule
+    let lastRun: String?
+    let nextRun: String?
+    let status: String
+    let errorCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case agentId = "agent_id"
+        case name
+        case description
+        case schedule
+        case lastRun = "last_run"
+        case nextRun = "next_run"
+        case status
+        case errorCount = "error_count"
+    }
 }
 
 // MARK: - Bridge Session

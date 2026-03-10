@@ -115,6 +115,10 @@ export class WebSocketManager {
     this.state.events.on('bridge_session_update', (session: BridgeSession) => {
       this.broadcastToAll('bridge_session_update', session);
     });
+
+    this.state.events.on('recurring_task_updated', (task: import('../types/protocol.js').RecurringTask) => {
+      this.broadcastToSubscribers(task.agent_id, 'recurring_task_updated', task);
+    });
   }
 
   // ── Connection handling ───────────────────────────────────────────────────

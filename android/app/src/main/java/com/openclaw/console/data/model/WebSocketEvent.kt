@@ -11,6 +11,7 @@ sealed class WebSocketEvent {
     data class ChatResponse(val message: ChatMessage) : WebSocketEvent()
     data class BridgeSessionNew(val session: BridgeSession) : WebSocketEvent()
     data class BridgeSessionUpdate(val session: BridgeSession) : WebSocketEvent()
+    data class RecurringTaskUpdated(val task: RecurringTask) : WebSocketEvent()
     data class Error(val code: Int, val message: String) : WebSocketEvent()
     data object Disconnected : WebSocketEvent()
     data class Reconnecting(val attempt: Int, val delayMs: Long) : WebSocketEvent()

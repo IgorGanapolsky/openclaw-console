@@ -519,7 +519,7 @@ extension SubscriptionView {
 #Preview("Subscription View") {
     SubscriptionView()
         .environment(SubscriptionService())
-        .environment(BiometricService())
+        .environment(BiometricService.shared)
 }
 
 @available(iOS 17.0, *)

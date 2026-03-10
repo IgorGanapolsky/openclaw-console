@@ -192,6 +192,10 @@ final class WebSocketService: NSObject {
             if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
                 event = .bridgeSessionUpdate(obj)
             }
+        case .recurringTaskUpdated:
+            if let obj = try? decoder.decode(RecurringTask.self, from: payloadData) {
+                event = .recurringTaskUpdated(obj)
+            }
         case .connected:
             if let obj = try? decoder.decode(ConnectedPayload.self, from: payloadData) {
                 event = .connected(sessionId: obj.sessionId, gatewayVersion: obj.gatewayVersion)
