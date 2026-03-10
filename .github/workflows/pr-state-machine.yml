@@ -470,7 +470,7 @@ jobs:
                 prCandidates.push(pr.number);
               }
             } else if (context.eventName === "workflow_dispatch") {
-              const raw = core.getInput("pr_number");
+              const raw = context.payload.inputs?.pr_number || core.getInput("pr_number");
               if (raw && raw.trim()) {
                 const parsed = Number.parseInt(raw, 10);
                 if (Number.isInteger(parsed) && parsed > 0) {
