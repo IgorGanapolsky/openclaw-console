@@ -4,6 +4,7 @@ import {
   getSubscriptionStatus,
   restorePurchases,
   hasProEntitlement,
+  type CustomerInfo,
   checkPremiumAccess
 } from '../../src/billing/revenuecat.js';
 
@@ -12,7 +13,7 @@ process.env.REVENUECAT_PUBLIC_KEY = 'test_public_key_123';
 process.env.REVENUECAT_SECRET_KEY = 'test_secret_key_456';
 
 describe('RevenueCat Billing', () => {
-  function makeCustomerInfo(isActive: boolean) {
+  function makeCustomerInfo(isActive: boolean): CustomerInfo {
     return {
       id: 'test-user-123',
       originalAppUserId: 'test-user-123',
@@ -171,7 +172,7 @@ describe('RevenueCat Billing', () => {
       const originalFetch = global.fetch;
       const fetchMock = jest.fn(async () => ({
         ok: true,
-        json: async () => makeCustomerInfo(true)
+        json: async (): Promise<CustomerInfo> => makeCustomerInfo(true)
       })) as any;
       global.fetch = fetchMock;
 

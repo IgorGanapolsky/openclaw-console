@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import nodeFetch from 'node-fetch';
+import type { Response as FetchResponse } from 'node-fetch';
 import { StateManager } from '../../src/gateway/state.js';
 import { createGatewayServer } from '../../src/gateway/server.js';
 import type { GatewayServer } from '../../src/gateway/server.js';
@@ -211,14 +212,14 @@ describe('gateway server hardening', () => {
     global.fetch = jest.fn(async () => ({
       ok: false,
       status: 503,
-      json: async () => ({}),
-      text: async () => 'upstream unavailable'
+      json: async (): Promise<Record<string, never>> => ({}),
+      text: async (): Promise<string> => 'upstream unavailable'
     })) as any;
 
     const { gateway, baseUrl, token, tempDir } = await startGateway();
 
     try {
-      const request = () => nodeFetch(`${baseUrl}/api/billing/status/rate-limit-user`, {
+      const request = (): Promise<FetchResponse> => nodeFetch(`${baseUrl}/api/billing/status/rate-limit-user`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import type { DockerContainerManager as DockerContainerManagerType } from '../../src/gateway/container-manager.js';
 
 const mockSpawn = jest.fn();
 
@@ -19,7 +20,7 @@ describe('DockerContainerManager.stopSkill', () => {
     mockSpawn.mockReset();
   });
 
-  function makeManager() {
+  function makeManager(): DockerContainerManagerType {
     return new DockerContainerManager(
       { port: 18789 } as any,
       { getDefaultDevToken: () => 'dev-token' } as any
