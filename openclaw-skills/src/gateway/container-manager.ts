@@ -47,6 +47,11 @@ export class DockerContainerManager {
       docker.stdout.on('data', (data) => { output += data.toString(); });
       docker.stderr.on('data', (data) => { error += data.toString(); });
 
+      docker.on('error', (err) => {
+        console.error(`[docker] System error executing docker: ${err.message}`);
+        reject(err);
+      });
+
       docker.on('close', (code) => {
         if (code === 0) {
           const containerId = output.trim();
@@ -88,6 +93,11 @@ export class DockerContainerManager {
     return new Promise((resolve, reject) => {
       const docker = spawn('docker', ['build', '-t', 'openclaw-skill-base', '-f', 'Dockerfile.skill', '.']);
       
+      docker.on('error', (err) => {
+        console.error(`[docker] System error building image: ${err.message}`);
+        reject(err);
+      });
+
       docker.on('close', (code) => {
         if (code === 0) {
           console.info('[docker] Base image built successfully');

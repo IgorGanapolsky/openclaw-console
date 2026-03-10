@@ -8,7 +8,6 @@ import { RemoteStateManager } from './remote-client.js';
 import { CiMonitorSkill } from './ci-monitor.js';
 import { TradingMonitorSkill } from './trading-monitor.js';
 import type { IStateManager } from '../gateway/state-interface.js';
-import type { StateManager } from '../gateway/state.js';
 import type { GatewayConfig } from '../config/default.js';
 
 async function main(): Promise<void> {
@@ -40,7 +39,7 @@ async function main(): Promise<void> {
       break;
     case 'trading-monitor':
       skill = new TradingMonitorSkill(
-        state as unknown as StateManager, 
+        state as unknown as IStateManager, 
         {} as unknown as GatewayConfig, 
         {
           agentId,

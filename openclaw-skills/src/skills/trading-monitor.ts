@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaskManagerSkill } from './task-manager.js';
 import { IncidentManagerSkill } from './incident-manager.js';
 import { ApprovalGateSkill } from './approval-gate.js';
-import type { StateManager } from '../gateway/state.js';
+import type { IStateManager } from '../gateway/state-interface.js';
 import type { GatewayConfig } from '../config/default.js';
 
 export interface TradingMonitorOptions {
@@ -50,7 +50,7 @@ export class TradingMonitorSkill {
   private timer: ReturnType<typeof setInterval> | null = null;
   private tickCount = 0;
 
-  constructor(state: StateManager, config: GatewayConfig, options: TradingMonitorOptions) {
+  constructor(state: IStateManager, config: GatewayConfig, options: TradingMonitorOptions) {
     this.taskManager = new TaskManagerSkill(state);
     this.incidentManager = new IncidentManagerSkill(state);
     this.approvalGate = new ApprovalGateSkill(state, config);
@@ -85,7 +85,7 @@ export class TradingMonitorSkill {
     // Check for anomalies on each tick
     const anomalies = this.detectAnomalies();
     for (const anomaly of anomalies) {
-      this.handleAnomaly(anomaly);
+      void this.handleAnomaly(anomaly);
     }
 
     // Propose a trade every 3 ticks
@@ -124,10 +124,10 @@ export class TradingMonitorSkill {
     return anomalies;
   }
 
-  private handleAnomaly(anomaly: TradingAnomaly): void {
+  private async handleAnomaly(anomaly: TradingAnomaly): Promise<void> {
     console.info(`[trading-monitor] Anomaly detected: ${anomaly.type} on ${anomaly.symbol}`);
 
-    void this.incidentManager.createIncident({
+    await this.incidentManager.createIncident({
       agentId: this.options.agentId,
       agentName: this.options.agentName,
       severity: anomaly.severity,
@@ -231,7 +231,7 @@ export class TradingMonitorSkill {
       await this.taskManager.complete(task.id, `Order filled: ${trade.side} ${trade.quantity} ${trade.symbol} @ $${trade.price.toFixed(2)}`);
     } else {
       await this.taskManager.recordError(task.id, `Order rejected by exchange: insufficient liquidity at $${trade.price.toFixed(2)}`);
-      void this.incidentManager.createIncident({
+      await this.incidentManager.createIncident({
         agentId: this.options.agentId,
         agentName: this.options.agentName,
         severity: 'warning',

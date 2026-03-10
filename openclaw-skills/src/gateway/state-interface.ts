@@ -10,6 +10,8 @@ import type {
   IncidentStatus, 
   ResourceLink,
   ActionType,
+  ApprovalRequest,
+  ApprovalResponse,
 } from '../types/protocol.js';
 
 /**
@@ -45,6 +47,8 @@ export interface IStateManager {
     description: string;
     actions?: ActionType[];
   }): Promise<Incident>;
+  
+  queueApproval(request: ApprovalRequest, timeoutMs: number): Promise<ApprovalResponse>;
   
   updateIncidentStatus?(incidentId: string, status: IncidentStatus): Promise<Incident | null>;
   
