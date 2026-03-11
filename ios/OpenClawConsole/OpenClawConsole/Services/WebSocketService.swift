@@ -207,6 +207,14 @@ final class WebSocketService: NSObject {
             if let obj = try? decoder.decode(RecurringTask.self, from: data) {
                 return .recurringTaskUpdated(obj)
             }
+        case .gitStateChanged:
+            if let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let agentId = raw["agent_id"] as? String,
+               let stateData = raw["git_state"],
+               let stateJson = try? JSONSerialization.data(withJSONObject: stateData),
+               let gitState = try? decoder.decode(GitState.self, from: stateJson) {
+                return .gitStateChanged(agentId, gitState)
+            }
         case .connected:
             return parseConnectedEvent(from: data)
         case .error:

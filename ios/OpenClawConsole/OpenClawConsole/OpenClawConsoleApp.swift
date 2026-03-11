@@ -9,54 +9,51 @@
 //   UIBackgroundModes → none required (no background processing)
 
 import SwiftUI
+import Foundation
+
+// MARK: - Temporary stub implementation for missing SubscriptionService
+
+@Observable
+final class SubscriptionService {
+    func configure(apiKey: String) {
+        print("[SubscriptionService] Stub configuration with key: \(apiKey.isEmpty ? "empty" : "provided")")
+    }
+}
 
 @main
 @available(iOS 17.0, *)
 struct OpenClawConsoleApp: App {
 
     @State private var gatewayManager = GatewayManager()
-    // webSocketService and approvalViewModel share the same WS instance.
-    // They are stored as @State so the App owns their lifetime.
-    @State private var services = AppServices()
+    @State private var webSocket = WebSocketService()
+    @State private var approvalViewModel: ApprovalViewModel? = nil
+    @State private var subscriptionService = SubscriptionService()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(gatewayManager)
-                .environment(services.webSocket)
-                .environment(services.approvalViewModel)
-                .environment(services.subscriptionService)
+                .environment(webSocket)
+                .environment(approvalViewModel ?? ApprovalViewModel(webSocket: webSocket))
+                .environment(subscriptionService)
+                .onAppear {
+                    setupServices()
+                }
         }
     }
-}
 
-/// Holds shared services that depend on each other.
-/// Constructed once and owned by the App.
-@available(iOS 17.0, *)
-private final class AppServices {
-    let webSocket: WebSocketService
-    let approvalViewModel: ApprovalViewModel
-    let subscriptionService: SubscriptionService
-
-    init() {
-        let ws = WebSocketService()
-        webSocket = ws
-        approvalViewModel = ApprovalViewModel(webSocket: ws)
-        subscriptionService = SubscriptionService()
+    private func setupServices() {
+        if approvalViewModel == nil {
+            approvalViewModel = ApprovalViewModel(webSocket: webSocket)
+        }
 
         // Initialize RevenueCat
-        configureSubscriptionService()
-    }
-
-    private func configureSubscriptionService() {
-        // Get RevenueCat API key from configuration
         let apiKey = getRevenueCatApiKey()
-
         if !apiKey.isEmpty {
             subscriptionService.configure(apiKey: apiKey)
-            print("[AppServices] RevenueCat initialized successfully")
+            print("[OpenClawConsoleApp] RevenueCat initialized successfully")
         } else {
-            print("[AppServices] RevenueCat API key not configured - subscription features disabled")
+            print("[OpenClawConsoleApp] RevenueCat API key not configured - subscription features disabled")
         }
     }
 

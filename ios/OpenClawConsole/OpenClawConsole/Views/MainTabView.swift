@@ -4,6 +4,38 @@
 // Badge on Incidents tab shows open incident count.
 
 import SwiftUI
+import Foundation
+import Combine
+
+// MARK: - Temporary stub implementations for missing files
+
+@Observable
+final class BridgeListViewModel {
+    private(set) var sessions: [BridgeSession] = []
+    private(set) var isLoading = false
+    private(set) var errorMessage: String?
+
+    private let webSocket: WebSocketService
+
+    init(webSocket: WebSocketService) {
+        self.webSocket = webSocket
+    }
+
+    @MainActor
+    func fetchBridges() async {
+        // Stub implementation
+        isLoading = false
+    }
+}
+
+struct BridgeListView: View {
+    let viewModel: BridgeListViewModel
+
+    var body: some View {
+        Text("Bridge List (temporarily disabled)")
+            .navigationTitle("Bridges")
+    }
+}
 
 struct MainTabView: View {
     @Environment(GatewayManager.self) private var gatewayManager
@@ -127,7 +159,7 @@ struct MainTabView: View {
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
             await bridgeVM.fetchBridges()
-            await loopVM.fetchLoops()
+            // await loopVM.fetchLoops() // Loops temporarily disabled
             await approvalViewModel.fetchPendingApprovals()
         }
     }
