@@ -25,7 +25,8 @@ let package = Package(
             ],
             path: "OpenClawConsole",
             resources: [
-                // Info.plist managed by Xcode-SPM integration
+                .process("Assets.xcassets"),
+                .process("Info.plist")
             ]
         ),
         .testTarget(

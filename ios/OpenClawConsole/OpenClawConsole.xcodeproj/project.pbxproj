@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		02411DA368F00CCFB1B17CE1 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6941C49BC9627180A9025CEB /* ChatView.swift */; };
+		050A4E004B5CEF6180F0F432 /* GitViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 624151D8871E7A969212A719 /* GitViewModelTests.swift */; };
 		0802C43B4A799C06A1462B3F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C61E89ABC4C29C3008787294 /* MainTabView.swift */; };
 		084298497D1A6D9535FCE569 /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0ACD3457578FDCFD63D1F50 /* TaskDetailView.swift */; };
 		0BBA9EA593E3DDAC46089C23 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D928179E99267A56D9E33E52 /* TaskListView.swift */; };
@@ -19,6 +20,7 @@
 		4A71CA2536F12EF85385EA67 /* WebSocketMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C385C510F80CD1DC99D9FF1C /* WebSocketMessage.swift */; };
 		583576DE1E6079CE1FDF374D /* OpenClawConsoleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */; };
 		59EDA4E49DC3C2BD35B17F7E /* GatewayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A9BFEF432C2C99D3AB2B64 /* GatewayManager.swift */; };
+		672DBBC814C06934CF6ECBA7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E21503DCF16A9C8D813408A5 /* Foundation.framework */; };
 		684A6ECC0C43B3C005409108 /* GatewayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D60699A05286D032BA41CA /* GatewayConnection.swift */; };
 		71A77654FEDAB4AD34F8C7AD /* Incident.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93CE694F3125DF7DF85A5C1B /* Incident.swift */; };
 		834A119174506349F30E0334 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3999F387613A839206EB5B56 /* ContentView.swift */; };
@@ -37,14 +39,33 @@
 		B9AC8F1FFF6D0DD18AC17F27 /* AgentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9AB1C4AF831D67E0658604 /* AgentListView.swift */; };
 		BE269AFA5F5107BE85633437 /* ApprovalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6D0921DCBD4C71D547F7965 /* ApprovalDetailView.swift */; };
 		C66D3143C15269ECE9DC33E1 /* OCTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9744F34B8396A1E8942101E /* OCTask.swift */; };
+		CE4A61DA832046C8402A3C4D /* GitViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62EC7EC954E7E50C96240FB0 /* GitViewModelTests.swift */; };
 		D28CC7C4AE2D6D5A8F0AC782 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654A4451670E3B268745438C /* BiometricService.swift */; };
 		D369415E9A00CD7B87587BE7 /* ResourceLinkChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ACE84DE106112376EC9414 /* ResourceLinkChip.swift */; };
+		D40EFFB6F3491306FAAE4A93 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E21503DCF16A9C8D813408A5 /* Foundation.framework */; };
 		E26DC6695FC47994160F67D4 /* AddGatewayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D0C1CA37A1215F789DAE /* AddGatewayView.swift */; };
 		E4CC40270CBEEB0BA9686BDA /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC76505A1ACB7BAEF914F07 /* StatusDot.swift */; };
 		E7E99A351D5E3574C0B2CA1E /* AgentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16BEA5AD6F77FE5CBD437E1E /* AgentListViewModel.swift */; };
 		ED3EE759CA896EAA866F2020 /* TaskListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693C1589C4E7330AE88DCD42 /* TaskListViewModel.swift */; };
 		F49FB73627F40CD647F65836 /* ApprovalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7465BA19A6F55111388C81A8 /* ApprovalViewModel.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1979CFA1EA26EC56E025D71A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CCC4285A4910BCC03DF52580 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D73E99810B13C310036F9B93;
+			remoteInfo = OpenClawConsole;
+		};
+		9150B366CC580D27D575AE30 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CCC4285A4910BCC03DF52580 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D73E99810B13C310036F9B93;
+			remoteInfo = OpenClawConsole;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		03D60699A05286D032BA41CA /* GatewayConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayConnection.swift; sourceTree = "<group>"; };
@@ -56,6 +77,8 @@
 		52ACE84DE106112376EC9414 /* ResourceLinkChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceLinkChip.swift; sourceTree = "<group>"; };
 		5B37EC455A5F78045FA8EA7A /* IncidentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentDetailView.swift; sourceTree = "<group>"; };
 		5EE8627C1FD4D7384D0F039D /* ApprovalBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalBannerView.swift; sourceTree = "<group>"; };
+		624151D8871E7A969212A719 /* GitViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitViewModelTests.swift; path = Tests/GitViewModelTests.swift; sourceTree = "<group>"; };
+		62EC7EC954E7E50C96240FB0 /* GitViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitViewModelTests.swift; path = Tests/GitViewModelTests.swift; sourceTree = "<group>"; };
 		654A4451670E3B268745438C /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		693C1589C4E7330AE88DCD42 /* TaskListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListViewModel.swift; sourceTree = "<group>"; };
 		6941C49BC9627180A9025CEB /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -74,6 +97,7 @@
 		C0A9BFEF432C2C99D3AB2B64 /* GatewayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayManager.swift; sourceTree = "<group>"; };
 		C385C510F80CD1DC99D9FF1C /* WebSocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketMessage.swift; sourceTree = "<group>"; };
 		C61E89ABC4C29C3008787294 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		C6DA5E97816ED5F91601B116 /* OpenClawConsoleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenClawConsoleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C91ED0911899971B33856481 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		CADA3CC20D4CDDDEBDD0F5E4 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
 		CED7B8B440732222DBF270DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -84,8 +108,29 @@
 		DE4072C9B69E4184E045980D /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		DF1A595D54FA8D215174F303 /* OpenClawConsole.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenClawConsole.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF8869C2C89DE90325B36537 /* TaskDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailViewModel.swift; sourceTree = "<group>"; };
+		E21503DCF16A9C8D813408A5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		E3E2C6547FC111A0704755D8 /* IncidentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentListView.swift; sourceTree = "<group>"; };
+		FD865CC123088561BCE3334F /* OpenClawConsoleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenClawConsoleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		15FA60148BE33B81BAB2C8D2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				672DBBC814C06934CF6ECBA7 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		569824315547C83EF3DFA547 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D40EFFB6F3491306FAAE4A93 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0316CDEF9ADF932B23A91237 /* Views */ = {
@@ -156,6 +201,14 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		21365BFC1C1A933E8913B78C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5F5774EA5669DE8EC9E841BF /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		2261603496B3CF0F0F6A0D1F /* Approvals */ = {
 			isa = PBXGroup;
 			children = (
@@ -170,6 +223,8 @@
 			children = (
 				19758D90190C83E6F7D602ED /* OpenClawConsole */,
 				400013C51CE1D6B56A9B4C2E /* Products */,
+				21365BFC1C1A933E8913B78C /* Frameworks */,
+				E8D377F5425AFBCCAFD55283 /* Tests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -177,8 +232,18 @@
 			isa = PBXGroup;
 			children = (
 				DF1A595D54FA8D215174F303 /* OpenClawConsole.app */,
+				C6DA5E97816ED5F91601B116 /* OpenClawConsoleTests.xctest */,
+				FD865CC123088561BCE3334F /* OpenClawConsoleTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		5F5774EA5669DE8EC9E841BF /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				E21503DCF16A9C8D813408A5 /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 		A6267BD60FFBC7F3FC6C08AE /* Components */ = {
@@ -210,6 +275,15 @@
 			path = Tasks;
 			sourceTree = "<group>";
 		};
+		E8D377F5425AFBCCAFD55283 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				624151D8871E7A969212A719 /* GitViewModelTests.swift */,
+				62EC7EC954E7E50C96240FB0 /* GitViewModelTests.swift */,
+			);
+			name = Tests;
+			sourceTree = "<group>";
+		};
 		F845E0B17B0AF7DD02686BF0 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -239,6 +313,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0FCD288ACB87734BB7356155 /* OpenClawConsoleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6DBD79BB5D70358E0E11BA60 /* Build configuration list for PBXNativeTarget "OpenClawConsoleTests" */;
+			buildPhases = (
+				D0C6B0CF8C4A968A94E5E3DB /* Sources */,
+				569824315547C83EF3DFA547 /* Frameworks */,
+				279CFE7E7AF3CEF747D21658 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				14CA61794118F6D26D5A707A /* PBXTargetDependency */,
+			);
+			name = OpenClawConsoleTests;
+			productName = OpenClawConsoleTests;
+			productReference = FD865CC123088561BCE3334F /* OpenClawConsoleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		D73E99810B13C310036F9B93 /* OpenClawConsole */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3F26A693C9973452D55D440B /* Build configuration list for PBXNativeTarget "OpenClawConsole" */;
@@ -251,8 +343,6 @@
 			dependencies = (
 			);
 			name = OpenClawConsole;
-			packageProductDependencies = (
-			);
 			productName = OpenClawConsole;
 			productReference = DF1A595D54FA8D215174F303 /* OpenClawConsole.app */;
 			productType = "com.apple.product-type.application";
@@ -282,20 +372,36 @@
 			mainGroup = 386E84F76E8D76809ABB8DE2;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 400013C51CE1D6B56A9B4C2E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				D73E99810B13C310036F9B93 /* OpenClawConsole */,
+				0FCD288ACB87734BB7356155 /* OpenClawConsoleTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		279CFE7E7AF3CEF747D21658 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D3B4FE988C1C4DC28FAAF903 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A330FCFB0BA37C7C133E62C6 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA23F76A95AE3B3AA0DB707F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -345,7 +451,38 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BCE9C05853AC1DBB0D252C41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				050A4E004B5CEF6180F0F432 /* GitViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0C6B0CF8C4A968A94E5E3DB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CE4A61DA832046C8402A3C4D /* GitViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		14CA61794118F6D26D5A707A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = OpenClawConsole;
+			target = D73E99810B13C310036F9B93 /* OpenClawConsole */;
+			targetProxy = 1979CFA1EA26EC56E025D71A /* PBXContainerItemProxy */;
+		};
+		C2A57BF589DD30DA212894DA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = OpenClawConsole;
+			target = D73E99810B13C310036F9B93 /* OpenClawConsole */;
+			targetProxy = 9150B366CC580D27D575AE30 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		1513A0E374D582D6E4D1BC71 /* Debug */ = {
@@ -379,6 +516,30 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		38DEC42EDD647E61C2414DA5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
+			};
+			name = Debug;
+		};
+		5C192C6397424C5CCCD40527 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openclaw.console.tests;
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
+			};
+			name = Debug;
 		};
 		6DBBFBB63E5DC21B4741DDE7 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -440,6 +601,32 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		77CC8960B65DDEBA125A43A3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.openclaw.console.tests;
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		910C6A49DBB3EDD59B86F74D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -533,6 +720,24 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
+		};
+		6DBD79BB5D70358E0E11BA60 /* Build configuration list for PBXNativeTarget "OpenClawConsoleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				77CC8960B65DDEBA125A43A3 /* Release */,
+				5C192C6397424C5CCCD40527 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		845F82C2A2DB8F678437E8A8 /* Build configuration list for <deleted target> */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				910C6A49DBB3EDD59B86F74D /* Release */,
+				38DEC42EDD647E61C2414DA5 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
