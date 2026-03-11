@@ -146,8 +146,8 @@ describe('bearerAuthMiddleware', () => {
     let capturedStatus = 0;
     let capturedBody: unknown = null;
     const res2 = {
-      status(code: number): any { capturedStatus = code; return this; },
-      json(body: unknown): any { capturedBody = body; return this; },
+      status(code: number): typeof this { capturedStatus = code; return this; },
+      json(body: unknown): typeof this { capturedBody = body; return this; },
     };
     const next = jest.fn();
 
@@ -164,8 +164,8 @@ describe('bearerAuthMiddleware', () => {
 
     let capturedStatus = 0;
     const res2 = {
-      status(code: number): any { capturedStatus = code; return this; },
-      json(_body: unknown): any { return this; },
+      status(code: number): typeof this { capturedStatus = code; return this; },
+      json(_body: unknown): typeof this { return this; },
     };
     const req = mockReq('Bearer invalid-token'); // local-dev-only
     const next = jest.fn();
@@ -182,8 +182,8 @@ describe('bearerAuthMiddleware', () => {
 
     let capturedStatus = 0;
     const res2 = {
-      status(code: number): any { capturedStatus = code; return this; },
-      json(_body: unknown): any { return this; },
+      status(code: number): typeof this { capturedStatus = code; return this; },
+      json(_body: unknown): typeof this { return this; },
     };
     const req = mockReq('Token abc');
     const next = jest.fn();
