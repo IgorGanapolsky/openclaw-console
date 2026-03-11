@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { describe, it, expect, jest } from '@jest/globals';
 import {
   initializeRevenueCat,
@@ -145,13 +144,3 @@ describe('RevenueCat Billing', () => {
     });
   });
 });
-||||||| parent of 89270c1 (fix: update tsconfig to include all test files and add missing return types)
-=======
-import { describe, it, expect } from '@jest/globals';
-
-describe('RevenueCat Billing', () => {
-  it('should handle subscriptions', () => {
-    expect(true).toBe(true);
-  });
-});
->>>>>>> 89270c1 (fix: update tsconfig to include all test files and add missing return types)
