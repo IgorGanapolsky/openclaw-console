@@ -8,48 +8,69 @@ on:
     inputs:
       ref:
         description: "Git ref to distribute (optional, defaults to develop)"
+        required: false
+        type: string
 
 concurrency:
-  group: internal-distribution-${{ github.event_name }}-${{ github.ref_name || inputs.ref || github.event.workflow_run.head_branch || 'manual' }}
+  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_branch || inputs.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Gate Internal Distribution
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+      ref: ${{ steps.decide.outputs.ref }}
+      sha: ${{ steps.decide.outputs.sha }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - name: Decide whether to run
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+
+          SHOULD_RUN="false"
+          REF=""
+          SHA=""
+          REASON="not_eligible"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            REF="${INPUT_REF:-$GITHUB_REF_NAME}"
+            SHOULD_RUN="true"
+            REASON="manual_dispatch"
+          elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" ]]; then
+            REF="$WORKFLOW_SHA"
+            SHA="$WORKFLOW_SHA"
+            SHOULD_RUN="true"
+            REASON="ci_green_on_${WORKFLOW_BRANCH}"
+          fi
+
+          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          echo "gate: should_run=$SHOULD_RUN reason=$REASON ref=$REF sha=$SHA"
+
   ios-testflight-internal:
     name: iOS TestFlight (Internal)
+    needs: [gate]
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: macos-15
     environment: production
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}
-
-      - name: Detect iOS Xcode project
-        id: ios_project
-        run: |
-          if [ -f "ios/OpenClawConsole/OpenClawConsole.xcodeproj/project.pbxproj" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Skip TestFlight upload when xcodeproj is not committed
-        if: steps.ios_project.outputs.present != 'true'
-        run: |
-          echo "Skipping iOS TestFlight distribution because ios/OpenClawConsole/OpenClawConsole.xcodeproj is missing."
-          echo "Commit the Xcode project to enable CI TestFlight uploads."
-
-      - name: Setup Ruby
-        if: steps.ios_project.outputs.present == 'true'
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true
-          working-directory: ios/OpenClawConsole
+          ref: ${{ needs.gate.outputs.ref }}
 
       - name: Fail fast on required iOS distribution secrets
-        if: steps.ios_project.outputs.present == 'true'
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
@@ -59,33 +80,42 @@ jobs:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          for name in APPLE_TEAM_ID MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
             fi
           done
 
+      - name: Preflight release checks (iOS)
+        run: bash scripts/preflight-release.sh --platform ios --layer 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ios/OpenClawConsole
+
       - name: Install Fastlane
-        if: steps.ios_project.outputs.present == 'true'
         run: gem install fastlane
         working-directory: ios/OpenClawConsole
 
       - name: Write App Store Connect key
-        if: steps.ios_project.outputs.present == 'true'
         env:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
         run: |
-          if [ -z "${APPSTORE_PRIVATE_KEY:-}" ] || [ -z "${APPSTORE_KEY_ID:-}" ]; then
-            echo "Missing APPSTORE_PRIVATE_KEY or APPSTORE_KEY_ID"
-            exit 1
-          fi
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          echo "$APPSTORE_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          set -euo pipefail
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
       - name: Configure git credentials for match
-        if: steps.ios_project.outputs.present == 'true'
         env:
           GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
@@ -93,55 +123,49 @@ jobs:
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Setup signing certificates and profiles (match)
-        if: steps.ios_project.outputs.present == 'true'
         env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: fastlane setup
+        run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
-        if: steps.ios_project.outputs.present == 'true'
         env:
           CI: "true"
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: fastlane beta
+        run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
       - name: Upload IPA artifact
-        if: always() && steps.ios_project.outputs.present == 'true'
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-ipa-internal
-          path: ios/OpenClawConsole/*.ipa
+          path: ios/OpenClawConsole/OpenClawConsole.ipa
           if-no-files-found: warn
 
   android-firebase-internal:
     name: Android Firebase App Distribution (Internal)
+    needs: [gate]
+    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}
+          ref: ${{ needs.gate.outputs.ref }}
 
       - name: Fail fast on Android distribution auth inputs
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
@@ -154,10 +178,13 @@ jobs:
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
             exit 1
           fi
-          if [ -z "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ] && [ -z "${FIREBASE_TOKEN:-}" ]; then
-            echo "❌ Need one of FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN for Firebase authentication"
+          if [ -z "${FIREBASE_TOKEN:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+            echo "❌ Need one of FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY for Firebase authentication"
             exit 1
           fi
+
+      - name: Preflight release checks (Android)
+        run: bash scripts/preflight-release.sh --platform android --layer 1
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -173,71 +200,41 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Write google-services.json
+      - name: Create google-services.json
         working-directory: android
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           set -euo pipefail
-          if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
-            echo "Missing GOOGLE_SERVICES_JSON secret"
-            exit 1
-          fi
           echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
-      - name: Resolve Firebase app metadata
+      - name: Resolve Firebase app id
         id: firebase
         working-directory: android
         env:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
-          EXPECTED_PACKAGE="com.openclaw.console"
-          APP_ID="${FIREBASE_ANDROID_APP_ID:-}"
+          APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
+          if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
+            APP_ID="$FIREBASE_ANDROID_APP_ID"
+          fi
           if [ -z "$APP_ID" ]; then
-            APP_ID="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
-              .client[]?
-              | select(.client_info.android_client_info.package_name == $pkg)
-              | .client_info.mobilesdk_app_id // empty
-            ' app/google-services.json | head -n 1)"
-          fi
-          PACKAGE_NAME="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
-            .client[]?
-            | select(.client_info.android_client_info.package_name == $pkg)
-            | .client_info.android_client_info.package_name // empty
-          ' app/google-services.json | head -n 1)"
-          PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
-          PROJECT_NUMBER="$(jq -r '.project_info.project_number // empty' app/google-services.json)"
-          if [ -z "$APP_ID" ]; then
-            echo "❌ Could not resolve Firebase Android app id for package $EXPECTED_PACKAGE from FIREBASE_ANDROID_APP_ID/GOOGLE_SERVICES_JSON."
-            exit 1
-          fi
-          if [ -z "$PACKAGE_NAME" ]; then
-            echo "❌ Could not resolve package_name from GOOGLE_SERVICES_JSON."
-            exit 1
-          fi
-          if [ -z "$PROJECT_ID" ]; then
-            echo "❌ Could not resolve project_id from GOOGLE_SERVICES_JSON."
+            echo "❌ Could not resolve Firebase Android app id. Set FIREBASE_ANDROID_APP_ID secret or include mobilesdk_app_id in GOOGLE_SERVICES_JSON."
             exit 1
           fi
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
-          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
-          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
-          echo "project_number=$PROJECT_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "Resolved Firebase app id for package $PACKAGE_NAME"
+          echo "Resolved Firebase app id: $APP_ID"
 
-      - name: Decode release keystore
+      - name: Decode keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
-          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            echo "Missing ANDROID_KEYSTORE_BASE64 secret"
-            exit 1
-          fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
 
-      - name: Build Release APK
+      - name: Build release APK
+        working-directory: android
         env:
           KEYSTORE_PATH: /tmp/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -245,204 +242,77 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          ./gradlew assembleRelease --no-daemon --stacktrace
-        working-directory: android
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Resolve APK path
-        id: apk
+      - name: Verify APK is signed
         run: |
           set -euo pipefail
-          APK_PATH="$(find android/app/build/outputs/apk/release -type f -name '*.apk' | grep -v 'unsigned' | head -n 1 || true)"
-          if [ -z "$APK_PATH" ]; then
-            APK_PATH="$(find android/app/build/outputs/apk/release -type f -name '*.apk' | head -n 1 || true)"
-          fi
-          if [ -z "$APK_PATH" ]; then
-            echo "No release APK found under android/app/build/outputs/apk/release"
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ APK not found at $APK_PATH"
             exit 1
           fi
-          CANONICAL_PATH="android/app/build/outputs/apk/release/app-release.apk"
-          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
-          echo "canonical=$CANONICAL_PATH" >> "$GITHUB_OUTPUT"
-          if [ "$APK_PATH" != "$CANONICAL_PATH" ]; then
-            cp "$APK_PATH" "$CANONICAL_PATH"
-          fi
-
-      - name: Verify APK signature
-        run: |
-          set -euo pipefail
-          APKSIGNER="$(find /usr/local/lib/android/sdk/build-tools -name apksigner -type f | sort -V | tail -n 1)"
+          # Use apksigner from Android SDK build-tools (available on ubuntu-latest via setup-java)
+          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" -type f 2>/dev/null | sort -V | tail -1)
           if [ -z "$APKSIGNER" ]; then
-            APKSIGNER="$(command -v apksigner || true)"
+            echo "⚠️ apksigner not found via SDK path, trying PATH"
+            APKSIGNER=$(command -v apksigner || true)
           fi
           if [ -z "$APKSIGNER" ]; then
-            echo "❌ apksigner not found"
+            echo "❌ apksigner not available — cannot verify APK signature"
             exit 1
           fi
-          "$APKSIGNER" verify --verbose "${{ steps.apk.outputs.canonical }}"
+          "$APKSIGNER" verify --verbose "$APK_PATH"
+          echo "✅ APK signature verified"
 
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
-      - name: Prepare Firebase auth credentials
+      - name: Prepare Google auth fallback for Firebase
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
-            echo "Using FIREBASE_SERVICE_ACCOUNT_JSON auth path."
-            CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
-            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
-            echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
-            if [ -n "${FIREBASE_TOKEN:-}" ]; then
-              echo "FIREBASE_TOKEN_FALLBACK=$FIREBASE_TOKEN" >> "$GITHUB_ENV"
-            fi
-          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            echo "Using GOOGLE_PLAY_JSON_KEY auth path."
+          if [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
-            printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
+            echo "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
-            if [ -n "${FIREBASE_TOKEN:-}" ]; then
-              echo "FIREBASE_TOKEN_FALLBACK=$FIREBASE_TOKEN" >> "$GITHUB_ENV"
-            fi
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            echo "Using FIREBASE_TOKEN auth path."
-            echo "FIREBASE_TOKEN=$FIREBASE_TOKEN" >> "$GITHUB_ENV"
           fi
-
-      - name: Discover Firebase app id by Android package
-        id: firebase_discovery
-        env:
-          EXPECTED_PACKAGE: com.openclaw.console
-          CONFIGURED_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          CONFIGURED_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          run_firebase() {
-            if [ -n "${FIREBASE_TOKEN:-}" ]; then
-              firebase "$@" --token "$FIREBASE_TOKEN"
-            else
-              firebase "$@"
-            fi
-          }
-
-          find_app_in_project() {
-            local project_id="$1"
-            local apps_json
-            local app_id
-            apps_json="$(run_firebase apps:list ANDROID --project "$project_id" --json 2>/dev/null || true)"
-            if [ -z "$apps_json" ]; then
-              return 1
-            fi
-            app_id="$(echo "$apps_json" | jq -r --arg pkg "$EXPECTED_PACKAGE" '
-              (.. | objects | select(.packageName? == $pkg) | .appId? // empty)
-            ' 2>/dev/null | head -n 1 || true)"
-            if [ -n "$app_id" ]; then
-              echo "$app_id"
-              return 0
-            fi
-            return 1
-          }
-
-          DISCOVERED_APP_ID=""
-          DISCOVERED_PROJECT=""
-
-          if [ -z "${FIREBASE_TOKEN:-}" ] && [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
-            echo "❌ Firebase discovery is unauthenticated. Set FIREBASE_TOKEN or service account credentials."
-            exit 1
-          fi
-
-          # First resolve against the exact Firebase project declared in google-services.json.
-          if [ -n "${CONFIGURED_PROJECT_ID:-}" ]; then
-            app_id="$(find_app_in_project "$CONFIGURED_PROJECT_ID" || true)"
-            if [ -n "$app_id" ]; then
-              DISCOVERED_APP_ID="$app_id"
-              DISCOVERED_PROJECT="$CONFIGURED_PROJECT_ID"
-            fi
-          fi
-
-          if [ -z "$DISCOVERED_APP_ID" ] && [ -n "${CONFIGURED_PROJECT_ID:-}" ]; then
-            echo "No existing Android app found for $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
-            echo "Attempting create in project: $CONFIGURED_PROJECT_ID"
-            CREATE_JSON="$(run_firebase apps:create ANDROID 'OpenClaw Console Android' --package-name "$EXPECTED_PACKAGE" --project "$CONFIGURED_PROJECT_ID" --json 2>&1 || true)"
-            CREATED_APP_ID="$(echo "$CREATE_JSON" | jq -r '
-              (.. | objects | .appId? // empty)
-            ' 2>/dev/null | head -n 1 || true)"
-            if [ -n "$CREATED_APP_ID" ]; then
-              DISCOVERED_APP_ID="$CREATED_APP_ID"
-              DISCOVERED_PROJECT="$CONFIGURED_PROJECT_ID"
-              echo "Created Firebase Android app for package $EXPECTED_PACKAGE in project: $CONFIGURED_PROJECT_ID"
-            else
-              echo "Firebase app create did not return app id for project: $CONFIGURED_PROJECT_ID"
-              echo "$CREATE_JSON" | sed -n '1,5p'
-            fi
-          fi
-
-          FINAL_APP_ID="${DISCOVERED_APP_ID:-$CONFIGURED_APP_ID}"
-          if [ -z "$FINAL_APP_ID" ]; then
-            echo "❌ Could not determine Firebase app id for package $EXPECTED_PACKAGE."
-            echo "Set FIREBASE_ANDROID_APP_ID to the correct Firebase Android app id."
-            exit 1
-          fi
-
-          if [ -n "$DISCOVERED_PROJECT" ]; then
-            echo "Using Firebase app id discovered in project: $DISCOVERED_PROJECT"
-          else
-            echo "Using configured Firebase app id from workflow metadata."
-          fi
-
-          echo "app_id=$FINAL_APP_ID" >> "$GITHUB_OUTPUT"
 
       - name: Distribute to internal Firebase tester(s)
         env:
-          FIREBASE_TOKEN_FALLBACK: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_APP_ID: ${{ steps.firebase_discovery.outputs.app_id }}
+          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
           TESTERS="${FIREBASE_INTERNAL_TESTERS:-ig5973700@gmail.com}"
           CMD=(
             firebase appdistribution:distribute
-            "${{ steps.apk.outputs.canonical }}"
+            android/app/build/outputs/apk/release/app-release.apk
             --app "$FIREBASE_APP_ID"
             --testers "$TESTERS"
-            --release-notes "GSD Internal build ($GITHUB_SHA)"
+            --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
-
-          run_distribute() {
-            if [ -n "${FIREBASE_TOKEN:-}" ]; then
-              "${CMD[@]}" --token "$FIREBASE_TOKEN"
-            else
-              "${CMD[@]}"
-            fi
-          }
-
-          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
-            echo "Distributing with GOOGLE_APPLICATION_CREDENTIALS."
-            if ! run_distribute; then
-              if [ -n "${FIREBASE_TOKEN_FALLBACK:-}" ]; then
-                echo "Service-account distribution failed; retrying with FIREBASE_TOKEN."
-                FIREBASE_TOKEN="$FIREBASE_TOKEN_FALLBACK"
-                run_distribute
-              else
-                exit 1
-              fi
-            fi
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            echo "Distributing with FIREBASE_TOKEN."
-            run_distribute
+          if [ -n "${FIREBASE_TOKEN:-}" ]; then
+            "${CMD[@]}" --token "$FIREBASE_TOKEN"
+          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+            "${CMD[@]}"
           else
-            echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
+            echo "❌ Missing Firebase auth. Set FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY."
             exit 1
           fi
 
       - name: Upload Android APK artifact
-        if: always()
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: android-apk-internal
-          path: ${{ steps.apk.outputs.canonical || steps.apk.outputs.path }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn
+
+      - name: Cleanup secrets
+        if: always()
+        run: |
+          rm -f /tmp/release.keystore

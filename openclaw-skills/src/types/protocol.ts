@@ -9,6 +9,17 @@
 /** Operational status of an agent. */
 export type AgentStatus = 'online' | 'offline' | 'busy';
 
+/** Git repository state for an agent. */
+export interface AgentGitState {
+  repository_url: string;
+  current_branch: string;
+  current_commit: string;
+  uncommitted_changes: number;
+  ahead_by: number;
+  behind_by: number;
+  last_sync: string; // ISO8601
+}
+
 /** An OpenClaw agent registered on the gateway. */
 export interface Agent {
   id: string;
@@ -20,6 +31,7 @@ export interface Agent {
   last_active: string; // ISO8601
   active_tasks: number;
   pending_approvals: number;
+  git_state?: AgentGitState;
 }
 
 // ─── Task ─────────────────────────────────────────────────────────────────────
@@ -112,10 +124,25 @@ export type ActionType =
   | 'destructive'
   | 'ask_root_cause'
   | 'propose_fix'
-  | 'acknowledge';
+  | 'acknowledge'
+  | 'git_commit'
+  | 'git_merge'
+  | 'git_push'
+  | 'agent_skill_install'
+  | 'agent_rollback';
 
 /** Risk classification of an approval context. */
 export type RiskLevel = 'high' | 'critical';
+
+/** Git operation details for approval requests. */
+export interface GitOperation {
+  operation_type: 'commit' | 'merge' | 'push' | 'rollback';
+  branch_from?: string;
+  branch_to?: string;
+  commit_message?: string;
+  file_changes?: string[];
+  diff_summary?: string;
+}
 
 /** Context metadata for an approval request. */
 export interface ApprovalContext {
@@ -123,6 +150,7 @@ export interface ApprovalContext {
   environment: string;
   repository: string;
   risk_level: RiskLevel;
+  git_operation?: GitOperation;
 }
 
 /** An approval request pending human decision. */
@@ -159,6 +187,42 @@ export interface ChatMessage {
   timestamp: string; // ISO8601
 }
 
+// ─── Bridge Session ───────────────────────────────────────────────────────────
+
+/** Metadata for an external IDE or terminal bridge session (e.g. Codex/acpx) */
+export interface BridgeSession {
+  id: string;
+  agent_id: string;
+  type: 'codex' | 'terminal' | 'other';
+  title: string;
+  cwd: string;
+  closed: boolean;
+  created_at: string; // ISO8601
+  updated_at: string; // ISO8601
+  metadata: Record<string, unknown>;
+}
+
+// ─── Scheduled Loops ──────────────────────────────────────────────────────────
+
+/** Schedule definition for recurring tasks. */
+export interface Schedule {
+  type: 'cron' | 'interval';
+  value: string | number; // cron expression or ms interval
+}
+
+/** A background loop/cron assigned to an agent. */
+export interface RecurringTask {
+  id: string;
+  agent_id: string;
+  name: string;
+  description: string;
+  schedule: Schedule;
+  last_run: string | null; // ISO8601
+  next_run: string | null; // ISO8601
+  status: 'active' | 'paused' | 'failed';
+  error_count: number;
+}
+
 // ─── WebSocket Message Envelope ───────────────────────────────────────────────
 
 /** All server→client WebSocket event type names. */
@@ -170,6 +234,12 @@ export type ServerEventType =
   | 'incident_update'
   | 'approval_request'
   | 'chat_response'
+  | 'bridge_session_new'
+  | 'bridge_session_update'
+  | 'recurring_task_updated'
+  | 'git_state_update'
+  | 'git_conflict'
+  | 'git_operation_complete'
   | 'connected'
   | 'error';
 
@@ -178,7 +248,8 @@ export type ClientEventType =
   | 'subscribe'
   | 'unsubscribe'
   | 'approval_response'
-  | 'chat_message';
+  | 'chat_message'
+  | 'git_conflict_resolve';
 
 /** Generic WebSocket message envelope. */
 export interface WebSocketMessage<T = unknown> {
@@ -219,6 +290,44 @@ export interface ConnectedPayload {
 export interface ErrorPayload {
   code: number;
   message: string;
+}
+
+// ─── Git WebSocket Payloads ───────────────────────────────────────────────────
+
+/** git_state_update WebSocket event payload. */
+export interface GitStateUpdatePayload {
+  agent_id: string;
+  git_state: AgentGitState;
+  changes: string[];
+  requires_action: boolean;
+}
+
+/** git_conflict WebSocket event payload. */
+export interface GitConflictPayload {
+  agent_id: string;
+  repository_path: string;
+  conflicted_files: string[];
+  conflict_details: string;
+  resolution_suggestions: string[];
+  operation: GitOperation;
+}
+
+/** git_operation_complete WebSocket event payload. */
+export interface GitOperationCompletePayload {
+  agent_id: string;
+  operation: GitOperation;
+  success: boolean;
+  output: string;
+  error?: string;
+  approval_id?: string;
+}
+
+/** git_conflict_resolve client message payload. */
+export interface GitConflictResolvePayload {
+  agent_id: string;
+  conflict_id: string;
+  resolution: 'manual' | 'accept_theirs' | 'accept_ours' | 'abort';
+  resolved_files?: string[];
 }
 
 // ─── HTTP Request / Response Types ────────────────────────────────────────────

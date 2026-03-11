@@ -1,14 +1,43 @@
-OpenClaw Work Console is a focused mobile cockpit for monitoring and controlling your OpenClaw agents. No social apps, no distractions — just a single-purpose work tool.
+Your Professional Mobile Control Plane for DevOps and Infrastructure
 
-Monitor your agents, track CI/CD tasks, respond to incidents, and approve dangerous actions (deploys, shell commands, config changes) with biometric verification — all from your phone.
+OpenClaw Console delivers enterprise-grade security and professional workflows for DevOps professionals who need secure, mobile access to critical infrastructure operations.
 
-Key Features:
+🔒 BIOMETRIC SECURITY FIRST
+Face ID and Touch ID authentication ensure only authorized personnel can approve dangerous operations. Eliminate accidental deployments and protect production systems with professional-grade security.
 
-• Connect to one or more OpenClaw gateways with secure token auth
-• Real-time agent status dashboard (online/offline/busy)
-• Task-centric activity feed with live timeline updates
-• Aggregated incident alerts across all agents with severity filtering
-• Biometric-gated approval workflow for dangerous actions
-• Minimal chat for quick agent instructions
+📱 MOBILE-NATIVE DEVOPS WORKFLOWS
+• Approve database migrations from anywhere
+• Secure CI/CD pipeline management on-the-go
+• Emergency incident response with proper authorization
+• Real-time infrastructure monitoring and alerting
 
-Built for developers, DevOps engineers, indie hackers, and trading/infra builders who self-host OpenClaw and want a quiet, professional mobile console.
+🏠 SELF-HOSTED PRIVACY AND CONTROL
+Complete data sovereignty with self-hosted deployment. Your operations never leave your infrastructure. Zero corporate surveillance or third-party data access. Works seamlessly with VPN solutions like Tailscale and WireGuard.
+
+🤖 INTELLIGENT AGENT ORCHESTRATION
+• Manage multiple OpenClaw AI agents from a single interface
+• Agent-specific approval workflows tailored to your infrastructure
+• Seamless environment switching (dev/staging/production)
+• Comprehensive audit trails for compliance requirements
+
+✨ BUILT FOR PROFESSIONALS
+Unlike social messaging apps with custom bots or expensive enterprise solutions, OpenClaw Console provides a dedicated, distraction-free interface designed specifically for DevOps professionals.
+
+• Clean, focused UI eliminates notification noise
+• Native iOS app optimized for speed and reliability
+• Professional approval workflows with audit trails
+• Push notifications only for operations requiring authorization
+
+PERFECT FOR:
+• DevOps engineers managing infrastructure
+• Platform engineers building internal tools
+• SREs responsible for system reliability
+• Self-hosting professionals who value privacy
+• Teams wanting enterprise security without enterprise costs
+
+WHY OPENCLAW CONSOLE:
+More secure than Slack bots. More affordable than PagerDuty ($21+/user). More focused than general monitoring apps. More professional than consumer messaging solutions.
+
+Start with our free tier (up to 3 agents), then upgrade to Pro for unlimited agents and advanced features at just $15-20/month per user.
+
+Transform your iPhone into a secure DevOps control plane. Download now.

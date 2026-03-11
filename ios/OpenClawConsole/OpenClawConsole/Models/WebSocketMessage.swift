@@ -42,8 +42,8 @@ struct AnyCodable: Codable {
             value = NSNull()
         } else {
             throw DecodingError.typeMismatch(AnyCodable.self,
-                DecodingError.Context(codingPath: decoder.codingPath,
-                                      debugDescription: "Unsupported type"))
+                                             DecodingError.Context(codingPath: decoder.codingPath,
+                                                                   debugDescription: "Unsupported type"))
         }
     }
 
@@ -68,8 +68,8 @@ struct AnyCodable: Codable {
             try container.encodeNil()
         default:
             throw EncodingError.invalidValue(value,
-                EncodingError.Context(codingPath: encoder.codingPath,
-                                      debugDescription: "Unsupported type"))
+                                             EncodingError.Context(codingPath: encoder.codingPath,
+                                                                   debugDescription: "Unsupported type"))
         }
     }
 }
@@ -111,6 +111,10 @@ enum InboundEventType: String {
     case incidentUpdate = "incident_update"
     case approvalRequest = "approval_request"
     case chatResponse = "chat_response"
+    case bridgeSessionNew = "bridge_session_new"
+    case bridgeSessionUpdate = "bridge_session_update"
+    case recurringTaskUpdated = "recurring_task_updated"
+    case gitStateChanged = "git_state_changed"
     case connected
     case error
 }
@@ -124,9 +128,70 @@ enum InboundEvent {
     case incidentUpdate(IncidentUpdate)
     case approvalRequest(ApprovalRequest)
     case chatResponse(ChatMessage)
+    case bridgeSessionNew(BridgeSession)
+    case bridgeSessionUpdate(BridgeSession)
+    case recurringTaskUpdated(RecurringTask)
+    case gitStateChanged(String, GitState)
     case connected(sessionId: String, gatewayVersion: String)
     case error(code: Int, message: String)
     case unknown(String)
+}
+
+// MARK: - Recurring Task
+
+struct Schedule: Codable {
+    let type: String
+    let value: AnyCodable
+}
+
+struct RecurringTask: Codable, Identifiable {
+    let id: String
+    let agentId: String
+    let name: String
+    let description: String
+    let schedule: Schedule
+    let lastRun: String?
+    let nextRun: String?
+    let status: String
+    let errorCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case agentId = "agent_id"
+        case name
+        case description
+        case schedule
+        case lastRun = "last_run"
+        case nextRun = "next_run"
+        case status
+        case errorCount = "error_count"
+    }
+}
+
+// MARK: - Bridge Session
+
+struct BridgeSession: Codable, Identifiable {
+    let id: String
+    let agentId: String
+    let type: String // codex, terminal, other
+    let title: String
+    let cwd: String
+    let closed: Bool
+    let createdAt: Date
+    let updatedAt: Date
+    let metadata: [String: AnyCodable]
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case agentId = "agent_id"
+        case type
+        case title
+        case cwd
+        case closed
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case metadata
+    }
 }
 
 // MARK: - Connected Payload

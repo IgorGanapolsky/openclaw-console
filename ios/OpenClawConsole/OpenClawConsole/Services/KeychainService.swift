@@ -27,22 +27,17 @@ enum KeychainError: LocalizedError {
 
 // MARK: - KeychainService
 
-final class KeychainService {
+public final class KeychainService {
 
-    static let shared = KeychainService()
+    public static let shared = KeychainService()
     private let service = "com.openclaw.console.gateway-tokens"
 
     private init() {}
 
     // MARK: Save
 
-    /// Saves a token to the keychain for a given account key.
-    /// If an item already exists, it is updated.
-    func save(token: String, for account: String) throws {
-        guard let data = token.data(using: .utf8) else {
-            throw KeychainError.unexpectedStatus(errSecParam)
-        }
-
+    /// Saves data to the keychain for a given account key.
+    func save(data: Data, for account: String) throws {
         // Attempt update first
         let updateQuery: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
@@ -76,11 +71,19 @@ final class KeychainService {
         }
     }
 
+    /// Saves a token to the keychain for a given account key.
+    /// If an item already exists, it is updated.
+    func save(token: String, for account: String) throws {
+        guard let data = token.data(using: .utf8) else {
+            throw KeychainError.unexpectedStatus(errSecParam)
+        }
+        try save(data: data, for: account)
+    }
+
     // MARK: Retrieve
 
-    /// Retrieves the token stored for the given account key.
-    /// Returns nil if no item exists.
-    func retrieve(for account: String) -> String? {
+    /// Retrieves the data stored for the given account key.
+    func retrieveData(for account: String) -> Data? {
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
@@ -93,7 +96,17 @@ final class KeychainService {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         guard status == errSecSuccess,
-              let data = result as? Data,
+              let data = result as? Data else {
+            return nil
+        }
+
+        return data
+    }
+
+    /// Retrieves the token stored for the given account key.
+    /// Returns nil if no item exists.
+    func retrieve(for account: String) -> String? {
+        guard let data = retrieveData(for: account),
               let token = String(data: data, encoding: .utf8) else {
             return nil
         }
