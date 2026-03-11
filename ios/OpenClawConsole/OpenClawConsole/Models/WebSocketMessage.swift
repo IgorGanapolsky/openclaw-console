@@ -42,8 +42,8 @@ struct AnyCodable: Codable {
             value = NSNull()
         } else {
             throw DecodingError.typeMismatch(AnyCodable.self,
-                DecodingError.Context(codingPath: decoder.codingPath,
-                                      debugDescription: "Unsupported type"))
+                                             DecodingError.Context(codingPath: decoder.codingPath,
+                                                                   debugDescription: "Unsupported type"))
         }
     }
 
@@ -68,8 +68,8 @@ struct AnyCodable: Codable {
             try container.encodeNil()
         default:
             throw EncodingError.invalidValue(value,
-                EncodingError.Context(codingPath: encoder.codingPath,
-                                      debugDescription: "Unsupported type"))
+                                             EncodingError.Context(codingPath: encoder.codingPath,
+                                                                   debugDescription: "Unsupported type"))
         }
     }
 }

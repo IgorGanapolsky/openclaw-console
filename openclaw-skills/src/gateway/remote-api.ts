@@ -57,8 +57,8 @@ export function registerRemoteApi(app: Express, state: StateManager): void {
       const { request, timeoutMs } = req.body;
       const response = await state.queueApproval(request, timeoutMs);
       res.json(response);
-    } catch (err: any) {
-      res.status(408).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(408).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 

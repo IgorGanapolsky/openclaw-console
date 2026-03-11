@@ -127,8 +127,9 @@ export class DailyBriefSkill {
 
       await this.taskManager.complete(task.id, 'Daily brief generated successfully.');
 
-    } catch (err: any) {
-      console.error(`[daily-brief] Failed to run triage: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error(`[daily-brief] Failed to run triage: ${errorMessage}`);
       if (this.state.upsertRecurringTask && this.state.listRecurringTasks) {
         const tasks = await this.state.listRecurringTasks();
         const myTask = tasks.find(t => t.id === this.loopId);

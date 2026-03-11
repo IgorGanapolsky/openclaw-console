@@ -10,9 +10,9 @@ struct LoopListView: View {
     var body: some View {
         List {
             if viewModel.tasks.isEmpty && !viewModel.isLoading {
-                ContentUnavailableView("No Active Loops", 
-                                     systemImage: "arrow.triangle.2.circlepath", 
-                                     description: Text("Generate a new autonomous skill to get started."))
+                ContentUnavailableView("No Active Loops",
+                                       systemImage: "arrow.triangle.2.circlepath",
+                                       description: Text("Generate a new autonomous skill to get started."))
             } else {
                 ForEach(viewModel.tasks) { task in
                     LoopRow(task: task)
@@ -61,9 +61,9 @@ struct LoopRow: View {
             HStack {
                 Label(task.name, systemImage: "arrow.triangle.2.circlepath")
                     .font(.headline)
-                
+
                 Spacer()
-                
+
                 Text(task.status.uppercased())
                     .font(.caption2.bold())
                     .padding(.horizontal, 6)
@@ -72,12 +72,12 @@ struct LoopRow: View {
                     .foregroundStyle(statusColor)
                     .clipShape(Capsule())
             }
-            
+
             Text(task.description)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
-            
+
             HStack {
                 Text("Agent: \(task.agentId)")
                 Spacer()
@@ -90,7 +90,7 @@ struct LoopRow: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     private var statusColor: Color {
         switch task.status {
         case "active": return .green
@@ -99,7 +99,7 @@ struct LoopRow: View {
         default: return .secondary
         }
     }
-    
+
     private func formatDate(_ iso: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -114,7 +114,7 @@ struct SkillGeneratorView: View {
     @Environment(\.dismiss) var dismiss
     @Bindable var viewModel: LoopListViewModel
     @State private var prompt: String = ""
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -125,7 +125,7 @@ struct SkillGeneratorView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 if let err = viewModel.generateError {
                     Section {
                         Text(err).foregroundStyle(.red)

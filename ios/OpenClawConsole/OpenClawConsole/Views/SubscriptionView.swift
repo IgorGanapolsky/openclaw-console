@@ -255,7 +255,7 @@ struct FeatureComparisonGrid: View {
         FeatureItem(name: "Advanced Analytics", free: false, pro: true),
         FeatureItem(name: "Custom Webhooks", free: false, pro: true),
         FeatureItem(name: "Priority Support", free: false, pro: true),
-        FeatureItem(name: "Unlimited Agents", free: false, pro: true),
+        FeatureItem(name: "Unlimited Agents", free: false, pro: true)
     ]
 
     var body: some View {

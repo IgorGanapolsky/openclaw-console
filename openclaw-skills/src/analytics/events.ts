@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+import type { Request, Response } from 'express';
 import crypto from 'crypto';
 
 // Analytics event types for conversion funnel
@@ -71,7 +72,7 @@ interface ABTestConfig {
   variants: {
     [key: string]: {
       weight: number;
-      properties: { [key: string]: any };
+      properties: Record<string, unknown>;
     };
   };
 }
@@ -136,8 +137,8 @@ function initializeFirebaseAnalytics(): { success: boolean; error?: string } {
 export async function trackConversionEvent(
   event: ConversionEvent,
   userId: string,
-  properties: { [key: string]: any } = {},
-  userProperties?: { [key: string]: any }
+  properties: Record<string, unknown> = {},
+  userProperties?: Record<string, string | number | boolean | undefined>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const analyticsEvent: AnalyticsEvent = {
@@ -237,7 +238,7 @@ export async function identifyUser(
     device_type?: 'ios' | 'android' | 'web';
     email?: string;
     signup_date?: string;
-    [key: string]: any;
+    [key: string]: string | number | boolean | undefined;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -386,7 +387,7 @@ export function getConversionAnalytics(
  */
 export function getABTestAssignment(userId: string, testName: string): {
   variant: string;
-  properties: { [key: string]: any };
+  properties: Record<string, unknown>;
 } {
   const test = AB_TESTS[testName];
   if (!test) {
@@ -436,7 +437,7 @@ async function sendToFirebaseAnalytics(event: AnalyticsEvent): Promise<void> {
 /**
  * Validate event data
  */
-function validateEvent(event: ConversionEvent, userId: string, properties: any): boolean {
+function validateEvent(event: ConversionEvent, userId: string, properties: unknown): boolean {
   if (!event || typeof event !== 'string') {
     return false;
   }

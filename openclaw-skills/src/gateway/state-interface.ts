@@ -1,17 +1,19 @@
-import type { 
-  Agent, 
-  AgentStatus, 
-  Task, 
-  TaskStatus, 
-  TaskStep, 
-  StepType, 
-  Incident, 
-  IncidentSeverity, 
-  IncidentStatus, 
+import type {
+  Agent,
+  AgentStatus,
+  Task,
+  TaskStatus,
+  TaskStep,
+  StepType,
+  Incident,
+  IncidentSeverity,
+  IncidentStatus,
   ResourceLink,
   ActionType,
   ApprovalRequest,
   ApprovalResponse,
+  BridgeSession,
+  RecurringTask,
 } from '../types/protocol.js';
 
 /**
@@ -60,9 +62,9 @@ export interface IStateManager {
   getIncident?(incidentId: string): Promise<Incident | undefined> | Incident | undefined;
   listIncidents?(): Promise<Incident[]> | Incident[];
 
-  upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession>;
-  listBridgeSessions?(): Promise<import('../types/protocol.js').BridgeSession[]> | import('../types/protocol.js').BridgeSession[];
+  upsertBridgeSession(session: BridgeSession): Promise<BridgeSession>;
+  listBridgeSessions?(): Promise<BridgeSession[]> | BridgeSession[];
 
-  upsertRecurringTask?(task: import('../types/protocol.js').RecurringTask): Promise<import('../types/protocol.js').RecurringTask>;
-  listRecurringTasks?(): Promise<import('../types/protocol.js').RecurringTask[]> | import('../types/protocol.js').RecurringTask[];
+  upsertRecurringTask?(task: RecurringTask): Promise<RecurringTask>;
+  listRecurringTasks?(): Promise<RecurringTask[]> | RecurringTask[];
 }

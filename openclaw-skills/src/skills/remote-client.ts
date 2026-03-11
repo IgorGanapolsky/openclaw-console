@@ -39,7 +39,7 @@ export class RemoteStateManager {
   }
 
   public async updateAgentStatus(agentId: string, status: AgentStatus): Promise<void> {
-    await this.post(`/api/remote/agents/${agentId}/status`, { status } as any);
+    await this.post(`/api/remote/agents/${agentId}/status`, { status });
   }
 
   public async createTask(params: {
@@ -48,11 +48,11 @@ export class RemoteStateManager {
     description: string;
     links?: ResourceLink[];
   }): Promise<Task> {
-    return this.post<Task>('/api/remote/tasks', params as any);
+    return this.post<Task>('/api/remote/tasks', params);
   }
 
   public async updateTaskStatus(taskId: string, status: TaskStatus): Promise<Task> {
-    return this.post<Task>(`/api/remote/tasks/${taskId}/status`, { status } as any);
+    return this.post<Task>(`/api/remote/tasks/${taskId}/status`, { status });
   }
 
   public async addTaskStep(params: {
@@ -61,7 +61,7 @@ export class RemoteStateManager {
     content: string;
     metadata?: Record<string, unknown>;
   }): Promise<TaskStep> {
-    return this.post<TaskStep>(`/api/remote/tasks/${params.task_id}/steps`, params as any);
+    return this.post<TaskStep>(`/api/remote/tasks/${params.task_id}/steps`, params);
   }
 
   public async createIncident(params: {
@@ -72,10 +72,10 @@ export class RemoteStateManager {
     description: string;
     actions?: ActionType[];
   }): Promise<Incident> {
-    return this.post<Incident>('/api/remote/incidents', params as any);
+    return this.post<Incident>('/api/remote/incidents', params);
   }
 
   public async queueApproval(request: ApprovalRequest, timeoutMs: number): Promise<ApprovalResponse> {
-    return this.post<ApprovalResponse>('/api/remote/approvals/queue', { request, timeoutMs } as any);
+    return this.post<ApprovalResponse>('/api/remote/approvals/queue', { request, timeoutMs });
   }
 }

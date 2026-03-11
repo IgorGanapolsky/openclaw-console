@@ -6,7 +6,8 @@
  * Monitors git repository state and surfaces changes as tasks.
  */
 
-import { simpleGit, SimpleGit, StatusResult } from 'simple-git';
+import { simpleGit } from 'simple-git';
+import type { SimpleGit, StatusResult } from 'simple-git';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { TaskManagerSkill } from './task-manager.js';
@@ -164,7 +165,7 @@ export class GitClawAgentSkill {
           operation_type: 'commit',
           commit_message: message,
           file_changes: files,
-        } as any,
+        },
       },
     });
 
@@ -243,7 +244,7 @@ export class GitClawAgentSkill {
           operation_type: 'merge',
           branch_from: sourceBranch,
           branch_to: targetBranch,
-        } as any,
+        },
       },
     });
 
@@ -311,7 +312,7 @@ export class GitClawAgentSkill {
         git_operation: {
           operation_type: 'push',
           branch_to: currentBranch,
-        } as any,
+        },
       },
     });
 
@@ -378,7 +379,7 @@ export class GitClawAgentSkill {
         git_operation: {
           operation_type: 'rollback',
           commit_message: `Rollback to ${commitHash}`,
-        } as any,
+        },
       },
     });
 

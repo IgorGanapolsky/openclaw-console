@@ -275,8 +275,8 @@ struct GitRepositoryView: View {
                 .foregroundColor(gitState.protectionEnabled ? .green : .orange)
 
             Text(gitState.protectionEnabled
-                 ? "Branch protection rules are active on this branch."
-                 : "No branch protection rules are configured.")
+                    ? "Branch protection rules are active on this branch."
+                    : "No branch protection rules are configured.")
                 .foregroundColor(gitState.protectionEnabled ? .green : .orange)
         }
         .padding()

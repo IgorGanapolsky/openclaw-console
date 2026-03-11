@@ -114,7 +114,7 @@ export class McpManager {
   /**
    * Call a specific tool on a specific server.
    */
-  public async callTool(serverName: string, toolName: string, args: any): Promise<any> {
+  public async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
     const client = this.clients.get(serverName);
     if (!client) throw new Error(`MCP Server ${serverName} not connected`);
 
@@ -129,7 +129,7 @@ export class McpManager {
    */
   public async executeGitOperation(
     operation: string,
-    args: Record<string, any> = {}
+    args: Record<string, unknown> = {}
   ): Promise<GitMcpResult> {
     if (!this.gitServerName) {
       throw new Error('No git MCP server connected');
@@ -138,10 +138,14 @@ export class McpManager {
     try {
       const result = await this.callTool(this.gitServerName, `git_${operation}`, args);
 
+      const resultData = result as CallToolResult;
+      const firstContent = resultData.content?.[0];
+      const outputText = firstContent && 'text' in firstContent ? firstContent.text : JSON.stringify(resultData);
+
       return {
         success: true,
-        output: result.content?.[0]?.text || JSON.stringify(result),
-        operation: this.extractGitOperation(operation, args, result),
+        output: outputText,
+        operation: this.extractGitOperation(operation, args, resultData),
       };
     } catch (error) {
       return {
@@ -242,9 +246,9 @@ export class McpManager {
   }
 
   public async shutdown(): Promise<void> {
-    for (const _client of this.clients.values()) {
-      // await _client.close();
-    }
+    // for (const client of this.clients.values()) {
+    //   await client.close();
+    // }
     this.clients.clear();
     this.gitServerName = null;
   }
@@ -253,26 +257,26 @@ export class McpManager {
 
   private extractGitOperation(
     operation: string,
-    args: Record<string, any>,
+    args: Record<string, unknown>,
     _result: CallToolResult
   ): GitOperation | undefined {
     switch (operation) {
       case 'commit':
         return {
           operation_type: 'commit',
-          commit_message: args.message,
-          file_changes: args.files,
+          commit_message: typeof args.message === 'string' ? args.message : undefined,
+          file_changes: Array.isArray(args.files) ? args.files as string[] : undefined,
         };
       case 'push':
         return {
           operation_type: 'push',
-          branch_to: args.branch,
+          branch_to: typeof args.branch === 'string' ? args.branch : undefined,
         };
       case 'merge':
         return {
           operation_type: 'merge',
-          branch_from: args.source,
-          branch_to: args.target,
+          branch_from: typeof args.source === 'string' ? args.source : undefined,
+          branch_to: typeof args.target === 'string' ? args.target : undefined,
         };
       default:
         return undefined;

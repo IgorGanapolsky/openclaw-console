@@ -250,8 +250,8 @@ export function createGatewayServer(
       } else {
         res.status(500).json({ error: response.error });
       }
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
+    } catch (err: unknown) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 

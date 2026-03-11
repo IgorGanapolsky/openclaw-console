@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
-import { DockerContainerManager } from './container-manager.js';
-import { McpManager } from './mcp-manager.js';
+import type { DockerContainerManager } from './container-manager.js';
+import type { McpManager } from './mcp-manager.js';
 import type { IStateManager } from './state-interface.js';
 
 export interface GenerateSkillRequest {
@@ -48,30 +48,27 @@ export class SkillGenerator {
       
       // Generate a mock scaffolded skill script based on "cron" / "loop" pattern
       const code = `
-import { TaskManagerSkill } from '../task-manager.js';
-import { IncidentManagerSkill } from '../incident-manager.js';
-import type { IStateManager } from '../../gateway/state-interface.js';
-
 export class ${skillName.replace(/-/g, '_')}Skill {
   private timer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private state: IStateManager, private options: { agentId: string }) {}
+  constructor() {}
 
-  public start() {
+  public start(): void {
     console.info('[${skillName}] Starting autonomous loop...');
     this.timer = setInterval(() => this.tick(), 60000);
     void this.tick();
   }
 
-  public stop() {
+  public stop(): void {
     if (this.timer) clearInterval(this.timer);
   }
 
-  private async tick() {
-  console.info('[${skillName}] Running proactive background check...');
-  // Discovered Gateway Tools: ${toolNames}
-  // AI generated logic based on: ${req.prompt}
-  }}
+  private async tick(): Promise<void> {
+    console.info('[${skillName}] Running proactive background check...');
+    // Discovered Gateway Tools: ${toolNames}
+    // AI generated logic based on: ${req.prompt}
+  }
+}
       `.trim();
 
       fs.writeFileSync(skillPath, code, 'utf-8');
@@ -89,9 +86,10 @@ export class ${skillName.replace(/-/g, '_')}Skill {
         skillName,
         message: `Successfully generated and deployed ${skillName} in isolated Nanoclaw container.`
       };
-    } catch (err: any) {
-      console.error(`[skill-generator] Failed to generate skill: ${err.message}`);
-      return { success: false, error: err.message };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error(`[skill-generator] Failed to generate skill: ${errorMessage}`);
+      return { success: false, error: errorMessage };
     }
   }
 }

@@ -26,6 +26,7 @@ import type {
   ChatMessage,
   ApprovalResponse,
   BridgeSession,
+  RecurringTask,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
 import type { StateManager } from './state.js';
@@ -116,7 +117,7 @@ export class WebSocketManager {
       this.broadcastToAll('bridge_session_update', session);
     });
 
-    this.state.events.on('recurring_task_updated', (task: import('../types/protocol.js').RecurringTask) => {
+    this.state.events.on('recurring_task_updated', (task: RecurringTask) => {
       this.broadcastToSubscribers(task.agent_id, 'recurring_task_updated', task);
     });
   }

@@ -404,7 +404,7 @@ struct GitApprovalDetailView: View {
             DiffLine(lineNumber: 3, type: .added, prefix: "+", content: "func newFunction() -> Bool {"),
             DiffLine(lineNumber: 4, type: .added, prefix: "+", content: "    return true"),
             DiffLine(lineNumber: 5, type: .added, prefix: "+", content: "}"),
-            DiffLine(lineNumber: 6, type: .context, prefix: " ", content: ""),
+            DiffLine(lineNumber: 6, type: .context, prefix: " ", content: "")
         ]
     }
 }

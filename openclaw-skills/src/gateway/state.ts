@@ -22,6 +22,8 @@ import type {
   ApprovalRequest,
   ApprovalResponse,
   ResourceLink,
+  BridgeSession,
+  RecurringTask,
 } from '../types/protocol.js';
 import type { IStateManager } from './state-interface.js';
 
@@ -37,9 +39,9 @@ export interface StateEvents {
   approval_created: [approval: ApprovalRequest];
   approval_responded: [response: ApprovalResponse, approval: ApprovalRequest];
   approval_expired: [approval: ApprovalRequest];
-  bridge_session_new: [session: import('../types/protocol.js').BridgeSession];
-  bridge_session_update: [session: import('../types/protocol.js').BridgeSession];
-  recurring_task_updated: [task: import('../types/protocol.js').RecurringTask];
+  bridge_session_new: [session: BridgeSession];
+  bridge_session_update: [session: BridgeSession];
+  recurring_task_updated: [task: RecurringTask];
 }
 
 export type StateEventName = keyof StateEvents;
@@ -80,8 +82,8 @@ export class StateManager implements IStateManager {
   private tasks: Map<string, Task> = new Map();
   private incidents: Map<string, Incident> = new Map();
   private approvals: Map<string, PendingApproval> = new Map();
-  private bridgeSessions: Map<string, import('../types/protocol.js').BridgeSession> = new Map();
-  private recurringTasks: Map<string, import('../types/protocol.js').RecurringTask> = new Map();
+  private bridgeSessions: Map<string, BridgeSession> = new Map();
+  private recurringTasks: Map<string, RecurringTask> = new Map();
 
   // ── Agent ─────────────────────────────────────────────────────────────────
 
@@ -267,7 +269,7 @@ export class StateManager implements IStateManager {
   /**
    * Register or update an external bridge session (IDE/terminal).
    */
-  public async upsertBridgeSession(session: import('../types/protocol.js').BridgeSession): Promise<import('../types/protocol.js').BridgeSession> {
+  public async upsertBridgeSession(session: BridgeSession): Promise<BridgeSession> {
     const exists = this.bridgeSessions.has(session.id);
     this.bridgeSessions.set(session.id, session);
     
@@ -280,19 +282,19 @@ export class StateManager implements IStateManager {
     return session;
   }
 
-  public listBridgeSessions(): import('../types/protocol.js').BridgeSession[] {
+  public listBridgeSessions(): BridgeSession[] {
     return Array.from(this.bridgeSessions.values());
   }
 
   // ── Recurring Tasks ───────────────────────────────────────────────────────
 
-  public async upsertRecurringTask(task: import('../types/protocol.js').RecurringTask): Promise<import('../types/protocol.js').RecurringTask> {
+  public async upsertRecurringTask(task: RecurringTask): Promise<RecurringTask> {
     this.recurringTasks.set(task.id, task);
     this.events.emit('recurring_task_updated', task);
     return task;
   }
 
-  public listRecurringTasks(): import('../types/protocol.js').RecurringTask[] {
+  public listRecurringTasks(): RecurringTask[] {
     return Array.from(this.recurringTasks.values());
   }
 

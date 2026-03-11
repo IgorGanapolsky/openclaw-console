@@ -14,7 +14,7 @@ struct MainTabView: View {
     @State private var agentListVM: AgentListViewModel?
     @State private var incidentListVM: IncidentListViewModel?
     @State private var bridgeListVM: BridgeListViewModel?
-    @State private var loopListVM: LoopListViewModel?
+    // @State private var loopListVM: LoopListViewModel?
 
     enum Tab: Int {
         case agents, incidents, loops, bridges, settings
@@ -52,11 +52,11 @@ struct MainTabView: View {
 
                 // MARK: Loops Tab
                 NavigationStack {
-                    if let vm = loopListVM {
-                        LoopListView(viewModel: vm)
-                    } else {
-                        ProgressView()
-                    }
+                    // if let vm = loopListVM {
+                    //     LoopListView(viewModel: vm)
+                    // } else {
+                    ProgressView("Loops tab temporarily disabled")
+                    // }
                 }
                 .tabItem {
                     Label("Loops", systemImage: "arrow.triangle.2.circlepath")
@@ -112,12 +112,12 @@ struct MainTabView: View {
         let agentVM = AgentListViewModel(webSocket: webSocket)
         let incidentVM = IncidentListViewModel(webSocket: webSocket)
         let bridgeVM = BridgeListViewModel(webSocket: webSocket)
-        let loopVM = LoopListViewModel(webSocket: webSocket)
+        // let loopVM = LoopListViewModel(webSocket: webSocket)
 
         agentListVM = agentVM
         incidentListVM = incidentVM
         bridgeListVM = bridgeVM
-        loopListVM = loopVM
+        // loopListVM = loopVM
 
         // Connect WebSocket
         webSocket.connect(baseURL: gateway.baseURL, token: token)
