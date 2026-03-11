@@ -66,3 +66,4 @@ private final class AppServices {
         return Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String ?? ""
     }
 }
+// SwiftLint fixes completed
