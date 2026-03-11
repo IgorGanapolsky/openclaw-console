@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { describe, it, expect } from '@jest/globals';
 import crypto from 'crypto';
 import {
@@ -266,3 +267,13 @@ describe('DevOps Integrations Hub', () => {
     });
   });
 });
+||||||| parent of 89270c1 (fix: update tsconfig to include all test files and add missing return types)
+=======
+import { describe, it, expect } from '@jest/globals';
+
+describe('DevOps Hub Integration', () => {
+  it('should connect to DevOps Hub', () => {
+    expect(true).toBe(true);
+  });
+});
+>>>>>>> 89270c1 (fix: update tsconfig to include all test files and add missing return types)
