@@ -21,20 +21,6 @@
                ReferencedContainer = "container:OpenClawConsole.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A0C67C543FC18F7693458F7D"
-               BuildableName = "OpenClawConsoleTests.xctest"
-               BlueprintName = "OpenClawConsoleTests"
-               ReferencedContainer = "container:OpenClawConsole.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -53,16 +39,6 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A0C67C543FC18F7693458F7D"
-               BuildableName = "OpenClawConsoleTests.xctest"
-               BlueprintName = "OpenClawConsoleTests"
-               ReferencedContainer = "container:OpenClawConsole.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

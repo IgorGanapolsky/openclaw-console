@@ -8,21 +8,29 @@
 
 /* Begin PBXBuildFile section */
 		02411DA368F00CCFB1B17CE1 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6941C49BC9627180A9025CEB /* ChatView.swift */; };
-		050A4E004B5CEF6180F0F432 /* GitViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 624151D8871E7A969212A719 /* GitViewModelTests.swift */; };
 		0802C43B4A799C06A1462B3F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C61E89ABC4C29C3008787294 /* MainTabView.swift */; };
 		084298497D1A6D9535FCE569 /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0ACD3457578FDCFD63D1F50 /* TaskDetailView.swift */; };
 		0BBA9EA593E3DDAC46089C23 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D928179E99267A56D9E33E52 /* TaskListView.swift */; };
 		1411E663C8A4209F050783A9 /* WebSocketService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E514BCE93EB1F89A2190D0 /* WebSocketService.swift */; };
+		16A1BD2710BF953FACC6331F /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 38D99F4B062A6E575A5E59DE /* RevenueCat */; };
 		17440A7BE1F4BEFF258E597A /* AgentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADA3CC20D4CDDDEBDD0F5E4 /* AgentDetailView.swift */; };
 		20557B9A641A9353044D4921 /* SeverityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2AD462AAE57779B0DE9F4E /* SeverityBadge.swift */; };
+		2866E4F06FE4338446C9EF6C /* GitApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = 315E8D1299C727F7AC105362 /* GitApproval.swift */; };
 		3540FD3BAE80D01B1D1A5426 /* ApprovalRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AF605A05582ADBC8D33C238 /* ApprovalRequest.swift */; };
 		425A3F011AFB84645BC928ED /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE4072C9B69E4184E045980D /* APIService.swift */; };
 		4A71CA2536F12EF85385EA67 /* WebSocketMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C385C510F80CD1DC99D9FF1C /* WebSocketMessage.swift */; };
+		4CE9E78AE728C63A07C6A81A /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C5C3ECE1E96A925A41F58E /* PaywallView.swift */; };
+		57A96383CAA75AF6243852DE /* BridgeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6E65609DA14116E6B9A80A /* BridgeSession.swift */; };
 		583576DE1E6079CE1FDF374D /* OpenClawConsoleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */; };
 		59EDA4E49DC3C2BD35B17F7E /* GatewayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A9BFEF432C2C99D3AB2B64 /* GatewayManager.swift */; };
-		672DBBC814C06934CF6ECBA7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E21503DCF16A9C8D813408A5 /* Foundation.framework */; };
+		65F61482FA6A22CD31D73941 /* BridgeListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36AB1801F557A7EC7E992815 /* BridgeListViewModel.swift */; };
+		6753C6C0FAAFF59FBE84978E /* GitApprovalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9C9B40292B9B4C06F5DDE9 /* GitApprovalDetailView.swift */; };
 		684A6ECC0C43B3C005409108 /* GatewayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D60699A05286D032BA41CA /* GatewayConnection.swift */; };
 		71A77654FEDAB4AD34F8C7AD /* Incident.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93CE694F3125DF7DF85A5C1B /* Incident.swift */; };
+		71D32708D964456DC80B6206 /* GitViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37FE1B71EECCA1C270D53400 /* GitViewModel.swift */; };
+		79ED967E6E9993BA7B8F1A8E /* GitBranchStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8ACFE001B520A20A101DD5E /* GitBranchStatusView.swift */; };
+		7CD68F82EB8F9F585D8B8323 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435D4B8D71B99ECDAA94875B /* SubscriptionService.swift */; };
+		7FC6EDB42AFF76988D9DD222 /* GitRepositoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C479BAC83EA7BE37AE770C1 /* GitRepositoryView.swift */; };
 		834A119174506349F30E0334 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3999F387613A839206EB5B56 /* ContentView.swift */; };
 		86E92D78B4590725F53CEF47 /* ApprovalBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE8627C1FD4D7384D0F039D /* ApprovalBannerView.swift */; };
 		8C36E210614A9D9FE9E414D7 /* IncidentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F2D4D93012B1AF15CE032EF /* IncidentListViewModel.swift */; };
@@ -30,42 +38,29 @@
 		953C3B052F95CC93A8040197 /* IncidentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B37EC455A5F78045FA8EA7A /* IncidentDetailView.swift */; };
 		966ECBF0E91A054093E2D67F /* GatewayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA6A371EC180F91BDFA129B9 /* GatewayListView.swift */; };
 		9F737B7808C9CD05B42D4B9B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842FD483A26BED5A85DC4F7C /* ChatMessage.swift */; };
-		A330FCFB0BA37C7C133E62C6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CED7B8B440732222DBF270DB /* Assets.xcassets */; };
 		A493D58690FC2CE687DA91D7 /* IncidentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E2C6547FC111A0704755D8 /* IncidentListView.swift */; };
 		AC0FFC34FFACB1A930B10B57 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91ED0911899971B33856481 /* KeychainService.swift */; };
 		AFF4755AB8473B8C3FB0CD59 /* TimeAgoText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1974DC28FE46E8DE552AB153 /* TimeAgoText.swift */; };
 		B0C197E39F3BDB8A72EDAA7F /* TaskDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8869C2C89DE90325B36537 /* TaskDetailViewModel.swift */; };
+		B492807AC771F83C9C5C4B00 /* LoopListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B4348CD784C780DA154616 /* LoopListView.swift */; };
+		B6D8EF706617D7DC5A96FFE4 /* FeatureComparisonGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC675F8E8DDE8E14C1DD25E3 /* FeatureComparisonGrid.swift */; };
 		B8CB2AE38F3880AB616E876D /* Agent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D025F37633CB3007EC40F5FB /* Agent.swift */; };
+		B9903D36D8DFEED2AC1B30BB /* SubscriptionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 509F1429FA1A908CD03132C0 /* SubscriptionStatusView.swift */; };
 		B9AC8F1FFF6D0DD18AC17F27 /* AgentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C9AB1C4AF831D67E0658604 /* AgentListView.swift */; };
+		BDCA8D7C73ACD3F78BF3AFD1 /* LoopListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55AC5A64A5860DF199AAE16C /* LoopListViewModel.swift */; };
 		BE269AFA5F5107BE85633437 /* ApprovalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6D0921DCBD4C71D547F7965 /* ApprovalDetailView.swift */; };
 		C66D3143C15269ECE9DC33E1 /* OCTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9744F34B8396A1E8942101E /* OCTask.swift */; };
-		CE4A61DA832046C8402A3C4D /* GitViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62EC7EC954E7E50C96240FB0 /* GitViewModelTests.swift */; };
 		D28CC7C4AE2D6D5A8F0AC782 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 654A4451670E3B268745438C /* BiometricService.swift */; };
 		D369415E9A00CD7B87587BE7 /* ResourceLinkChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52ACE84DE106112376EC9414 /* ResourceLinkChip.swift */; };
-		D40EFFB6F3491306FAAE4A93 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E21503DCF16A9C8D813408A5 /* Foundation.framework */; };
+		D40205F968C7C6DE0109D155 /* BridgeListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 581A0864C079D5632FA9CC66 /* BridgeListView.swift */; };
+		D8029CA4DCF750C53E7DBFF1 /* SubscriptionOptionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E675ED9798B4E5132C46554 /* SubscriptionOptionCard.swift */; };
 		E26DC6695FC47994160F67D4 /* AddGatewayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FB2D0C1CA37A1215F789DAE /* AddGatewayView.swift */; };
 		E4CC40270CBEEB0BA9686BDA /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC76505A1ACB7BAEF914F07 /* StatusDot.swift */; };
 		E7E99A351D5E3574C0B2CA1E /* AgentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16BEA5AD6F77FE5CBD437E1E /* AgentListViewModel.swift */; };
+		E89001E0283D9DFA4AC44D9C /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CCD823833E5603691F188F1 /* SubscriptionView.swift */; };
 		ED3EE759CA896EAA866F2020 /* TaskListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 693C1589C4E7330AE88DCD42 /* TaskListViewModel.swift */; };
 		F49FB73627F40CD647F65836 /* ApprovalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7465BA19A6F55111388C81A8 /* ApprovalViewModel.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		1979CFA1EA26EC56E025D71A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CCC4285A4910BCC03DF52580 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D73E99810B13C310036F9B93;
-			remoteInfo = OpenClawConsole;
-		};
-		9150B366CC580D27D575AE30 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CCC4285A4910BCC03DF52580 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D73E99810B13C310036F9B93;
-			remoteInfo = OpenClawConsole;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		03D60699A05286D032BA41CA /* GatewayConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayConnection.swift; sourceTree = "<group>"; };
@@ -73,12 +68,18 @@
 		0FB2D0C1CA37A1215F789DAE /* AddGatewayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddGatewayView.swift; sourceTree = "<group>"; };
 		16BEA5AD6F77FE5CBD437E1E /* AgentListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentListViewModel.swift; sourceTree = "<group>"; };
 		1974DC28FE46E8DE552AB153 /* TimeAgoText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeAgoText.swift; sourceTree = "<group>"; };
+		1C479BAC83EA7BE37AE770C1 /* GitRepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitRepositoryView.swift; sourceTree = "<group>"; };
+		315E8D1299C727F7AC105362 /* GitApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitApproval.swift; sourceTree = "<group>"; };
+		36AB1801F557A7EC7E992815 /* BridgeListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeListViewModel.swift; sourceTree = "<group>"; };
+		37FE1B71EECCA1C270D53400 /* GitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitViewModel.swift; sourceTree = "<group>"; };
 		3999F387613A839206EB5B56 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		435D4B8D71B99ECDAA94875B /* SubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
+		509F1429FA1A908CD03132C0 /* SubscriptionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionStatusView.swift; sourceTree = "<group>"; };
 		52ACE84DE106112376EC9414 /* ResourceLinkChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceLinkChip.swift; sourceTree = "<group>"; };
+		55AC5A64A5860DF199AAE16C /* LoopListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopListViewModel.swift; sourceTree = "<group>"; };
+		581A0864C079D5632FA9CC66 /* BridgeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeListView.swift; sourceTree = "<group>"; };
 		5B37EC455A5F78045FA8EA7A /* IncidentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentDetailView.swift; sourceTree = "<group>"; };
 		5EE8627C1FD4D7384D0F039D /* ApprovalBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalBannerView.swift; sourceTree = "<group>"; };
-		624151D8871E7A969212A719 /* GitViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitViewModelTests.swift; path = Tests/GitViewModelTests.swift; sourceTree = "<group>"; };
-		62EC7EC954E7E50C96240FB0 /* GitViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = GitViewModelTests.swift; path = Tests/GitViewModelTests.swift; sourceTree = "<group>"; };
 		654A4451670E3B268745438C /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		693C1589C4E7330AE88DCD42 /* TaskListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListViewModel.swift; sourceTree = "<group>"; };
 		6941C49BC9627180A9025CEB /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -86,21 +87,25 @@
 		7465BA19A6F55111388C81A8 /* ApprovalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalViewModel.swift; sourceTree = "<group>"; };
 		7AF605A05582ADBC8D33C238 /* ApprovalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalRequest.swift; sourceTree = "<group>"; };
 		7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenClawConsoleApp.swift; sourceTree = "<group>"; };
+		7E675ED9798B4E5132C46554 /* SubscriptionOptionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionOptionCard.swift; sourceTree = "<group>"; };
 		842FD483A26BED5A85DC4F7C /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		84E514BCE93EB1F89A2190D0 /* WebSocketService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketService.swift; sourceTree = "<group>"; };
 		8A2AD462AAE57779B0DE9F4E /* SeverityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeverityBadge.swift; sourceTree = "<group>"; };
+		8CCD823833E5603691F188F1 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
 		93CE694F3125DF7DF85A5C1B /* Incident.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Incident.swift; sourceTree = "<group>"; };
+		AA9C9B40292B9B4C06F5DDE9 /* GitApprovalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitApprovalDetailView.swift; sourceTree = "<group>"; };
 		ADC76505A1ACB7BAEF914F07 /* StatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDot.swift; sourceTree = "<group>"; };
 		B0ACD3457578FDCFD63D1F50 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
+		B4B4348CD784C780DA154616 /* LoopListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopListView.swift; sourceTree = "<group>"; };
 		B6D0921DCBD4C71D547F7965 /* ApprovalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalDetailView.swift; sourceTree = "<group>"; };
 		BA6A371EC180F91BDFA129B9 /* GatewayListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayListView.swift; sourceTree = "<group>"; };
+		BC6E65609DA14116E6B9A80A /* BridgeSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeSession.swift; sourceTree = "<group>"; };
 		C0A9BFEF432C2C99D3AB2B64 /* GatewayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayManager.swift; sourceTree = "<group>"; };
 		C385C510F80CD1DC99D9FF1C /* WebSocketMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSocketMessage.swift; sourceTree = "<group>"; };
 		C61E89ABC4C29C3008787294 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		C6DA5E97816ED5F91601B116 /* OpenClawConsoleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenClawConsoleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6C5C3ECE1E96A925A41F58E /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		C91ED0911899971B33856481 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		CADA3CC20D4CDDDEBDD0F5E4 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
-		CED7B8B440732222DBF270DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D025F37633CB3007EC40F5FB /* Agent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Agent.swift; sourceTree = "<group>"; };
 		D2F9FF3A8CA3A0C5D1395632 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		D928179E99267A56D9E33E52 /* TaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListView.swift; sourceTree = "<group>"; };
@@ -108,25 +113,17 @@
 		DE4072C9B69E4184E045980D /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
 		DF1A595D54FA8D215174F303 /* OpenClawConsole.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenClawConsole.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF8869C2C89DE90325B36537 /* TaskDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailViewModel.swift; sourceTree = "<group>"; };
-		E21503DCF16A9C8D813408A5 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		E3E2C6547FC111A0704755D8 /* IncidentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentListView.swift; sourceTree = "<group>"; };
-		FD865CC123088561BCE3334F /* OpenClawConsoleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenClawConsoleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F8ACFE001B520A20A101DD5E /* GitBranchStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitBranchStatusView.swift; sourceTree = "<group>"; };
+		FC675F8E8DDE8E14C1DD25E3 /* FeatureComparisonGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureComparisonGrid.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		15FA60148BE33B81BAB2C8D2 /* Frameworks */ = {
+		8129656D69330E1F3532DA9F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				672DBBC814C06934CF6ECBA7 /* Foundation.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		569824315547C83EF3DFA547 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D40EFFB6F3491306FAAE4A93 /* Foundation.framework in Frameworks */,
+				16A1BD2710BF953FACC6331F /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -138,12 +135,17 @@
 			children = (
 				3999F387613A839206EB5B56 /* ContentView.swift */,
 				C61E89ABC4C29C3008787294 /* MainTabView.swift */,
+				8CCD823833E5603691F188F1 /* SubscriptionView.swift */,
 				0B7400156998A215FDD3F85F /* Agents */,
 				2261603496B3CF0F0F6A0D1F /* Approvals */,
+				7EF7C13838EA9504CC79CAA1 /* Bridges */,
 				06143CA74AA11898DD6EC38A /* Chat */,
 				A6267BD60FFBC7F3FC6C08AE /* Components */,
+				10F0754F433E1AFDF149F065 /* Git */,
 				B30878B13876FCA0C31050C1 /* Incidents */,
+				4730B9DABDC9EACA167D04D4 /* Loops */,
 				04C5E0146D1D1236FCF0AAB8 /* Settings */,
+				CE47D284CE09350579655C8F /* Subscription */,
 				E6769E232CBDC15EDA6FD49C /* Tasks */,
 			);
 			path = Views;
@@ -175,10 +177,19 @@
 			path = Agents;
 			sourceTree = "<group>";
 		};
+		10F0754F433E1AFDF149F065 /* Git */ = {
+			isa = PBXGroup;
+			children = (
+				AA9C9B40292B9B4C06F5DDE9 /* GitApprovalDetailView.swift */,
+				F8ACFE001B520A20A101DD5E /* GitBranchStatusView.swift */,
+				1C479BAC83EA7BE37AE770C1 /* GitRepositoryView.swift */,
+			);
+			path = Git;
+			sourceTree = "<group>";
+		};
 		19758D90190C83E6F7D602ED /* OpenClawConsole */ = {
 			isa = PBXGroup;
 			children = (
-				CED7B8B440732222DBF270DB /* Assets.xcassets */,
 				7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */,
 				F9D50A5D1534369CB96C4286 /* Models */,
 				F845E0B17B0AF7DD02686BF0 /* Services */,
@@ -193,20 +204,15 @@
 			children = (
 				16BEA5AD6F77FE5CBD437E1E /* AgentListViewModel.swift */,
 				7465BA19A6F55111388C81A8 /* ApprovalViewModel.swift */,
+				36AB1801F557A7EC7E992815 /* BridgeListViewModel.swift */,
 				C0A9BFEF432C2C99D3AB2B64 /* GatewayManager.swift */,
+				37FE1B71EECCA1C270D53400 /* GitViewModel.swift */,
 				6F2D4D93012B1AF15CE032EF /* IncidentListViewModel.swift */,
+				55AC5A64A5860DF199AAE16C /* LoopListViewModel.swift */,
 				DF8869C2C89DE90325B36537 /* TaskDetailViewModel.swift */,
 				693C1589C4E7330AE88DCD42 /* TaskListViewModel.swift */,
 			);
 			path = ViewModels;
-			sourceTree = "<group>";
-		};
-		21365BFC1C1A933E8913B78C /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				5F5774EA5669DE8EC9E841BF /* iOS */,
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		2261603496B3CF0F0F6A0D1F /* Approvals */ = {
@@ -223,8 +229,6 @@
 			children = (
 				19758D90190C83E6F7D602ED /* OpenClawConsole */,
 				400013C51CE1D6B56A9B4C2E /* Products */,
-				21365BFC1C1A933E8913B78C /* Frameworks */,
-				E8D377F5425AFBCCAFD55283 /* Tests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -232,18 +236,24 @@
 			isa = PBXGroup;
 			children = (
 				DF1A595D54FA8D215174F303 /* OpenClawConsole.app */,
-				C6DA5E97816ED5F91601B116 /* OpenClawConsoleTests.xctest */,
-				FD865CC123088561BCE3334F /* OpenClawConsoleTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		5F5774EA5669DE8EC9E841BF /* iOS */ = {
+		4730B9DABDC9EACA167D04D4 /* Loops */ = {
 			isa = PBXGroup;
 			children = (
-				E21503DCF16A9C8D813408A5 /* Foundation.framework */,
+				B4B4348CD784C780DA154616 /* LoopListView.swift */,
 			);
-			name = iOS;
+			path = Loops;
+			sourceTree = "<group>";
+		};
+		7EF7C13838EA9504CC79CAA1 /* Bridges */ = {
+			isa = PBXGroup;
+			children = (
+				581A0864C079D5632FA9CC66 /* BridgeListView.swift */,
+			);
+			path = Bridges;
 			sourceTree = "<group>";
 		};
 		A6267BD60FFBC7F3FC6C08AE /* Components */ = {
@@ -266,6 +276,17 @@
 			path = Incidents;
 			sourceTree = "<group>";
 		};
+		CE47D284CE09350579655C8F /* Subscription */ = {
+			isa = PBXGroup;
+			children = (
+				FC675F8E8DDE8E14C1DD25E3 /* FeatureComparisonGrid.swift */,
+				C6C5C3ECE1E96A925A41F58E /* PaywallView.swift */,
+				7E675ED9798B4E5132C46554 /* SubscriptionOptionCard.swift */,
+				509F1429FA1A908CD03132C0 /* SubscriptionStatusView.swift */,
+			);
+			path = Subscription;
+			sourceTree = "<group>";
+		};
 		E6769E232CBDC15EDA6FD49C /* Tasks */ = {
 			isa = PBXGroup;
 			children = (
@@ -275,15 +296,6 @@
 			path = Tasks;
 			sourceTree = "<group>";
 		};
-		E8D377F5425AFBCCAFD55283 /* Tests */ = {
-			isa = PBXGroup;
-			children = (
-				624151D8871E7A969212A719 /* GitViewModelTests.swift */,
-				62EC7EC954E7E50C96240FB0 /* GitViewModelTests.swift */,
-			);
-			name = Tests;
-			sourceTree = "<group>";
-		};
 		F845E0B17B0AF7DD02686BF0 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -291,6 +303,7 @@
 				654A4451670E3B268745438C /* BiometricService.swift */,
 				C91ED0911899971B33856481 /* KeychainService.swift */,
 				D2F9FF3A8CA3A0C5D1395632 /* NotificationService.swift */,
+				435D4B8D71B99ECDAA94875B /* SubscriptionService.swift */,
 				84E514BCE93EB1F89A2190D0 /* WebSocketService.swift */,
 			);
 			path = Services;
@@ -301,8 +314,10 @@
 			children = (
 				D025F37633CB3007EC40F5FB /* Agent.swift */,
 				7AF605A05582ADBC8D33C238 /* ApprovalRequest.swift */,
+				BC6E65609DA14116E6B9A80A /* BridgeSession.swift */,
 				842FD483A26BED5A85DC4F7C /* ChatMessage.swift */,
 				03D60699A05286D032BA41CA /* GatewayConnection.swift */,
+				315E8D1299C727F7AC105362 /* GitApproval.swift */,
 				93CE694F3125DF7DF85A5C1B /* Incident.swift */,
 				D9744F34B8396A1E8942101E /* OCTask.swift */,
 				C385C510F80CD1DC99D9FF1C /* WebSocketMessage.swift */,
@@ -313,36 +328,21 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0FCD288ACB87734BB7356155 /* OpenClawConsoleTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6DBD79BB5D70358E0E11BA60 /* Build configuration list for PBXNativeTarget "OpenClawConsoleTests" */;
-			buildPhases = (
-				D0C6B0CF8C4A968A94E5E3DB /* Sources */,
-				569824315547C83EF3DFA547 /* Frameworks */,
-				279CFE7E7AF3CEF747D21658 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				14CA61794118F6D26D5A707A /* PBXTargetDependency */,
-			);
-			name = OpenClawConsoleTests;
-			productName = OpenClawConsoleTests;
-			productReference = FD865CC123088561BCE3334F /* OpenClawConsoleTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		D73E99810B13C310036F9B93 /* OpenClawConsole */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3F26A693C9973452D55D440B /* Build configuration list for PBXNativeTarget "OpenClawConsole" */;
 			buildPhases = (
 				AC55413DEC7B34043F71182C /* Sources */,
-				D3B4FE988C1C4DC28FAAF903 /* Resources */,
+				8129656D69330E1F3532DA9F /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = OpenClawConsole;
+			packageProductDependencies = (
+				38D99F4B062A6E575A5E59DE /* RevenueCat */,
+			);
 			productName = OpenClawConsole;
 			productReference = DF1A595D54FA8D215174F303 /* OpenClawConsole.app */;
 			productType = "com.apple.product-type.application";
@@ -362,7 +362,6 @@
 				};
 			};
 			buildConfigurationList = 357B68605B3C7E351822A9CB /* Build configuration list for PBXProject "OpenClawConsole" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -371,41 +370,18 @@
 			);
 			mainGroup = 386E84F76E8D76809ABB8DE2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A2EF036E71534171B89A4C0B /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 400013C51CE1D6B56A9B4C2E /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				D73E99810B13C310036F9B93 /* OpenClawConsole */,
-				0FCD288ACB87734BB7356155 /* OpenClawConsoleTests */,
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXResourcesBuildPhase section */
-		279CFE7E7AF3CEF747D21658 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D3B4FE988C1C4DC28FAAF903 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A330FCFB0BA37C7C133E62C6 /* Assets.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		DA23F76A95AE3B3AA0DB707F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AC55413DEC7B34043F71182C /* Sources */ = {
@@ -423,24 +399,40 @@
 				3540FD3BAE80D01B1D1A5426 /* ApprovalRequest.swift in Sources */,
 				F49FB73627F40CD647F65836 /* ApprovalViewModel.swift in Sources */,
 				D28CC7C4AE2D6D5A8F0AC782 /* BiometricService.swift in Sources */,
+				D40205F968C7C6DE0109D155 /* BridgeListView.swift in Sources */,
+				65F61482FA6A22CD31D73941 /* BridgeListViewModel.swift in Sources */,
+				57A96383CAA75AF6243852DE /* BridgeSession.swift in Sources */,
 				9F737B7808C9CD05B42D4B9B /* ChatMessage.swift in Sources */,
 				02411DA368F00CCFB1B17CE1 /* ChatView.swift in Sources */,
 				834A119174506349F30E0334 /* ContentView.swift in Sources */,
+				B6D8EF706617D7DC5A96FFE4 /* FeatureComparisonGrid.swift in Sources */,
 				684A6ECC0C43B3C005409108 /* GatewayConnection.swift in Sources */,
 				966ECBF0E91A054093E2D67F /* GatewayListView.swift in Sources */,
 				59EDA4E49DC3C2BD35B17F7E /* GatewayManager.swift in Sources */,
+				2866E4F06FE4338446C9EF6C /* GitApproval.swift in Sources */,
+				6753C6C0FAAFF59FBE84978E /* GitApprovalDetailView.swift in Sources */,
+				79ED967E6E9993BA7B8F1A8E /* GitBranchStatusView.swift in Sources */,
+				7FC6EDB42AFF76988D9DD222 /* GitRepositoryView.swift in Sources */,
+				71D32708D964456DC80B6206 /* GitViewModel.swift in Sources */,
 				71A77654FEDAB4AD34F8C7AD /* Incident.swift in Sources */,
 				953C3B052F95CC93A8040197 /* IncidentDetailView.swift in Sources */,
 				A493D58690FC2CE687DA91D7 /* IncidentListView.swift in Sources */,
 				8C36E210614A9D9FE9E414D7 /* IncidentListViewModel.swift in Sources */,
 				AC0FFC34FFACB1A930B10B57 /* KeychainService.swift in Sources */,
+				B492807AC771F83C9C5C4B00 /* LoopListView.swift in Sources */,
+				BDCA8D7C73ACD3F78BF3AFD1 /* LoopListViewModel.swift in Sources */,
 				0802C43B4A799C06A1462B3F /* MainTabView.swift in Sources */,
 				8DD21866F6A167E9B4DA0BBC /* NotificationService.swift in Sources */,
 				C66D3143C15269ECE9DC33E1 /* OCTask.swift in Sources */,
 				583576DE1E6079CE1FDF374D /* OpenClawConsoleApp.swift in Sources */,
+				4CE9E78AE728C63A07C6A81A /* PaywallView.swift in Sources */,
 				D369415E9A00CD7B87587BE7 /* ResourceLinkChip.swift in Sources */,
 				20557B9A641A9353044D4921 /* SeverityBadge.swift in Sources */,
 				E4CC40270CBEEB0BA9686BDA /* StatusDot.swift in Sources */,
+				D8029CA4DCF750C53E7DBFF1 /* SubscriptionOptionCard.swift in Sources */,
+				7CD68F82EB8F9F585D8B8323 /* SubscriptionService.swift in Sources */,
+				B9903D36D8DFEED2AC1B30BB /* SubscriptionStatusView.swift in Sources */,
+				E89001E0283D9DFA4AC44D9C /* SubscriptionView.swift in Sources */,
 				084298497D1A6D9535FCE569 /* TaskDetailView.swift in Sources */,
 				B0C197E39F3BDB8A72EDAA7F /* TaskDetailViewModel.swift in Sources */,
 				0BBA9EA593E3DDAC46089C23 /* TaskListView.swift in Sources */,
@@ -451,38 +443,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		BCE9C05853AC1DBB0D252C41 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				050A4E004B5CEF6180F0F432 /* GitViewModelTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D0C6B0CF8C4A968A94E5E3DB /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				CE4A61DA832046C8402A3C4D /* GitViewModelTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		14CA61794118F6D26D5A707A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = OpenClawConsole;
-			target = D73E99810B13C310036F9B93 /* OpenClawConsole */;
-			targetProxy = 1979CFA1EA26EC56E025D71A /* PBXContainerItemProxy */;
-		};
-		C2A57BF589DD30DA212894DA /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = OpenClawConsole;
-			target = D73E99810B13C310036F9B93 /* OpenClawConsole */;
-			targetProxy = 9150B366CC580D27D575AE30 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		1513A0E374D582D6E4D1BC71 /* Debug */ = {
@@ -516,30 +477,6 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
-		};
-		38DEC42EDD647E61C2414DA5 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				SDKROOT = iphoneos;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
-			};
-			name = Debug;
-		};
-		5C192C6397424C5CCCD40527 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.openclaw.console.tests;
-				SDKROOT = iphoneos;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
-			};
-			name = Debug;
 		};
 		6DBBFBB63E5DC21B4741DDE7 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -592,7 +529,6 @@
 				INFOPLIST_FILE = OpenClawConsole/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
-				DEVELOPMENT_TEAM = "C5SW8HWPPJ";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.openclaw.console;
@@ -602,32 +538,6 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		77CC8960B65DDEBA125A43A3 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.openclaw.console.tests;
-				SDKROOT = iphoneos;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
-				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
-		910C6A49DBB3EDD59B86F74D /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CLANG_ENABLE_OBJC_WEAK = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				SDKROOT = iphoneos;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenClawConsole.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OpenClawConsole";
-				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -688,7 +598,6 @@
 				INFOPLIST_FILE = OpenClawConsole/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0.0;
-				DEVELOPMENT_TEAM = "C5SW8HWPPJ";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -723,25 +632,26 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		6DBD79BB5D70358E0E11BA60 /* Build configuration list for PBXNativeTarget "OpenClawConsoleTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				77CC8960B65DDEBA125A43A3 /* Release */,
-				5C192C6397424C5CCCD40527 /* Debug */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		845F82C2A2DB8F678437E8A8 /* Build configuration list for <deleted target> */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				910C6A49DBB3EDD59B86F74D /* Release */,
-				38DEC42EDD647E61C2414DA5 /* Debug */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A2EF036E71534171B89A4C0B /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.43.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		38D99F4B062A6E575A5E59DE /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A2EF036E71534171B89A4C0B /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CCC4285A4910BCC03DF52580 /* Project object */;
 }

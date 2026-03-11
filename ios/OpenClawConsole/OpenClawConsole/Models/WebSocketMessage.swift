@@ -168,32 +168,6 @@ struct RecurringTask: Codable, Identifiable {
     }
 }
 
-// MARK: - Bridge Session
-
-struct BridgeSession: Codable, Identifiable {
-    let id: String
-    let agentId: String
-    let type: String // codex, terminal, other
-    let title: String
-    let cwd: String
-    let closed: Bool
-    let createdAt: Date
-    let updatedAt: Date
-    let metadata: [String: AnyCodable]
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case agentId = "agent_id"
-        case type
-        case title
-        case cwd
-        case closed
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
-        case metadata
-    }
-}
-
 // MARK: - Connected Payload
 
 struct ConnectedPayload: Codable {

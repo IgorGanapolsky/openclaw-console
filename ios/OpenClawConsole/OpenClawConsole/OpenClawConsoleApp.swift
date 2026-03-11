@@ -10,15 +10,7 @@
 
 import SwiftUI
 import Foundation
-
-// MARK: - Temporary stub implementation for missing SubscriptionService
-
-@Observable
-final class SubscriptionService {
-    func configure(apiKey: String) {
-        print("[SubscriptionService] Stub configuration with key: \(apiKey.isEmpty ? "empty" : "provided")")
-    }
-}
+import RevenueCat
 
 @main
 @available(iOS 17.0, *)
@@ -27,7 +19,6 @@ struct OpenClawConsoleApp: App {
     @State private var gatewayManager = GatewayManager()
     @State private var webSocket = WebSocketService()
     @State private var approvalViewModel: ApprovalViewModel? = nil
-    @State private var subscriptionService = SubscriptionService()
 
     var body: some Scene {
         WindowGroup {
@@ -35,7 +26,6 @@ struct OpenClawConsoleApp: App {
                 .environment(gatewayManager)
                 .environment(webSocket)
                 .environment(approvalViewModel ?? ApprovalViewModel(webSocket: webSocket))
-                .environment(subscriptionService)
                 .onAppear {
                     setupServices()
                 }
@@ -50,7 +40,7 @@ struct OpenClawConsoleApp: App {
         // Initialize RevenueCat
         let apiKey = getRevenueCatApiKey()
         if !apiKey.isEmpty {
-            subscriptionService.configure(apiKey: apiKey)
+            Purchases.configure(withAPIKey: apiKey)
             print("[OpenClawConsoleApp] RevenueCat initialized successfully")
         } else {
             print("[OpenClawConsoleApp] RevenueCat API key not configured - subscription features disabled")
