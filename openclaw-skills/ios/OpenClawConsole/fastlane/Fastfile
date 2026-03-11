@@ -1,0 +1,144 @@
+default_platform(:ios)
+
+def app_store_api_key_from_env
+  return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
+
+  key_content = ENV["APPSTORE_PRIVATE_KEY"]
+  is_base64 = key_content&.include?("-----BEGIN PRIVATE KEY-----") ? false : true
+
+  app_store_connect_api_key(
+    key_id: ENV["APPSTORE_KEY_ID"],
+    issuer_id: ENV["APPSTORE_ISSUER_ID"],
+    key_content: key_content,
+    is_key_content_base64: is_base64
+  )
+end
+
+platform :ios do
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    setup_ci if ENV["CI"] == "true"
+
+    # Use App Store Connect API key if available
+    api_key = app_store_api_key_from_env
+
+    marketing_version = get_version_number(
+      xcodeproj: "OpenClawConsole.xcodeproj",
+      target: "OpenClawConsole"
+    )
+    current_build_number = get_build_number(
+      xcodeproj: "OpenClawConsole.xcodeproj"
+    ).to_i
+    next_build_number = current_build_number + 1
+
+    if api_key
+      begin
+        latest_remote_build_number = latest_testflight_build_number(
+          api_key: api_key,
+          app_identifier: "com.openclaw.console",
+          version: marketing_version,
+          initial_build_number: current_build_number
+        ).to_i
+        next_build_number = [next_build_number, latest_remote_build_number + 1].max
+      rescue => e
+        UI.important("Could not read latest TestFlight build number: #{e}")
+      end
+    end
+
+    UI.message("Using build number #{next_build_number} for version #{marketing_version}")
+    increment_build_number(
+      xcodeproj: "OpenClawConsole.xcodeproj",
+      build_number: next_build_number
+    )
+
+    if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: true,
+        targets: ["OpenClawConsole"],
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
+    end
+
+    if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
+      # CI runners do not have Apple ID accounts configured; force manual signing
+      # with match-managed App Store profiles for deterministic archives.
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: true,
+        api_key: api_key
+      )
+
+      app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
+
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: false,
+        targets: ["OpenClawConsole"],
+        code_sign_identity: "Apple Distribution",
+        profile_name: app_profile,
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
+
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        export_options: {
+          signingStyle: "manual",
+          provisioningProfiles: {
+            "com.openclaw.console" => app_profile
+          }
+        }
+      )
+    else
+      # Local/dev fallback
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        xcargs: "-allowProvisioningUpdates"
+      )
+    end
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      api_key: api_key,
+      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
+      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"
+    )
+  end
+
+  desc "Setup certificates and profiles via match"
+  lane :setup do
+    setup_ci if ENV["CI"] == "true"
+
+    if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
+      api_key = app_store_api_key_from_env
+
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: false,
+        api_key: api_key
+      )
+    else
+      UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
+    end
+  end
+
+  desc "Distribute to Firebase App Distribution"
+  lane :firebase_dev do
+    increment_build_number(
+      build_number: latest_testflight_build_number + 1
+    )
+    build_app(
+      scheme: "OpenClawConsole",
+      export_method: "ad-hoc"
+    )
+    firebase_app_distribution(
+      app: ENV["FIREBASE_IOS_APP_ID"],
+      groups: "qa-team,developers",
+      release_notes: "Dev build from develop branch (#{ENV['GITHUB_SHA'] || 'local'})"
+    )
+  end
+end

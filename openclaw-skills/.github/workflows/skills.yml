@@ -1,0 +1,42 @@
+name: OpenClaw Skills CI
+
+on:
+  pull_request:
+    paths:
+      - 'openclaw-skills/**'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'openclaw-skills/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: openclaw-skills
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: openclaw-skills/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build

@@ -1,0 +1,45 @@
+# SwiftLint Configuration for OpenClaw Console
+
+disabled_rules:
+  - identifier_name       # Allow short names like vm, gw, ws (common SwiftUI patterns)
+  - multiple_closures_with_trailing_closure  # Common in SwiftUI
+  - implicit_optional_initialization  # = nil is explicit and readable
+
+opt_in_rules:
+  - empty_count
+  - closure_spacing
+  - contains_over_filter_count
+  - discouraged_optional_boolean
+  - empty_string
+  - fatal_error_message
+  - first_where
+  - sorted_first_last
+
+# force_unwrapping is intentionally NOT opted in — too strict for early-stage project.
+# The claude-review workflow already flags force-unwraps in PR reviews.
+
+excluded:
+  - Pods
+  - DerivedData
+  - build
+  - .build
+
+line_length:
+  warning: 150
+  error: 200
+
+function_body_length:
+  warning: 60
+  error: 100
+
+cyclomatic_complexity:
+  warning: 25
+  error: 35
+
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 500
+  error: 1000

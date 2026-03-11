@@ -23,9 +23,6 @@ on:
         default: 'production'
       submit_review:
         description: 'iOS only: submit the App Store version for App Review after verification'
-        # `type: boolean` can be unreliable when dispatched via `gh workflow run -f submit_review=true`
-        # (we've observed the `ios-submit-review` job being skipped). Use a string choice so UI/CLI/API
-        # always pass consistent values.
         type: choice
         options:
           - 'false'
@@ -40,7 +37,7 @@ concurrency:
 jobs:
   ios-testflight:
     if: ${{ inputs.platform == 'ios' || inputs.platform == 'both' }}
-    runs-on: macos-26
+    runs-on: macos-15
     environment: production
     steps:
       - uses: actions/checkout@v4
@@ -67,39 +64,20 @@ jobs:
         run: bash scripts/preflight-release.sh --platform ios --layer 1
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
       - name: Setup Ruby
-        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
-          working-directory: native-ios
+          working-directory: ios/OpenClawConsole
 
       - name: Install Fastlane
         run: gem install fastlane
-        working-directory: native-ios
-
-      - name: Validate iOS signing secrets
-        env:
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: |
-          if [ -z "$MATCH_GIT_URL" ]; then
-            echo "❌ MATCH_GIT_URL secret is not set"
-            exit 1
-          fi
-          if [ -z "$MATCH_PASSWORD" ]; then
-            echo "❌ MATCH_PASSWORD secret is not set"
-            exit 1
-          fi
-          if [ -z "$MATCH_GIT_BASIC_AUTHORIZATION" ]; then
-            echo "❌ MATCH_GIT_BASIC_AUTHORIZATION secret is not set"
-            exit 1
-          fi
+        working-directory: ios/OpenClawConsole
 
       - name: Write API key
         env:
@@ -123,16 +101,7 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: fastlane setup
-        working-directory: native-ios
-
-      - name: Verify App Store Connect API access
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY_PATH: ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
-        run: |
-          python -m pip install pyjwt==2.11.0 cryptography==46.0.5 requests==2.32.5
-          python scripts/check_store_access.py --platform ios
+        working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
         env:
@@ -142,603 +111,46 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: fastlane beta
-        working-directory: native-ios
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ios-ipa
-          path: native-ios/RandomTimer.ipa
+        working-directory: ios/OpenClawConsole
 
   android-release:
     if: ${{ inputs.platform == 'android' || inputs.platform == 'both' }}
     runs-on: ubuntu-latest
     environment: production
-    permissions:
-      contents: read
-    outputs:
-      requested_track: ${{ steps.play_result.outputs.requested_track }}
-      effective_track: ${{ steps.play_result.outputs.effective_track }}
-      fallback_used: ${{ steps.play_result.outputs.fallback_used }}
-      precondition_blocked: ${{ steps.play_result.outputs.precondition_blocked }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fail fast on required Android release secrets
-        env:
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          for name in GOOGLE_PLAY_JSON_KEY ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if [ -z "${!name:-}" ]; then
-              echo "❌ Missing required secret: $name"
-              exit 1
-            fi
-          done
-
-      - name: Preflight release checks (Android)
-        run: bash scripts/preflight-release.sh --platform android --layer 1
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Create google-services.json
+        working-directory: android
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
-          else
-            echo '{"project_info":{"project_number":"","project_id":"","storage_bucket":""},"client":[{"client_info":{"mobilesdk_app_id":"1:000000000000:android:0000000000000000","android_client_info":{"package_name":"com.iganapolsky.randomtimer"}},"api_key":[{"current_key":""}]}]}' > app/google-services.json
-          fi
-        working-directory: native-android
-
-      - name: Write Google Play service account key
-        env:
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
-        run: |
-          if [ -z "$GOOGLE_PLAY_JSON_KEY" ]; then
-            echo "❌ GOOGLE_PLAY_JSON_KEY secret is not set"
-            exit 1
-          fi
-          echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
-
-      - name: Verify Google Play API access
-        env:
-          GOOGLE_PLAY_JSON_KEY_PATH: /tmp/play-service-account.json
-        run: |
-          python -m pip install google-api-python-client==2.190.0 google-auth==2.48.0 google-auth-httplib2==0.3.0 google-auth-oauthlib==1.2.4 requests==2.32.5
-          python scripts/check_store_access.py --platform android
+        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Decode keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "❌ ANDROID_KEYSTORE_BASE64 secret is not set"
-            exit 1
-          fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
-          echo "✅ Keystore decoded"
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
 
-      - name: Inspect upload key certificate
+      - name: Build and Publish to Google Play
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: |
-          keytool -list -v \
-            -keystore /tmp/release.keystore \
-            -storepass "$KEYSTORE_PASSWORD" \
-            -alias "$KEY_ALIAS" | grep -E "Alias name:|Valid from:|SHA1:|SHA-256:"
-
-      - name: Set unique Android version code
-        run: |
-          set -euo pipefail
-          VERSION_CODE="$(date +%s)"
-          echo "ANDROID_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Using ANDROID_VERSION_CODE=$VERSION_CODE"
-
-      - name: Build release AAB
-        env:
-          ANDROID_VERSION_CODE: ${{ env.ANDROID_VERSION_CODE }}
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           KEYSTORE_PATH: /tmp/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
-        run: ./gradlew bundleRelease
-        working-directory: native-android
-
-      - name: Upload to Google Play (track)
-        env:
-          GOOGLE_PLAY_JSON_KEY_PATH: /tmp/play-service-account.json
-          PLAY_TRACK: ${{ inputs.android_track }}
-          PLAY_FALLBACK_TRACK: alpha
-          PLAY_RELEASE_STATUS: completed
-          PLAY_UPLOAD_RETRY_WINDOW_SECONDS: "10800"
-          PLAY_UPLOAD_RETRY_INTERVAL_SECONDS: "300"
-        run: |
-          if [ ! -f "$GOOGLE_PLAY_JSON_KEY_PATH" ]; then
-            echo "❌ Google Play key file not found at $GOOGLE_PLAY_JSON_KEY_PATH"
-            exit 1
-          fi
-          pip install google-api-python-client==2.190.0 google-auth==2.48.0 google-auth-httplib2==0.3.0 google-auth-oauthlib==1.2.4
-          python scripts/play_publish.py \
-            --service-account-json "$GOOGLE_PLAY_JSON_KEY_PATH" \
-            --package com.iganapolsky.randomtimer \
-            --aab-path native-android/app/build/outputs/bundle/release/app-release.aab \
-            --requested-track "$PLAY_TRACK" \
-            --fallback-track "$PLAY_FALLBACK_TRACK" \
-            --release-status "$PLAY_RELEASE_STATUS" \
-            --retry-window-seconds "$PLAY_UPLOAD_RETRY_WINDOW_SECONDS" \
-            --retry-interval-seconds "$PLAY_UPLOAD_RETRY_INTERVAL_SECONDS" \
-            --result-json /tmp/play-upload-result.json \
-            --error-json /tmp/play-upload-error.json
-
-      - name: Capture Play publish result outputs
-        id: play_result
-        if: always()
-        run: |
-          REQUESTED_TRACK="${{ inputs.android_track }}"
-          EFFECTIVE_TRACK="${{ inputs.android_track }}"
-          FALLBACK_USED="false"
-          PRECONDITION_BLOCKED="false"
-
-          if [ -f /tmp/play-upload-result.json ]; then
-            REQUESTED_TRACK="$(jq -r '.requested_track // empty' /tmp/play-upload-result.json)"
-            EFFECTIVE_TRACK="$(jq -r '.effective_track // empty' /tmp/play-upload-result.json)"
-            FALLBACK_USED="$(jq -r '.fallback_used // false' /tmp/play-upload-result.json)"
-            PRECONDITION_BLOCKED="$(jq -r '.precondition_blocked // false' /tmp/play-upload-result.json)"
-          fi
-
-          if [ -z "$REQUESTED_TRACK" ] || [ "$REQUESTED_TRACK" = "null" ]; then
-            REQUESTED_TRACK="${{ inputs.android_track }}"
-          fi
-          if [ -z "$EFFECTIVE_TRACK" ] || [ "$EFFECTIVE_TRACK" = "null" ]; then
-            EFFECTIVE_TRACK="$REQUESTED_TRACK"
-          fi
-
-          echo "requested_track=$REQUESTED_TRACK" >> "$GITHUB_OUTPUT"
-          echo "effective_track=$EFFECTIVE_TRACK" >> "$GITHUB_OUTPUT"
-          echo "fallback_used=$FALLBACK_USED" >> "$GITHUB_OUTPUT"
-          echo "precondition_blocked=$PRECONDITION_BLOCKED" >> "$GITHUB_OUTPUT"
-          echo "play_result requested=$REQUESTED_TRACK effective=$EFFECTIVE_TRACK fallback_used=$FALLBACK_USED precondition_blocked=$PRECONDITION_BLOCKED"
-
-      - name: Upload Play upload result (if any)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: play-upload-result
-          path: /tmp/play-upload-result.json
-          if-no-files-found: ignore
-
-      - name: Upload Play upload error (if any)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: play-upload-error
-          path: /tmp/play-upload-error.json
-          if-no-files-found: ignore
-
-      - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: android-aab
-          path: native-android/app/build/outputs/bundle/release/app-release.aab
+        run: ./gradlew publishReleaseBundle
+        working-directory: android
 
       - name: Cleanup secrets
         if: always()
-        run: |
-          rm -f /tmp/release.keystore /tmp/play-service-account.json
-
-  verify-releases:
-    needs: [ios-testflight, android-release]
-    if: always() && (needs.ios-testflight.result == 'success' || needs.android-release.result == 'success')
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install google-api-python-client==2.190.0 google-auth==2.48.0 pyjwt==2.11.0 cryptography==46.0.5 requests==2.32.5
-
-      - name: Extract version info
-        id: versions
-        run: |
-          # Android versionCode from build.gradle.kts
-          VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' native-android/app/build.gradle.kts || echo "")
-          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
-
-          # iOS version from project.pbxproj
-          IOS_VERSION=$(grep -m1 'MARKETING_VERSION' native-ios/RandomTimer.xcodeproj/project.pbxproj | grep -oP '[\d.]+' || echo "")
-          echo "ios_version=$IOS_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Debug workflow inputs (no secrets)
-        run: |
-          echo "event_name=${{ github.event_name }}"
-          echo "inputs.platform=${{ inputs.platform }}"
-          echo "inputs.android_track=${{ inputs.android_track }}"
-          echo "inputs.submit_review=${{ inputs.submit_review }}"
-          echo "github.event.inputs.platform=${{ github.event.inputs.platform }}"
-          echo "github.event.inputs.android_track=${{ github.event.inputs.android_track }}"
-          echo "github.event.inputs.submit_review=${{ github.event.inputs.submit_review }}"
-          echo "github.event.inputs(json)=${{ toJSON(github.event.inputs) }}"
-
-      - name: Determine platform flag
-        id: platform
-        run: |
-          if [[ "${{ needs.ios-testflight.result }}" == "success" && "${{ needs.android-release.result }}" == "success" ]]; then
-            echo "flag=both" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ needs.ios-testflight.result }}" == "success" ]]; then
-            echo "flag=ios" >> "$GITHUB_OUTPUT"
-          else
-            echo "flag=android" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Determine Android track (no secrets)
-        id: android_track
-        run: |
-          TRACK="${{ needs.android-release.outputs.effective_track }}"
-          if [ -n "$TRACK" ] && [ "$TRACK" != "null" ]; then
-            echo "Using effective track from android-release output: $TRACK"
-          else
-            TRACK=$(jq -r '.inputs.android_track // ""' "$GITHUB_EVENT_PATH")
-          fi
-          if [ -z "$TRACK" ] || [ "$TRACK" = "null" ]; then
-            TRACK="${{ inputs.android_track }}"
-          fi
-          if [ -z "$TRACK" ] || [ "$TRACK" = "null" ]; then
-            TRACK="production"
-          fi
-          echo "track=$TRACK" >> "$GITHUB_OUTPUT"
-          echo "android_track=$TRACK"
-
-      - name: Write App Store Connect key
-        if: needs.ios-testflight.result == 'success'
-        env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-        run: |
-          echo "$APPSTORE_PRIVATE_KEY" > /tmp/appstore_key.p8
-
-      - name: Write Google Play key
-        if: needs.android-release.result == 'success'
-        env:
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
-        run: |
-          echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
-
-      - name: Verify releases
-        env:
-          GOOGLE_PLAY_JSON_KEY: /tmp/play-service-account.json
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
-        run: |
-          ARGS="--platform ${{ steps.platform.outputs.flag }} --wait --timeout 600"
-          if [ "${{ needs.android-release.result }}" = "success" ]; then
-            ARGS="$ARGS --track ${{ steps.android_track.outputs.track }}"
-          fi
-          if [ -n "${{ steps.versions.outputs.version_code }}" ]; then
-            ARGS="$ARGS --version-code ${{ steps.versions.outputs.version_code }}"
-          fi
-          if [ -n "${{ steps.versions.outputs.ios_version }}" ]; then
-            ARGS="$ARGS --version ${{ steps.versions.outputs.ios_version }}"
-          fi
-          python scripts/verify_release.py $ARGS
-
-      - name: Cleanup secrets
-        if: always()
-        run: |
-          rm -f /tmp/play-service-account.json /tmp/appstore_key.p8
-
-  ios-submit-review:
-    needs: [verify-releases]
-    # Run after verification. Gate privileged steps at runtime by reading the dispatch payload,
-    # because job-level `if:` on workflow_dispatch inputs has been brittle in practice.
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Gate submit-for-review (no secrets)
-        id: gate
-        env:
-          VERIFY_RELEASES_RESULT: ${{ needs.verify-releases.result }}
-        run: |
-          set -euo pipefail
-          PLATFORM=$(jq -r '.inputs.platform // ""' "$GITHUB_EVENT_PATH")
-          SUBMIT_REVIEW=$(jq -r '.inputs.submit_review // ""' "$GITHUB_EVENT_PATH")
-
-          ENABLED="false"
-          if [[ "${VERIFY_RELEASES_RESULT}" == "success" && ( "$PLATFORM" == "ios" || "$PLATFORM" == "both" ) ]]; then
-            if [[ "$SUBMIT_REVIEW" == "true" || "$SUBMIT_REVIEW" == "1" ]]; then
-              ENABLED="true"
-            fi
-          fi
-
-          echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
-          echo "submit_review=$SUBMIT_REVIEW" >> "$GITHUB_OUTPUT"
-          echo "enabled=$ENABLED" >> "$GITHUB_OUTPUT"
-          echo "gate: verify_releases_result=${VERIFY_RELEASES_RESULT} platform=$PLATFORM submit_review=$SUBMIT_REVIEW enabled=$ENABLED"
-
-      - name: Setup Python
-        if: steps.gate.outputs.enabled == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies (ASC)
-        if: steps.gate.outputs.enabled == 'true'
-        run: pip install pyjwt==2.11.0 cryptography==46.0.5 requests==2.32.5
-
-      - name: Extract iOS version
-        if: steps.gate.outputs.enabled == 'true'
-        id: versions
-        run: |
-          IOS_VERSION=$(grep -m1 'MARKETING_VERSION' native-ios/RandomTimer.xcodeproj/project.pbxproj | grep -oP '[\\d.]+' || echo "")
-          if [ -z "$IOS_VERSION" ]; then
-            echo "❌ Could not read iOS version from native-ios/RandomTimer.xcodeproj/project.pbxproj"
-            exit 1
-          fi
-          echo "ios_version=$IOS_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Resolve editable App Store version
-        if: steps.gate.outputs.enabled == 'true'
-        id: asc_version
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-          PREFERRED_VERSION: ${{ steps.versions.outputs.ios_version }}
-        run: |
-          python scripts/asc_resolve_version.py \
-            --preferred-version "$PREFERRED_VERSION" \
-            --create-if-needed \
-            --json-out /tmp/asc_version.json
-          SELECTED_VERSION=$(python -c 'import json; print(json.load(open("/tmp/asc_version.json"))["selected_version"])')
-          echo "selected_version=$SELECTED_VERSION" >> "$GITHUB_OUTPUT"
-          echo "Using editable App Store version: $SELECTED_VERSION"
-
-      - name: Write App Store Connect key (for API)
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-        run: |
-          echo "$APPSTORE_PRIVATE_KEY" > /tmp/appstore_key.p8
-
-      - name: Setup Ruby
-        if: steps.gate.outputs.enabled == 'true'
-        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: native-ios
-
-      - name: Install Fastlane
-        if: steps.gate.outputs.enabled == 'true'
-        run: gem install fastlane
-        working-directory: native-ios
-
-      - name: Write App Store Connect key (Fastlane convention)
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
-
-      - name: Upload App Store metadata/screenshots + attach build
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          CI: "true"
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-        run: fastlane metadata version:${{ steps.asc_version.outputs.selected_version }}
-        working-directory: native-ios
-
-      - name: Verify App Store submission readiness (hard gate)
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
-        run: |
-          python scripts/asc_verify_ready.py \
-            --version "${{ steps.asc_version.outputs.selected_version }}" \
-            --json /tmp/asc_ready.json
-
-      - name: Enforce delegation contract (submit gate)
-        if: steps.gate.outputs.enabled == 'true'
-        run: |
-          python scripts/delegation_contract.py \
-            --operation ios_submit_for_review \
-            --asc-ready-json /tmp/asc_ready.json \
-            --intent "${{ steps.gate.outputs.submit_review }}" \
-            --json-out /tmp/delegation_contract.json \
-            --enforce
-
-      - name: Upload readiness report
-        uses: actions/upload-artifact@v4
-        if: ${{ steps.gate.outputs.enabled == 'true' && always() }}
-        with:
-          name: asc-ready-report
-          path: |
-            /tmp/asc_ready.json
-            /tmp/delegation_contract.json
-          if-no-files-found: ignore
-
-      - name: Submit for App Review (App Store)
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          CI: "true"
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-        run: fastlane submit_review version:${{ steps.asc_version.outputs.selected_version }}
-        working-directory: native-ios
-
-      - name: Verify App Store submission state
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY: /tmp/appstore_key.p8
-        run: |
-          python scripts/verify_release.py \
-            --platform ios \
-            --version "${{ steps.asc_version.outputs.selected_version }}" \
-            --wait \
-            --timeout 600 \
-            --require-appstore-submission
-
-      - name: Upload version resolution report
-        uses: actions/upload-artifact@v4
-        if: ${{ steps.gate.outputs.enabled == 'true' && always() }}
-        with:
-          name: asc-version-resolution
-          path: /tmp/asc_version.json
-
-      - name: Cleanup secrets
-        if: always()
-        run: |
-          rm -f /tmp/appstore_key.p8 /tmp/asc_ready.json /tmp/delegation_contract.json /tmp/asc_version.json
-
-  tag-release:
-    needs: [verify-releases]
-    if: always() && needs.verify-releases.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Extract version from source
-        id: version
-        run: |
-          VERSION_NAME=$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' native-android/app/build.gradle.kts | head -1)
-          VERSION_CODE=$(sed -n 's/.*versionCode *= *\([0-9]*\).*/\1/p' native-android/app/build.gradle.kts | head -1)
-          TAG="v${VERSION_NAME}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
-          echo "Resolved: $TAG (Android code=$VERSION_CODE)"
-
-      - name: Check if tag already exists
-        id: check_tag
-        run: |
-          if git rev-parse "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag ${{ steps.version.outputs.tag }} already exists, skipping"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create git tag
-        if: steps.check_tag.outputs.exists == 'false'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.version.outputs.tag }}" \
-            -m "Release ${{ steps.version.outputs.tag }} (Android code=${{ steps.version.outputs.version_code }})"
-          git push origin "${{ steps.version.outputs.tag }}"
-          echo "✅ Created and pushed tag ${{ steps.version.outputs.tag }}"
-
-      - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Read Android changelog if it exists
-          CHANGELOG_FILE="native-android/fastlane/metadata/android/en-US/changelogs/${{ steps.version.outputs.version_code }}.txt"
-          NOTES=""
-          if [ -f "$CHANGELOG_FILE" ]; then
-            NOTES=$(cat "$CHANGELOG_FILE")
-          fi
-
-          # Read iOS release notes if available
-          IOS_NOTES_FILE="native-ios/fastlane/metadata/en-US/release_notes.txt"
-          if [ -f "$IOS_NOTES_FILE" ]; then
-            IOS_NOTES=$(cat "$IOS_NOTES_FILE")
-            if [ -n "$IOS_NOTES" ]; then
-              NOTES="${NOTES}
-
-          ### iOS
-          ${IOS_NOTES}"
-            fi
-          fi
-
-          if [ -z "$NOTES" ]; then
-            NOTES="Release ${{ steps.version.outputs.tag }}"
-          fi
-
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --notes "$NOTES"
-          echo "✅ Created GitHub Release ${{ steps.version.outputs.tag }}"
-
-  sync-main:
-    needs: [tag-release]
-    if: always() && needs.tag-release.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create PR to merge release into main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ needs.tag-release.outputs.tag || '' }}"
-          BRANCH="${GITHUB_REF_NAME}"
-          gh pr create \
-            --base main \
-            --head "$BRANCH" \
-            --title "release: merge $BRANCH into main" \
-            --body "Auto-generated PR to sync main with release $TAG" \
-            || echo "PR already exists or branch is up to date"
-        continue-on-error: true
-
-      - name: Create PR to merge release back into develop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          BRANCH="${GITHUB_REF_NAME}"
-          gh pr create \
-            --base develop \
-            --head "$BRANCH" \
-            --title "chore: merge $BRANCH back into develop" \
-            --body "Auto-generated PR to sync develop after release" \
-            || echo "PR already exists or branch is up to date"
-        continue-on-error: true
+        run: rm -f /tmp/release.keystore

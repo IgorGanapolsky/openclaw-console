@@ -1,17 +1,7 @@
-name: 'CodeQL Config for React Native'
-
-# Exclude paths not relevant to security analysis
+name: "OpenClaw Console CodeQL Config"
+queries:
+  - uses: security-and-quality
 paths-ignore:
   - node_modules
-  - '**/*.test.ts'
-  - '**/*.test.tsx'
-  - '**/__tests__/**'
-  - '**/__mocks__/**'
-  - '.maestro/**'
-  - 'coverage/**'
-
-# Filter out false positives
-query-filters:
-  # Suppress "unknown directive" warning for React Native Reanimated worklets
-  - exclude:
-      id: js/unknown-directive
+  - "**/*.test.ts"
+  - "**/*.spec.ts"

@@ -1,0 +1,13 @@
+{
+  "domains": {
+    "testing": {
+      "count": 1,
+      "positive": 0,
+      "negative": 1,
+      "lastSeen": "2026-03-11T18:38:22.513Z"
+    }
+  },
+  "lastUpdated": "2026-03-11T18:38:22.517Z",
+  "diversityScore": "91.0",
+  "recommendation": "Good diversity (91.0%)"
+}

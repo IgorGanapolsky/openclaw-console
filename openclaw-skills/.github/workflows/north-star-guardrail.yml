@@ -1,0 +1,50 @@
+name: North Star Guardrail
+
+on:
+  schedule:
+    - cron: '10 14 * * *' # Daily at 14:10 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: north-star-guardrail
+  cancel-in-progress: true
+
+jobs:
+  north-star:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests==2.32.5
+
+      - name: Compute and enforce north star guardrail
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
+        run: |
+          python scripts/north_star_guardrail.py \
+            --repo-root . \
+            --lookback-days 30 \
+            --wqtu-window-days 7 \
+            --enforce-guardrail \
+            --require-posthog-when-active
+
+      - name: Upload north star snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: north-star-snapshot
+          path: marketing/data/north_star.json
+          retention-days: 14

@@ -1,0 +1,16 @@
+{
+  "total": 2,
+  "positive": 0,
+  "negative": 2,
+  "accepted": 2,
+  "rejected": 0,
+  "lastUpdated": "2026-03-11T18:39:58.000Z",
+  "patterns": {
+    "ci-verification-failures": 1,
+    "rlhf-integration-failures": 1
+  },
+  "learnings": [
+    "Never claim CI passes without verification",
+    "Must properly wire RLHF MCP for continuous learning"
+  ]
+}

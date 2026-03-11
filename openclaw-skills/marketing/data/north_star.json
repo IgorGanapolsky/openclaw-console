@@ -1,0 +1,7 @@
+{
+  "metric": "Weekly Qualified Task Units (WQTU)",
+  "description": "Number of meaningful agent tasks supervised via mobile per week",
+  "target": "100 WQTU within 90 days of launch",
+  "current": 0,
+  "last_updated": "2026-03-02T00:00:00Z"
+}

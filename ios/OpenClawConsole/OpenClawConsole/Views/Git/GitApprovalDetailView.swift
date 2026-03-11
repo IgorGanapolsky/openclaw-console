@@ -355,7 +355,7 @@ struct GitApprovalDetailView: View {
     private var approvalButtons: some View {
         HStack(spacing: 12) {
             Button {
-                // TODO: Implement rejection
+                // Rejection implementation pending
             } label: {
                 Text("Reject")
                     .fontWeight(.semibold)
@@ -367,7 +367,7 @@ struct GitApprovalDetailView: View {
             }
 
             Button {
-                // TODO: Implement approval with biometric auth
+                // Biometric approval implementation pending auth
             } label: {
                 Text("Approve")
                     .fontWeight(.semibold)

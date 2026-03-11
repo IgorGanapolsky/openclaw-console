@@ -1,0 +1,32 @@
+name: Wiki Sync
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'wiki/**'
+      - 'marketing/data/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: true
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Publish wiki pages
+        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        with:
+          strategy: init
+          path: wiki/
+          token: ${{ secrets.GITHUB_TOKEN }}

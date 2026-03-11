@@ -1,0 +1,252 @@
+name: Project Automation
+
+on:
+  schedule:
+    - cron: '0 */8 * * *' # Run metrics every 8 hours
+  issues:
+    types: [opened, labeled, unlabeled, assigned, unassigned]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  project-status:
+    name: OpenClaw Console Status Update
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      PROJECTS_V2_OWNER: IgorGanapolsky
+      PROJECTS_V2_NUMBER: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Helper functions
+            function median(nums) {
+              if (!nums.length) return 0;
+              const s = [...nums].sort((a,b)=>a-b);
+              const mid = Math.floor(s.length/2);
+              return s.length % 2 ? s[mid] : (s[mid-1]+s[mid])/2;
+            }
+
+            function fmtDuration(ms) {
+              const sec = Math.floor(ms/1000);
+              if (sec < 60) return `${sec}s`;
+              const min = Math.floor(sec/60);
+              if (min < 60) return `${min}m`;
+              const hr = Math.floor(min/60);
+              if (hr < 24) return `${hr}h`;
+              const day = Math.floor(hr/24);
+              if (day < 30) return `${day}d`;
+              const mo = Math.floor(day/30);
+              if (mo < 12) return `${mo}mo`;
+              const yr = Math.floor(mo/12);
+              return `${yr}y`;
+            }
+
+            // Issue for status updates (create if doesn't exist)
+            const STATUS_ISSUE_TITLE = '📊 OpenClaw Console Project Status';
+            let statusIssueNumber = null;
+
+            try {
+              const existingIssues = await github.paginate(github.rest.issues.listForRepo, {
+                owner, repo, state: 'open', per_page: 100
+              });
+
+              const statusIssue = existingIssues.find(i => i.title === STATUS_ISSUE_TITLE);
+              if (statusIssue) {
+                statusIssueNumber = statusIssue.number;
+              } else {
+                const newIssue = await github.rest.issues.create({
+                  owner, repo,
+                  title: STATUS_ISSUE_TITLE,
+                  body: 'Initializing OpenClaw Console project status...',
+                  labels: ['automation', 'metrics', 'status-board', 'pinned']
+                });
+                statusIssueNumber = newIssue.data.number;
+              }
+            } catch (e) {
+              console.error('Failed to manage status issue:', e);
+              return;
+            }
+
+            // Fetch all issues and PRs
+            const allOpenIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const issues = allOpenIssues.filter(i => !i.pull_request && i.number !== statusIssueNumber);
+
+            const openPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+
+            const closedPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'closed', per_page: 100
+            });
+
+            // Time periods
+            const now = new Date();
+            const last7 = new Date(now.getTime() - 7*24*60*60*1000);
+            const last30 = new Date(now.getTime() - 30*24*60*60*1000);
+
+            // Basic metrics
+            const issueCount = issues.length;
+            const prCount = openPRs.length;
+            const inProgress = issues.filter(i => (i.assignees?.length || 0) > 0).length;
+
+            // Categorize issues by type
+            const bugCount = issues.filter(i => i.labels?.some(l => /\bbug\b/i.test(l.name))).length;
+            const featureCount = issues.filter(i => i.labels?.some(l => /(enhancement|feature)/i.test(l.name))).length;
+            const securityCount = issues.filter(i => i.labels?.some(l => /\bsecurity\b/i.test(l.name))).length;
+
+            // OpenClaw Console specific labels
+            const mobileCount = issues.filter(i => i.labels?.some(l => /(android|ios|mobile)/i.test(l.name))).length;
+            const skillsCount = issues.filter(i => i.labels?.some(l => /skills/i.test(l.name))).length;
+            const biometricCount = issues.filter(i => i.labels?.some(l => /biometric/i.test(l.name))).length;
+
+            // Activity metrics
+            const activeIssues7 = issues.filter(i => new Date(i.updated_at) >= last7).length;
+            const activePRs7 = openPRs.filter(pr => new Date(pr.updated_at) >= last7).length;
+            const activityCount = activeIssues7 + activePRs7;
+            const totalWork = issueCount + prCount;
+            const activityRate = totalWork ? Math.round((activityCount / totalWork) * 100) : 0;
+
+            // Delivery metrics
+            const mergedLast30 = closedPRs.filter(pr => pr.merged_at && new Date(pr.merged_at) >= last30);
+            const throughput = mergedLast30.length;
+            const leadTimes = mergedLast30.map(pr => new Date(pr.merged_at) - new Date(pr.created_at));
+            const medianLead = median(leadTimes);
+
+            // Health indicators
+            const issueHealth = issueCount > 20 ? '🔴 High' : issueCount > 10 ? '🟡 Medium' : '🟢 Good';
+            const prHealth = prCount > 8 ? '🔴 High' : prCount > 4 ? '🟡 Medium' : '🟢 Good';
+            const bugHealth = bugCount > 3 ? '🔴 Critical' : bugCount > 1 ? '🟡 Moderate' : '🟢 Low';
+            const securityHealth = securityCount > 0 ? '🔴 Attention Needed' : '🟢 Secure';
+
+            const progressRate = issueCount ? Math.round((inProgress / issueCount) * 100) : 0;
+            const progressHealth = progressRate >= 40 ? '🟢 Good' : progressRate >= 20 ? '🟡 Fair' : '🔴 Needs Attention';
+            const activityHealth = activityRate >= 50 ? '🟢 High' : activityRate >= 25 ? '🟡 Moderate' : '🔴 Low';
+
+            // Business goal tracking (Daily Active Approvers focus)
+            const approvalFeatures = issues.filter(i =>
+              i.title.toLowerCase().includes('approval') ||
+              i.title.toLowerCase().includes('biometric') ||
+              i.labels?.some(l => /(approval|biometric|auth)/i.test(l.name))
+            ).length;
+
+            const releaseBlockers = issues.filter(i =>
+              i.labels?.some(l => /(blocker|critical)/i.test(l.name))
+            ).length;
+
+            // Recommendations
+            const recs = [];
+            if (securityCount > 0) recs.push('🔒 Security issues detected. Priority: immediate attention.');
+            if (releaseBlockers > 0) recs.push('🚫 Release blockers present. Focus on unblocking.');
+            if (bugCount > 3) recs.push('🐛 High bug count. Prioritize stabilization over new features.');
+            if (progressRate < 30 && issueCount > 0) recs.push('📈 Low active work rate. Assign/advance more issues.');
+            if (approvalFeatures === 0 && featureCount > 0) recs.push('🎯 No approval-flow work. Critical for DAA (Daily Active Approvers) goal.');
+            if (mobileCount < issueCount * 0.6 && issueCount > 5) recs.push('📱 Focus more on mobile (Android/iOS) issues - core product.');
+            if (activityRate < 25 && totalWork > 0) recs.push('💡 Low activity. Encourage smaller, frequent PRs.');
+            if (!recs.length) recs.push('✅ Strong project health. Maintain velocity toward $100/day goal.');
+
+            // Priority items
+            const priorities = issues
+              .filter(i => i.labels?.some(l => /^priority:/i.test(l.name)) || i.labels?.some(l => /(blocker|critical)/i.test(l.name)))
+              .slice(0, 7)
+              .map(i => `- [${i.title}](${i.html_url}) (#${i.number})`);
+
+            const fmtDate = new Date().toLocaleString('en-US', {
+              timeZone: 'America/New_York',
+              dateStyle: 'full',
+              timeStyle: 'medium'
+            });
+
+            // Revenue goal progress estimate (rough)
+            const businessHealth = (approvalFeatures > 0 && bugCount < 3 && securityCount === 0) ? '🟢 On Track' :
+              (approvalFeatures > 0 || bugCount < 5) ? '🟡 Needs Focus' : '🔴 At Risk';
+
+            const body = '# 📊 OpenClaw Console Project Status\n\n' +
+              '*Last updated: ' + fmtDate + '*\n\n' +
+              '## 🎯 Business Goal: $100/day via Pro subscriptions\n' +
+              '**Status: ' + businessHealth + '** | **North Star: Daily Active Approvers (DAA)**\n\n' +
+              '## 📈 Current Metrics\n\n' +
+              '| Metric | Count | Status |\n' +
+              '| --- | ---: | --- |\n' +
+              '| 📋 Open Issues | ' + issueCount + ' | ' + issueHealth + ' |\n' +
+              '| 🔧 Open PRs | ' + prCount + ' | ' + prHealth + ' |\n' +
+              '| 🏃 In Progress | ' + inProgress + ' | ' + progressRate + '% (' + progressHealth + ') |\n' +
+              '| 🐛 Bugs | ' + bugCount + ' | ' + bugHealth + ' |\n' +
+              '| 🔒 Security | ' + securityCount + ' | ' + securityHealth + ' |\n' +
+              '| 🚫 Release Blockers | ' + releaseBlockers + ' | ' + (releaseBlockers > 0 ? '🔴 Blocked' : '🟢 Clear') + ' |\n\n' +
+              '## 🏗️ Development Focus\n\n' +
+              '| Category | Count | Notes |\n' +
+              '| --- | ---: | --- |\n' +
+              '| ✨ Features | ' + featureCount + ' | New capabilities |\n' +
+              '| 📱 Mobile (Android/iOS) | ' + mobileCount + ' | Core platform work |\n' +
+              '| 🛠️ Skills Gateway | ' + skillsCount + ' | TypeScript backend |\n' +
+              '| 🔐 Biometric/Auth | ' + biometricCount + ' | Critical for approvals |\n' +
+              '| 🎯 Approval Features | ' + approvalFeatures + ' | **DAA focus area** |\n\n' +
+              '## 🚀 Delivery (last 30 days)\n' +
+              '- **Merged PRs:** ' + throughput + '\n' +
+              '- **Median PR lead time:** ' + fmtDuration(medianLead) + '\n\n' +
+              '## 📊 Activity (last 7 days)\n' +
+              '- **Active items updated:** ' + activityCount + '\n' +
+              '- **Activity rate:** ' + activityRate + '% (' + activityHealth + ')\n' +
+              (priorities.length ? '\n## 🔝 Priority Items\n' + priorities.join('\n') + '\n' : '') +
+              '\n## 🎯 Recommendations\n' +
+              recs.map(r => '- ' + r).join('\n') + '\n\n' +
+              '---\n\n' +
+              '**Vision:** Native mobile console for OpenClaw agents with biometric approvals\n' +
+              '**Mission:** Zero dependency on Telegram/Slack/Discord for professional operators\n' +
+              '**Revenue Target:** $10-20/month Pro subscriptions for self-hosting developers\n\n' +
+              '*Automation: every 8 hours + on repo events. Manual refresh via workflow dispatch.*';
+
+            await github.rest.issues.update({
+              owner,
+              repo,
+              issue_number: statusIssueNumber,
+              body
+            });
+
+            console.log(`✅ Updated status issue #${statusIssueNumber}`);
+
+            // Auto-label new issues
+            if (context.eventName === 'issues' && context.payload.action === 'opened') {
+              const title = context.payload.issue.title.toLowerCase();
+              const issueBody = (context.payload.issue.body || '').toLowerCase();
+              const labels = [];
+
+              // Auto-label by keywords
+              if (title.includes('bug') || title.includes('error') || title.includes('crash')) {
+                labels.push('bug', 'triage');
+              } else if (title.includes('feature') || title.includes('enhancement')) {
+                labels.push('enhancement');
+              }
+
+              if (title.includes('android') || issueBody.includes('android')) labels.push('android');
+              if (title.includes('ios') || issueBody.includes('ios')) labels.push('ios');
+              if (title.includes('skills') || issueBody.includes('gateway')) labels.push('skills');
+              if (title.includes('security') || title.includes('auth') || title.includes('biometric')) {
+                labels.push('security');
+              }
+              if (title.includes('approval') || issueBody.includes('approval')) {
+                labels.push('approval-flow');
+              }
+
+              if (labels.length) {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: context.payload.issue.number,
+                  labels
+                });
+                console.log(`Auto-labeled issue #${context.payload.issue.number} with: ${labels.join(', ')}`);
+              }
+            }

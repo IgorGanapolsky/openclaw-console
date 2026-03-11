@@ -1,0 +1,8 @@
+{
+  "version": "0.6.13",
+  "apiUrl": "http://localhost:3000",
+  "logPath": ".rlhf/feedback-log.jsonl",
+  "memoryPath": ".rlhf/memory-log.jsonl",
+  "installId": "61668143-abd5-4946-83bd-11784d48d280",
+  "createdAt": "2026-03-11T18:37:10.988Z"
+}

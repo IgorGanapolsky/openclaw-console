@@ -1,0 +1,497 @@
+name: PR State Machine
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  check_suite:
+    types: [requested, rerequested, completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Optional PR number to reconcile"
+        required: false
+
+jobs:
+  reconcile:
+    name: reconcile-pr-state
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: read
+      statuses: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Reconcile labels, commit status, and incidents
+        uses: actions/github-script@v7
+        env:
+          REQUIRED_CHECKS_FROM_VAR: ${{ vars.PR_REQUIRED_CHECKS || '' }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            const STATE_LABELS = ["pr-state:draft", "pr-state:ci_running", "pr-state:ci_green", "pr-state:blocked"];
+            const LABELS = {
+              "pr-state:draft": { color: "f2e4a1", description: "PR is currently in draft state" },
+              "pr-state:ci_running": { color: "fbca04", description: "Required CI checks are still running" },
+              "pr-state:ci_green": { color: "0e8a16", description: "All required CI checks are green" },
+              "pr-state:blocked": { color: "b60205", description: "One or more required CI checks are failing" },
+              "incident": { color: "d73a4a", description: "Operational incident requiring intervention" },
+              "pr-state-machine": { color: "0052cc", description: "Managed by PR state machine automation" }
+            };
+
+            const PASSING_CONCLUSIONS = new Set(["success", "neutral", "skipped"]);
+            const FAILING_CONCLUSIONS = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure", "stale"]);
+            const FAILING_STATES = new Set(["error", "failure"]);
+            const PENDING_STATES = new Set(["pending"]);
+
+            function uniqueNumbers(values) {
+              return [...new Set(values.filter((v) => Number.isInteger(v) && v > 0))];
+            }
+
+            function parseRequiredChecks(raw) {
+              return raw
+                .split(",")
+                .map((v) => v.trim())
+                .filter((v) => v.length > 0);
+            }
+
+            async function ensureLabel(name) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+                const meta = LABELS[name];
+                try {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color: meta.color,
+                    description: meta.description
+                  });
+                } catch (createError) {
+                  if (createError.status !== 422) {
+                    throw createError;
+                  }
+                }
+              }
+            }
+
+            async function ensureLabels() {
+              for (const name of Object.keys(LABELS)) {
+                await ensureLabel(name);
+              }
+            }
+
+            async function getRequiredContexts(baseBranch) {
+              try {
+                const protection = await github.rest.repos.getBranchProtection({
+                  owner,
+                  repo,
+                  branch: baseBranch
+                });
+
+                const contexts = new Set(protection.data.required_status_checks?.contexts || []);
+                for (const check of protection.data.required_status_checks?.checks || []) {
+                  if (check?.context) {
+                    contexts.add(check.context);
+                  }
+                }
+
+                return {
+                  contexts: [...contexts],
+                  source: "branch_protection"
+                };
+              } catch (error) {
+                core.warning(`Branch protection lookup failed for ${baseBranch}: ${error.message}`);
+              }
+
+              const fallbackFromVar = parseRequiredChecks(process.env.REQUIRED_CHECKS_FROM_VAR || "");
+              if (fallbackFromVar.length > 0) {
+                return {
+                  contexts: fallbackFromVar,
+                  source: "vars.PR_REQUIRED_CHECKS"
+                };
+              }
+
+              return { contexts: [], source: "none" };
+            }
+
+            async function getCheckRunMap(headSha) {
+              const runs = await github.paginate(github.rest.checks.listForRef, {
+                owner,
+                repo,
+                ref: headSha,
+                per_page: 100
+              });
+
+              const map = new Map();
+              for (const run of runs) {
+                const current = map.get(run.name);
+                const currentUpdated = current ? Date.parse(current.updated_at || current.started_at || "") : 0;
+                const nextUpdated = Date.parse(run.updated_at || run.started_at || "") || 0;
+                if (!current || nextUpdated >= currentUpdated) {
+                  map.set(run.name, run);
+                }
+              }
+              return map;
+            }
+
+            async function getStatusContextMap(headSha) {
+              const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
+                owner,
+                repo,
+                ref: headSha,
+                per_page: 100
+              });
+
+              const map = new Map();
+              for (const status of statuses) {
+                if (!map.has(status.context)) {
+                  map.set(status.context, status);
+                }
+              }
+              return map;
+            }
+
+            function evaluateContext(contextName, checkRunMap, statusContextMap) {
+              const checkRun = checkRunMap.get(contextName);
+              if (checkRun) {
+                if (checkRun.status !== "completed") {
+                  return { outcome: "pending", source: "check_run", detailsUrl: checkRun.details_url || checkRun.html_url || "" };
+                }
+                if (FAILING_CONCLUSIONS.has(checkRun.conclusion)) {
+                  return {
+                    outcome: "failed",
+                    source: "check_run",
+                    detailsUrl: checkRun.details_url || checkRun.html_url || "",
+                    detail: checkRun.conclusion || "failure"
+                  };
+                }
+                if (PASSING_CONCLUSIONS.has(checkRun.conclusion)) {
+                  return { outcome: "passed", source: "check_run", detailsUrl: checkRun.details_url || checkRun.html_url || "" };
+                }
+                return { outcome: "pending", source: "check_run", detailsUrl: checkRun.details_url || checkRun.html_url || "" };
+              }
+
+              const statusContext = statusContextMap.get(contextName);
+              if (statusContext) {
+                if (FAILING_STATES.has(statusContext.state)) {
+                  return {
+                    outcome: "failed",
+                    source: "status_context",
+                    detailsUrl: statusContext.target_url || "",
+                    detail: statusContext.state
+                  };
+                }
+                if (PENDING_STATES.has(statusContext.state)) {
+                  return {
+                    outcome: "pending",
+                    source: "status_context",
+                    detailsUrl: statusContext.target_url || ""
+                  };
+                }
+                return {
+                  outcome: "passed",
+                  source: "status_context",
+                  detailsUrl: statusContext.target_url || ""
+                };
+              }
+
+              return { outcome: "pending", source: "missing", detailsUrl: "" };
+            }
+
+            async function setStateLabel(prNumber, targetLabel) {
+              const currentLabels = await github.rest.issues.listLabelsOnIssue({
+                owner,
+                repo,
+                issue_number: prNumber,
+                per_page: 100
+              });
+              const current = new Set(currentLabels.data.map((label) => label.name));
+
+              for (const stateLabel of STATE_LABELS) {
+                if (stateLabel !== targetLabel && current.has(stateLabel)) {
+                  try {
+                    await github.rest.issues.removeLabel({
+                      owner,
+                      repo,
+                      issue_number: prNumber,
+                      name: stateLabel
+                    });
+                  } catch (error) {
+                    if (error.status !== 404) {
+                      throw error;
+                    }
+                  }
+                }
+              }
+
+              if (!current.has(targetLabel)) {
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: prNumber,
+                  labels: [targetLabel]
+                });
+              }
+            }
+
+            async function findOpenIncidentIssue(marker) {
+              const issues = await github.paginate(github.rest.issues.listForRepo, {
+                owner,
+                repo,
+                state: "open",
+                labels: "incident,pr-state-machine",
+                per_page: 100
+              });
+              return issues.find((issue) => !issue.pull_request && typeof issue.body === "string" && issue.body.includes(marker));
+            }
+
+            function formatIssueBody({ marker, prNumber, prUrl, headSha, baseRef, requiredSource, failedChecks }) {
+              const failedChecksText = failedChecks.length > 0
+                ? failedChecks
+                    .map((entry) => {
+                      const evidence = entry.detailsUrl ? `[details](${entry.detailsUrl})` : "details unavailable";
+                      return `- \`${entry.name}\` (${entry.source}, ${entry.detail}) - ${evidence}`;
+                    })
+                    .join("\n")
+                : "- none";
+
+              return [
+                marker,
+                `## Required checks are failing for PR #${prNumber}`,
+                "",
+                `- PR URL: ${prUrl}`,
+                `- Workflow run: ${runUrl}`,
+                `- Base branch: \`${baseRef}\``,
+                `- Head SHA: \`${headSha}\``,
+                `- Required checks source: \`${requiredSource}\``,
+                `- Updated at (UTC): ${new Date().toISOString()}`,
+                "",
+                "### Failed required checks",
+                failedChecksText
+              ].join("\n");
+            }
+
+            async function reconcileIncident({ prNumber, prUrl, headSha, baseRef, requiredSource, stateLabel, failedChecks }) {
+              const marker = `<!-- pr-state-machine:pr=${prNumber} -->`;
+              const incidentTitle = `PR Incident: #${prNumber} required checks failing`;
+              const existing = await findOpenIncidentIssue(marker);
+
+              if (stateLabel === "pr-state:blocked") {
+                const body = formatIssueBody({
+                  marker,
+                  prNumber,
+                  prUrl,
+                  headSha,
+                  baseRef,
+                  requiredSource,
+                  failedChecks
+                });
+
+                if (existing) {
+                  await github.rest.issues.update({
+                    owner,
+                    repo,
+                    issue_number: existing.number,
+                    title: incidentTitle,
+                    body
+                  });
+                  return { action: "updated", issueNumber: existing.number };
+                }
+
+                const created = await github.rest.issues.create({
+                  owner,
+                  repo,
+                  title: incidentTitle,
+                  body,
+                  labels: ["incident", "pr-state-machine"]
+                });
+                return { action: "created", issueNumber: created.data.number };
+              }
+
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  body: `Recovery detected for PR #${prNumber}.\n\n- PR URL: ${prUrl}\n- Workflow run: ${runUrl}\n- Updated at (UTC): ${new Date().toISOString()}`
+                });
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  state: "closed",
+                  state_reason: "completed"
+                });
+                return { action: "closed", issueNumber: existing.number };
+              }
+
+              return { action: "none", issueNumber: null };
+            }
+
+            function statusDescriptionForState(stateLabel, requiredCount, failedCount, pendingCount) {
+              if (stateLabel === "pr-state:draft") {
+                return "Draft PR; required checks are not yet enforced.";
+              }
+              if (stateLabel === "pr-state:ci_green" && requiredCount === 0) {
+                return "No required checks configured; PR state machine is green.";
+              }
+              if (stateLabel === "pr-state:ci_green") {
+                return `${requiredCount}/${requiredCount} required checks are passing.`;
+              }
+              if (stateLabel === "pr-state:blocked") {
+                return `${failedCount}/${requiredCount} required checks are failing.`;
+              }
+              if (requiredCount === 0) {
+                return "No required checks resolved; waiting for CI signal.";
+              }
+              return `${pendingCount}/${requiredCount} required checks pending.`;
+            }
+
+            function commitStatusState(stateLabel) {
+              if (stateLabel === "pr-state:ci_green") {
+                return "success";
+              }
+              if (stateLabel === "pr-state:blocked") {
+                return "failure";
+              }
+              return "pending";
+            }
+
+            async function reconcilePr(prNumber) {
+              const pr = (await github.rest.pulls.get({
+                owner,
+                repo,
+                pull_number: prNumber
+              })).data;
+
+              if (pr.state !== "open") {
+                core.info(`Skipping PR #${prNumber}: state is ${pr.state}`);
+                return {
+                  prNumber,
+                  skipped: true
+                };
+              }
+
+              const baseRef = pr.base.ref;
+              const headSha = pr.head.sha;
+              const prUrl = pr.html_url;
+
+              const required = await getRequiredContexts(baseRef);
+              const requiredContexts = required.contexts;
+
+              const checkRunMap = await getCheckRunMap(headSha);
+              const statusContextMap = await getStatusContextMap(headSha);
+
+              const failedChecks = [];
+              let pendingCount = 0;
+              let passedCount = 0;
+
+              for (const contextName of requiredContexts) {
+                const result = evaluateContext(contextName, checkRunMap, statusContextMap);
+                if (result.outcome === "failed") {
+                  failedChecks.push({
+                    name: contextName,
+                    source: result.source,
+                    detailsUrl: result.detailsUrl,
+                    detail: result.detail || "failure"
+                  });
+                } else if (result.outcome === "passed") {
+                  passedCount += 1;
+                } else {
+                  pendingCount += 1;
+                }
+              }
+
+              let stateLabel = "pr-state:ci_running";
+              if (pr.draft) {
+                stateLabel = "pr-state:draft";
+              } else if (failedChecks.length > 0) {
+                stateLabel = "pr-state:blocked";
+              } else if (requiredContexts.length === 0) {
+                stateLabel = "pr-state:ci_green";
+              } else if (requiredContexts.length > 0 && pendingCount === 0) {
+                stateLabel = "pr-state:ci_green";
+              }
+
+              const description = statusDescriptionForState(
+                stateLabel,
+                requiredContexts.length,
+                failedChecks.length,
+                pendingCount
+              );
+
+              await github.rest.repos.createCommitStatus({
+                owner,
+                repo,
+                sha: headSha,
+                state: commitStatusState(stateLabel),
+                context: "pr/state-machine",
+                description,
+                target_url: runUrl
+              });
+
+              await setStateLabel(prNumber, stateLabel);
+
+              const incident = await reconcileIncident({
+                prNumber,
+                prUrl,
+                headSha,
+                baseRef,
+                requiredSource: required.source,
+                stateLabel,
+                failedChecks
+              });
+
+              return {
+                prNumber,
+                stateLabel,
+                requiredChecks: requiredContexts.length,
+                passedChecks: passedCount,
+                pendingChecks: pendingCount,
+                failedChecks: failedChecks.length,
+                requiredSource: required.source,
+                incident
+              };
+            }
+
+            const prCandidates = [];
+            if (context.eventName === "pull_request_target") {
+              prCandidates.push(context.payload.pull_request?.number);
+            } else if (context.eventName === "check_suite") {
+              for (const pr of context.payload.check_suite?.pull_requests || []) {
+                prCandidates.push(pr.number);
+              }
+            } else if (context.eventName === "workflow_dispatch") {
+              const raw = core.getInput("pr_number");
+              if (raw && raw.trim()) {
+                const parsed = Number.parseInt(raw, 10);
+                if (Number.isInteger(parsed) && parsed > 0) {
+                  prCandidates.push(parsed);
+                } else {
+                  throw new Error(`Invalid workflow_dispatch input pr_number="${raw}"`);
+                }
+              }
+            }
+
+            const prNumbers = uniqueNumbers(prCandidates);
+            if (prNumbers.length === 0) {
+              core.info("No pull request associated with this event; nothing to reconcile.");
+              return;
+            }
+
+            await ensureLabels();
+
+            const results = [];
+            for (const prNumber of prNumbers) {
+              results.push(await reconcilePr(prNumber));
+            }
+
+            core.info(`Reconciled PR state(s): ${JSON.stringify(results, null, 2)}`);

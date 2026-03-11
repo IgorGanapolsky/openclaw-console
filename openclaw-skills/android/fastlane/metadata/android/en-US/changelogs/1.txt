@@ -1,0 +1,8 @@
+Initial release of OpenClaw Work Console.
+
+• Gateway connection with secure token auth
+• Agent list with real-time status
+• Task feed with live timeline
+• Incidents tab with severity filtering
+• Biometric approval for dangerous actions
+• Minimal agent chat

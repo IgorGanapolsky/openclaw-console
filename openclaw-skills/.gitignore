@@ -1,0 +1,74 @@
+# Node
+node_modules/
+dist/
+*.tgz
+.env
+tokens.json
+
+# iOS
+ios/OpenClawConsole/build/
+ios/OpenClawConsole/DerivedData/
+ios/OpenClawConsole/*.xcuserdata
+ios/OpenClawConsole/*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+android/.externalNativeBuild/
+*.apk
+*.aab
+*.jks
+*.keystore
+android/app/google-services.json
+
+# Fastlane
+ios/OpenClawConsole/fastlane/report.xml
+ios/OpenClawConsole/fastlane/Preview.html
+ios/OpenClawConsole/fastlane/screenshots/**/*.png
+ios/OpenClawConsole/fastlane/test_output
+android/fastlane/report.xml
+android/fastlane/Preview.html
+
+# Ruby
+vendor/bundle/
+*.gem
+Gemfile.lock
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+.build/
+.kotlin/
+dist-tests/
+# Temp files and secrets
+firebase-debug.log
+.env.*
+*.png
+
+# ralphex progress logs
+.ralphex/progress/

@@ -1,10 +1,10 @@
 {
   "domains": {
     "general": {
-      "count": 1,
+      "count": 2,
       "positive": 0,
-      "negative": 1,
-      "lastSeen": "2026-03-04T14:57:42.709Z"
+      "negative": 2,
+      "lastSeen": "2026-03-11T18:43:17.342Z"
     },
     "security": {
       "count": 1,
@@ -25,7 +25,7 @@
       "lastSeen": "2026-03-10T16:15:08.065Z"
     }
   },
-  "lastUpdated": "2026-03-10T16:15:08.085Z",
-  "diversityScore": "94.0",
-  "recommendation": "Good diversity (94.0%)"
+  "lastUpdated": "2026-03-11T18:43:17.348Z",
+  "diversityScore": "91.3",
+  "recommendation": "Good diversity (91.3%)"
 }

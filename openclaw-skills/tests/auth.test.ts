@@ -214,7 +214,7 @@ describe('validateWsToken', () => {
 
   test('Returns null for invalid token', () => {
     const { manager, filePath } = makeTempManager();
-    expect(validateWsToken(manager, { token: 'bad' })).toBeNull(); // local-dev-only
+    expect(validateWsToken(manager, { token: 'bad' })).toBeNull(); // allow-credentials
     fs.unlinkSync(filePath);
   });
 

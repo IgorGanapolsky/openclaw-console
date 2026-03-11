@@ -1,0 +1,35 @@
+name: Enforce Release Branch to Main
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  enforce:
+    name: Require develop or release branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Validate source branch
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          echo "PR source branch: $HEAD_REF"
+
+          # Only develop, release/*, or hotfix/* branches can merge to main
+          if [[ "$HEAD_REF" == "develop" ]] || \
+             [[ "$HEAD_REF" == release/* ]] || \
+             [[ "$HEAD_REF" == hotfix/* ]]; then
+            echo "Branch '$HEAD_REF' is allowed to merge into main."
+          else
+            echo "ERROR: Only develop, release/*, or hotfix/* branches can merge into main."
+            echo "Got: '$HEAD_REF'"
+            echo ""
+            echo "Workflow: develop -> PR -> main"
+            echo "          release/* -> PR -> main"
+            echo "          hotfix/* -> PR -> main"
+            exit 1
+          fi

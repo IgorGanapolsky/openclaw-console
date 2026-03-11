@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "rlhf-memory-gateway": {
+      "command": "npx",
+      "args": [
+        "rlhf-feedback-loop",
+        "serve"
+      ],
+      "env": {
+        "RLHF_PROJECT": "openclaw-console",
+        "RLHF_MODE": "continuous"
+      }
+    }
+  }
+}

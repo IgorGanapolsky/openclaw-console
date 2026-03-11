@@ -1,0 +1,57 @@
+Professional Mobile Control Plane for DevOps and Infrastructure Management
+
+OpenClaw Console is the definitive mobile app for DevOps professionals, platform engineers, and system administrators who need secure, biometric-verified approval workflows for critical infrastructure operations.
+
+🔐 BIOMETRIC SECURITY FOR DANGEROUS OPERATIONS
+• Face ID and Touch ID authentication for all approvals
+• Prevent accidental production deployments and database modifications
+• Secure approval workflows that eliminate costly mistakes
+• Professional-grade security for self-hosting teams
+
+🤖 INTELLIGENT AGENT MANAGEMENT
+• Manage multiple OpenClaw AI agents from your phone
+• Agent-specific approval workflows tailored to your infrastructure
+• Real-time status updates and operation monitoring
+• Seamless switching between development, staging, and production environments
+
+⚡ SELF-HOSTED PRIVACY AND CONTROL
+• Complete data sovereignty - your operations never leave your infrastructure
+• No corporate surveillance or third-party data sharing
+• Works with your existing self-hosted OpenClaw deployment
+• Zero dependency on social messaging apps like Slack or Telegram
+
+🚀 PROFESSIONAL DEVOPS WORKFLOWS
+• Approve database migrations with confidence
+• Secure CI/CD pipeline approvals on-the-go
+• Infrastructure changes with proper authorization trails
+• Emergency incident response from anywhere
+
+✨ DESIGNED FOR PROFESSIONALS
+• Clean, distraction-free interface focused on critical approvals
+• Comprehensive audit trails for compliance requirements
+• Push notifications only for operations requiring your approval
+• Native Android app optimized for speed and reliability
+
+WHO IT'S FOR:
+• DevOps engineers managing personal or small team infrastructure
+• Platform engineers building internal developer tools
+• SREs responsible for critical system reliability
+• Self-hosting enthusiasts who value privacy and security
+• Teams transitioning from enterprise tools to self-hosted solutions
+
+COMPETITIVE ADVANTAGES:
+• More secure than Slack bots and chat-based approval systems
+• More affordable than enterprise tools like PagerDuty ($21+/user/month)
+• More focused than general monitoring apps that lack approval workflows
+• More professional than consumer messaging apps with custom bots
+
+WHY CHOOSE OPENCLAW CONSOLE:
+Unlike generic notification tools or expensive enterprise solutions, OpenClaw Console is purpose-built for the modern DevOps professional who needs secure mobile access to critical infrastructure decisions. With biometric authentication, self-hosted deployment, and agent-specific workflows, it delivers enterprise-grade security at a fraction of the cost.
+
+Perfect for teams of 1-50 who want professional approval workflows without enterprise complexity or vendor lock-in.
+
+Get started with our free tier supporting up to 3 agents, then upgrade to Pro for unlimited agents and advanced features at just $15-20/month per user.
+
+Your infrastructure decisions deserve professional tools. Your security requirements demand biometric verification. Your privacy needs self-hosted control.
+
+Download OpenClaw Console today and transform your pocket into a secure DevOps control plane.

@@ -1,0 +1,56 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  claude-review:
+    name: Claude Review
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Claude Code Review
+        id: claude_review
+        if: ${{ env.ANTHROPIC_API_KEY != '' }}
+        continue-on-error: true
+        uses: anthropics/claude-code-action@1fc90f3ed982521116d8ff6d85b948c9b12cae3e # v1
+        with:
+          anthropic_api_key: ${{ env.ANTHROPIC_API_KEY }}
+          allowed_bots: "dependabot[bot],github-actions[bot]"
+          prompt: |
+            Review this PR for the OpenClaw Work Console app. This is a native mobile + TypeScript monorepo:
+            - iOS: Swift + SwiftUI (ios/OpenClawConsole/)
+            - Android: Kotlin + Jetpack Compose (android/)
+            - Skills gateway: TypeScript + Express + WebSocket (openclaw-skills/)
+            - CI/CD: GitHub Actions (.github/workflows/)
+
+            CRITICAL CHECKS (fail the review if violated):
+            1. No secrets, API keys, credentials, or google-services.json in code
+            2. No hardcoded colors — use theme constants
+            3. Kotlin: no !! (non-null assertions) without justification
+            4. Swift: no force-unwraps without justification
+            5. No direct HTTP (non-TLS) URLs without explicit opt-in comments
+
+            ARCHITECTURE CHECKS:
+            - Android follows MVVM with Compose + Repository pattern
+            - iOS follows SwiftUI + @Observable pattern
+            - Skills follow Express + ws gateway architecture
+            - WebSocket messages use the protocol defined in docs/protocol.md
+            - Approval flows must always require biometric verification
+
+            NORTH STAR: Daily Active Approvers
+            - Does this PR help users approve agent actions more safely or more often?
+            - Does it reduce friction in the approval flow?
+
+            Be concise. Flag only real issues, not style nits.

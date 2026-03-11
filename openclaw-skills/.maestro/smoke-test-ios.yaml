@@ -1,0 +1,36 @@
+appId: com.openclaw.console
+---
+# Smoke test: Verify onboarding and gateway connection
+- launchApp
+
+# 1. Navigate to Settings to add a gateway
+- tapOn: 'Settings'
+- assertVisible: 'Gateway Connections'
+
+# 2. Add a new gateway
+- tapOn: 'Add Gateway'
+- assertVisible: 'Gateway Details'
+
+- inputText:
+    placeholder: 'Name'
+    text: "Dev Gateway"
+- inputText:
+    placeholder: 'Base URL'
+    text: "http://localhost:8080"
+- inputText:
+    placeholder: 'Token'
+    text: "dev-token-123"
+
+# 3. Test & Save
+- tapOn: 'Test & Save'
+
+# 4. Verify we are back on settings and connection is listed
+- assertVisible: 'Dev Gateway'
+- assertVisible: 'http://localhost:8080'
+
+# 5. Connect to it
+- tapOn: 'Connect'
+
+# 6. Verify we are on Agents screen
+- tapOn: 'Agents'
+- assertVisible: 'Agents'

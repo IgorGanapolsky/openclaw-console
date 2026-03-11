@@ -1,0 +1,164 @@
+name: Device Tests
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'android/**'
+      - 'ios/**'
+      - '.maestro/**'
+      - 'scripts/**'
+      - '.github/workflows/device-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: device-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-device-tests:
+    name: Android Emulator + Maestro Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Create dummy google-services.json for CI
+        working-directory: android
+        run: |
+          if [ ! -f app/google-services.json ]; then
+            cat > app/google-services.json << 'GSEOF'
+            {
+              "project_info": {
+                "project_number": "000000000000",
+                "project_id": "openclaw-console-ci",
+                "storage_bucket": "openclaw-console-ci.appspot.com"
+              },
+              "client": [{
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.openclaw.console"
+                  }
+                },
+                "api_key": [{ "current_key": "CI_PLACEHOLDER" }]
+              }],
+              "configuration_version": "1"
+            }
+          GSEOF
+          fi
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon -q
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-30-openclaw-${{ runner.os }}
+
+      - name: Run Maestro tests on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          disable-animations: true
+          script: sh scripts/device-tests/ci-maestro.sh
+
+  ios-device-tests:
+    name: iOS Simulator Tests
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List available simulators
+        run: |
+          xcrun simctl list devices available | grep iPhone
+          echo "Selected simulator for testing:"
+          xcrun simctl list devices available | grep "iPhone 16" | head -1
+
+      - name: Build and test iOS app
+        working-directory: ios/OpenClawConsole
+        run: |
+          # Build for simulator
+          xcodebuild build \
+            -scheme OpenClawConsole \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+          # Run unit tests (if the scheme defines a test action)
+          set +e
+          xcodebuild test \
+            -scheme OpenClawConsole \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee /tmp/xcode-test.log
+          test_exit=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$test_exit" -ne 0 ]; then
+            if grep -q "not currently configured for the test action" /tmp/xcode-test.log; then
+              echo "No test action configured for scheme OpenClawConsole; skipping xcodebuild test."
+            else
+              exit "$test_exit"
+            fi
+          fi
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run Maestro tests (if available)
+        run: |
+          if [ -d ".maestro" ] && [ -f ".maestro/smoke-test-ios.yaml" ]; then
+            echo "Running iOS Maestro tests..."
+            set +e
+            maestro test .maestro/smoke-test-ios.yaml 2>&1 | tee /tmp/maestro-ios.log
+            maestro_exit=${PIPESTATUS[0]}
+            set -e
+
+            if [ "$maestro_exit" -ne 0 ]; then
+              if grep -q "Not enough devices connected" /tmp/maestro-ios.log; then
+                echo "No Maestro-compatible iOS device detected in CI; skipping iOS Maestro tests."
+              else
+                exit "$maestro_exit"
+              fi
+            fi
+          else
+            echo "No iOS Maestro tests found - skipping E2E tests"
+          fi
