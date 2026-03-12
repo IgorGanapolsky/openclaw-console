@@ -8,12 +8,6 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.openclaw.console.R
-import java.util.Locale
-
-// Extension function for backward compatibility with older Kotlin versions
-private fun String.capitalizeCompat(): String {
-    return if (isEmpty()) this else this[0].uppercase() + substring(1)
-}
 import com.openclaw.console.data.model.ApprovalRequest
 import com.openclaw.console.data.model.Incident
 import com.openclaw.console.data.model.IncidentSeverity
@@ -23,6 +17,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
+
+// Extension function for backward compatibility with older Kotlin versions
+private fun String.capitalizeCompat(): String {
+    return if (isEmpty()) this else this[0].uppercase() + substring(1)
+}
 
 /**
  * Android notification service for OpenClaw Console.
@@ -102,7 +102,7 @@ class NotificationService private constructor(private val context: Context) {
                 .setSmallIcon(R.drawable.ic_security) // Assumes security icon exists
                 .setContentTitle("Approval Required")
                 .setContentText("${approval.agentName}: ${approval.title}")
-                .setSubText(approval.actionType.capitalizeCompat())
+                .setSubText(approval.actionType.name.lowercase().capitalizeCompat())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(false) // Keep until user responds
