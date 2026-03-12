@@ -30,15 +30,26 @@ end
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
+  UI.message("Creating App Store Connect API key with ID: #{ENV['APPSTORE_KEY_ID']}")
+
   key_content = ENV["APPSTORE_PRIVATE_KEY"]
   is_base64 = key_content&.include?("-----BEGIN PRIVATE KEY-----") ? false : true
 
-  app_store_connect_api_key(
-    key_id: ENV["APPSTORE_KEY_ID"],
-    issuer_id: ENV["APPSTORE_ISSUER_ID"],
-    key_content: key_content,
-    is_key_content_base64: is_base64
-  )
+  UI.message("Key format detected: #{is_base64 ? 'Base64' : 'Raw PEM'}")
+
+  begin
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APPSTORE_KEY_ID"],
+      issuer_id: ENV["APPSTORE_ISSUER_ID"],
+      key_content: key_content,
+      is_key_content_base64: is_base64
+    )
+    UI.success("App Store Connect API key created successfully")
+    return api_key
+  rescue => e
+    UI.error("Failed to create App Store Connect API key: #{e.message}")
+    return nil
+  end
 end
 
 def resolved_appstore_key_path
@@ -86,11 +97,23 @@ def signing_xcargs
 end
 
 def sync_match_with_bootstrap(api_key:, readonly:)
+  # Ensure we have a valid API key before proceeding
+  unless api_key
+    UI.user_error!("App Store Connect API key is required for match in CI environment")
+  end
+
+  # Force API key authentication by clearing Apple ID credentials
+  ENV.delete("FASTLANE_USER")
+  ENV.delete("FASTLANE_PASSWORD")
+  ENV.delete("FASTLANE_SESSION")
+
   options = {
     type: "appstore",
     app_identifier: ["com.openclaw.console"],
     readonly: readonly,
-    api_key: api_key
+    api_key: api_key,
+    keychain_name: ENV["MATCH_KEYCHAIN_NAME"],
+    keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
   }
 
   match(options)
