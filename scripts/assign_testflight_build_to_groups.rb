@@ -183,7 +183,8 @@ def build_for_metadata(jwt:, app_id:, build_number:, marketing_version:)
 end
 
 def beta_groups_by_name(jwt:, app_id:)
-  request_json_collection(jwt: jwt, path: "/v1/apps/#{app_id}/betaGroups?limit=200").each_with_object({}) do |group, memo|
+  query = URI.encode_www_form("filter[app]" => app_id, limit: 200)
+  request_json_collection(jwt: jwt, path: "/v1/betaGroups?#{query}").each_with_object({}) do |group, memo|
     memo[group.dig("attributes", "name")] = group
   end
 end
@@ -194,9 +195,37 @@ def app_beta_tester_emails(jwt:, app_id:)
   end.compact.uniq
 end
 
+def tester_beta_groups_by_name(jwt:, app_id:, email:)
+  query = URI.encode_www_form(
+    "filter[apps]" => app_id,
+    "filter[email]" => email,
+    include: "betaGroups",
+    limit: 200
+  )
+  response = request_json(jwt: jwt, method: :get, path: "/v1/betaTesters?#{query}")
+  tester = response.fetch("data", []).first
+  return {} unless tester
+
+  included_groups_by_id = response.fetch("included", []).each_with_object({}) do |item, memo|
+    next unless item.fetch("type") == "betaGroups"
+
+    memo[item.fetch("id")] = item
+  end
+  tester_group_ids = Array(tester.dig("relationships", "betaGroups", "data")).map do |group|
+    group.fetch("id")
+  end
+
+  tester_group_ids.each_with_object({}) do |group_id, memo|
+    group = included_groups_by_id[group_id]
+    next unless group
+
+    memo[group.dig("attributes", "name")] = group
+  end
+end
+
 def verify_group_assignment(jwt:, build_id:, groups:)
   missing_groups = groups.reject do |group|
-    build_ids = request_json_collection(jwt: jwt, path: "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200").map do |item|
+    build_ids = request_json_collection(jwt: jwt, path: "/v1/betaGroups/#{group.fetch('id')}/builds?limit=200").map do |item|
       item.fetch("id")
     end
     build_ids.include?(build_id)
@@ -212,19 +241,17 @@ def required_tester_email
   strict_csv_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET", "TESTFLIGHT_REQUIRED_TESTER_EMAIL").first
 end
 
-def verify_required_tester_membership(jwt:, groups:, email:)
+def verify_required_tester_membership(expected_group_names:, tester_groups_by_name:, email:)
   return if email.nil? || email.empty?
 
-  member_emails = groups.flat_map do |group|
-    request_json_collection(jwt: jwt, path: "/v1/betaGroups/#{group.fetch('id')}/betaTesters?limit=200").map do |tester|
-      tester.dig("attributes", "email")
-    end
-  end.compact.uniq
+  missing_group_names = expected_group_names.reject { |group_name| tester_groups_by_name.key?(group_name) }
+  return if missing_group_names.empty?
 
-  return if member_emails.include?(email)
-
-  group_names = groups.map { |group| group.dig("attributes", "name") }.join(", ")
-  fail_with("Required TestFlight tester #{email} is not a member of beta groups: #{group_names}")
+  visible_group_names = tester_groups_by_name.keys.sort
+  fail_with(
+    "Required TestFlight tester #{email} is not a member of beta groups: #{missing_group_names.join(', ')}. " \
+    "Visible tester beta groups: #{visible_group_names.join(', ')}"
+  )
 end
 
 def verify_testflight_build_delivery(metadata:)
@@ -244,13 +271,20 @@ def verify_testflight_build_delivery(metadata:)
   )
   required_tester = required_tester_email
   groups_by_name = beta_groups_by_name(jwt: jwt, app_id: app_id)
-  available_group_names = groups_by_name.keys.sort
-  missing_group_names = group_names.reject { |name| groups_by_name.key?(name) }
+  tester_groups_by_name = required_tester ? tester_beta_groups_by_name(jwt: jwt, app_id: app_id, email: required_tester) : {}
+  available_group_names = (groups_by_name.keys + tester_groups_by_name.keys).uniq.sort
+  missing_group_names = group_names.reject do |name|
+    groups_by_name.key?(name) || tester_groups_by_name.key?(name)
+  end
 
   if missing_group_names.empty?
-    groups = group_names.map { |name| groups_by_name.fetch(name) }
+    groups = group_names.map { |name| groups_by_name[name] || tester_groups_by_name.fetch(name) }
     verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), groups: groups)
-    verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
+    verify_required_tester_membership(
+      expected_group_names: group_names,
+      tester_groups_by_name: tester_groups_by_name,
+      email: required_tester
+    )
 
     group_summary = groups.map { |group| group.dig("attributes", "name") }.join(", ")
     if required_tester
@@ -276,8 +310,8 @@ def verify_testflight_build_delivery(metadata:)
     end
 
     fail_with(
-      "App Store Connect returned no app beta groups, so the verifier cannot prove configured TestFlight groups: #{group_names.join(', ')}. " \
-      "Only the #{APP_STORE_CONNECT_USERS_GROUP} auto-access path is supported when App Store Connect exposes no app beta groups."
+      "App Store Connect exposed no visible beta groups for this app or required tester, so the verifier cannot prove configured TestFlight groups: #{group_names.join(', ')}. " \
+      "Only the #{APP_STORE_CONNECT_USERS_GROUP} auto-access path is supported when App Store Connect exposes no visible beta groups."
     )
   else
     fail_with("Missing TestFlight beta groups: #{missing_group_names.join(', ')}. Available groups: #{available_group_names.join(', ')}")

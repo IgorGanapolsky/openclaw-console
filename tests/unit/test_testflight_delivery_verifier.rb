@@ -14,15 +14,30 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       group_names: ["Internal QA"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [
           { "id" => "group-build", "attributes" => { "name" => "Internal QA" } }
         ],
-        "/v1/betaGroups/group-build/relationships/builds?limit=200" => [
+        "/v1/betaGroups/group-build/builds?limit=200" => [
           { "id" => "build-id" }
-        ],
-        "/v1/betaGroups/group-build/betaTesters?limit=200" => [
-          { "attributes" => { "email" => "tester@example.com" } }
         ]
+      },
+      response_map: {
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {
+          "data" => [
+            {
+              "relationships" => {
+                "betaGroups" => {
+                  "data" => [
+                    { "id" => "group-build" }
+                  ]
+                }
+              }
+            }
+          ],
+          "included" => [
+            { "id" => "group-build", "type" => "betaGroups", "attributes" => { "name" => "Internal QA" } }
+          ]
+        }
       }
     )
 
@@ -39,10 +54,16 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       group_names: ["App Store Connect Users"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [],
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [],
         "/v1/apps/app-id/betaTesters?limit=200" => [
           { "attributes" => { "email" => "tester@example.com" } }
         ]
+      },
+      response_map: {
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {
+          "data" => [],
+          "included" => []
+        }
       }
     )
 
@@ -59,13 +80,28 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       group_names: ["Internal QA"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [
           { "id" => "group-build", "attributes" => { "name" => "Internal QA" } }
         ],
-        "/v1/betaGroups/group-build/relationships/builds?limit=200" => [],
-        "/v1/betaGroups/group-build/betaTesters?limit=200" => [
-          { "attributes" => { "email" => "tester@example.com" } }
-        ]
+        "/v1/betaGroups/group-build/builds?limit=200" => []
+      },
+      response_map: {
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {
+          "data" => [
+            {
+              "relationships" => {
+                "betaGroups" => {
+                  "data" => [
+                    { "id" => "group-build" }
+                  ]
+                }
+              }
+            }
+          ],
+          "included" => [
+            { "id" => "group-build", "type" => "betaGroups", "attributes" => { "name" => "Internal QA" } }
+          ]
+        }
       }
     )
 
@@ -76,15 +112,64 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
     assert_includes error.message, "Build build-id is missing beta group assignments: Internal QA"
   end
 
-  def test_fails_when_app_groups_are_not_visible_for_custom_group_names
+  def test_succeeds_when_required_tester_exposes_group_membership_without_app_group_listing
     verifier = build_verifier(
       group_names: ["Internal QA"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/apps/app-id/betaTesters?limit=200" => [
-          { "attributes" => { "email" => "tester@example.com" } }
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [],
+        "/v1/betaGroups/group-build/builds?limit=200" => [
+          { "id" => "build-id" }
         ]
+      },
+      response_map: {
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {
+          "data" => [
+            {
+              "relationships" => {
+                "betaGroups" => {
+                  "data" => [
+                    { "id" => "group-build" }
+                  ]
+                }
+              }
+            }
+          ],
+          "included" => [
+            { "id" => "group-build", "type" => "betaGroups", "attributes" => { "name" => "Internal QA" } }
+          ]
+        }
+      }
+    )
+
+    stdout, = capture_io do
+      verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
+    end
+
+    assert_includes stdout, "in beta groups Internal QA"
+    assert_includes stdout, "tester tester@example.com"
+  end
+
+  def test_fails_when_custom_groups_are_not_visible_anywhere
+    verifier = build_verifier(
+      group_names: ["Internal QA"],
+      required_tester: "tester@example.com",
+      collection_map: {
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => []
+      },
+      response_map: {
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {
+          "data" => [
+            {
+              "relationships" => {
+                "betaGroups" => {
+                  "data" => []
+                }
+              }
+            }
+          ],
+          "included" => []
+        }
       }
     )
 
@@ -92,7 +177,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
     end
 
-    assert_includes error.message, "App Store Connect returned no app beta groups"
+    assert_includes error.message, "App Store Connect exposed no visible beta groups"
     assert_includes error.message, "Internal QA"
     assert_includes error.message, "App Store Connect Users auto-access path"
   end
@@ -102,8 +187,14 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       group_names: ["App Store Connect Users"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [],
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [],
         "/v1/apps/app-id/betaTesters?limit=200" => []
+      },
+      response_map: {
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {
+          "data" => [],
+          "included" => []
+        }
       }
     )
 
@@ -117,7 +208,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
 
   private
 
-  def build_verifier(group_names:, required_tester:, collection_map:)
+  def build_verifier(group_names:, required_tester:, collection_map:, response_map: {})
     verifier = Object.new
 
     verifier.define_singleton_method(:strict_csv_env) do |primary_name, _secondary_name|
@@ -144,7 +235,9 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
     end
 
     verifier.define_singleton_method(:request_json) do |jwt:, method:, path:, payload: nil|
-      raise "Unexpected request path: #{path}"
+      response_map.fetch(path) do
+        raise "Unexpected request path: #{path}"
+      end
     end
 
     verifier.define_singleton_method(:fail_with) do |message|
