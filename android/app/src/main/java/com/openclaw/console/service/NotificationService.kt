@@ -8,6 +8,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.openclaw.console.R
+import java.util.Locale
 import com.openclaw.console.data.model.ApprovalRequest
 import com.openclaw.console.data.model.Incident
 import com.openclaw.console.data.model.IncidentSeverity
@@ -96,7 +97,7 @@ class NotificationService private constructor(private val context: Context) {
                 .setSmallIcon(R.drawable.ic_security) // Assumes security icon exists
                 .setContentTitle("Approval Required")
                 .setContentText("${approval.agentName}: ${approval.title}")
-                .setSubText(approval.actionType.replaceFirstChar { it.uppercase() })
+                .setSubText(approval.actionType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() })
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(false) // Keep until user responds
