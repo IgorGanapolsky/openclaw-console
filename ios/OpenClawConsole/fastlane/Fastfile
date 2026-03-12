@@ -16,6 +16,14 @@ def app_store_api_key_from_env
   )
 end
 
+def csv_env(*names)
+  names
+    .flat_map { |name| ENV.fetch(name, "").split(",") }
+    .map(&:strip)
+    .reject(&:empty?)
+    .uniq
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -23,6 +31,13 @@ platform :ios do
 
     # Use App Store Connect API key if available
     api_key = app_store_api_key_from_env
+    testflight_groups = csv_env("TESTFLIGHT_GROUPS", "TESTFLIGHT_GROUPS_SECRET")
+
+    if ENV["CI"] == "true"
+      UI.user_error!("APPSTORE_PRIVATE_KEY, APPSTORE_KEY_ID, and APPSTORE_ISSUER_ID are required in CI") if api_key.nil?
+      UI.user_error!("APPLE_TEAM_ID is required in CI") if ENV["APPLE_TEAM_ID"].to_s.empty?
+      UI.user_error!("TESTFLIGHT_GROUPS is required for internal TestFlight distribution") if testflight_groups.empty?
+    end
 
     marketing_version = get_version_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
@@ -54,7 +69,7 @@ platform :ios do
     )
 
     File.write(
-      "fastlane/testflight_build.json",
+      File.join(__dir__, "testflight_build.json"),
       JSON.pretty_generate(
         {
           bundle_id: "com.openclaw.console",
@@ -114,9 +129,14 @@ platform :ios do
     end
 
     upload_to_testflight(
-      skip_waiting_for_build_processing: false,
       api_key: api_key,
-      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
+      groups: testflight_groups,
+      distribute_external: false,
+      notify_external_testers: false,
+      skip_waiting_for_build_processing: false,
+      wait_processing_timeout_duration: 1800,
+      changelog: ENV["TESTFLIGHT_CHANGELOG"] || "Internal auto-distribution from #{ENV['GITHUB_SHA'] || 'local'}",
+      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console internal beta build.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"
     )
   end

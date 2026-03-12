@@ -166,10 +166,32 @@ if [ "${FB_TESTERS:-skip}" != "skip" ] && [ -n "$FB_TESTERS" ]; then
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
+read -p "Firebase required tester email for proof (or 'skip'): " FB_REQUIRED_TESTER
+if [ "${FB_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$FB_REQUIRED_TESTER" ]; then
+    echo "$FB_REQUIRED_TESTER" | gh secret set FIREBASE_REQUIRED_TESTER_EMAIL --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_REQUIRED_TESTER_EMAIL set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
 read -p "Firebase internal groups (comma-separated, or 'skip'): " FB_GROUPS
 if [ "${FB_GROUPS:-skip}" != "skip" ] && [ -n "$FB_GROUPS" ]; then
     echo "$FB_GROUPS" | gh secret set FIREBASE_INTERNAL_GROUPS --repo="$REPO"
     echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_GROUPS set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+echo ""
+read -p "TestFlight internal beta groups (comma-separated, or 'skip'): " TF_GROUPS
+if [ "${TF_GROUPS:-skip}" != "skip" ] && [ -n "$TF_GROUPS" ]; then
+    echo "$TF_GROUPS" | gh secret set TESTFLIGHT_GROUPS --repo="$REPO"
+    echo -e "${GREEN}  ✓ TESTFLIGHT_GROUPS set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+read -p "TestFlight required internal tester email for proof (or 'skip'): " TF_REQUIRED_TESTER
+if [ "${TF_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$TF_REQUIRED_TESTER" ]; then
+    echo "$TF_REQUIRED_TESTER" | gh secret set TESTFLIGHT_REQUIRED_TESTER_EMAIL --repo="$REPO"
+    echo -e "${GREEN}  ✓ TESTFLIGHT_REQUIRED_TESTER_EMAIL set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 

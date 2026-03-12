@@ -79,15 +79,28 @@ jobs:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_GROUPS_SECRET: ${{ secrets.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL: ${{ vars.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID APPLE_TEAM_ID ADMIN_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
             fi
           done
+          if [ -z "${TESTFLIGHT_GROUPS:-}${TESTFLIGHT_GROUPS_SECRET:-}" ]; then
+            echo "❌ Missing TestFlight audience. Set TESTFLIGHT_GROUPS as a repo variable or secret."
+            exit 1
+          fi
+          if [ -z "${TESTFLIGHT_REQUIRED_TESTER_EMAIL:-}${TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET:-}" ]; then
+            echo "❌ Missing required proof target. Set TESTFLIGHT_REQUIRED_TESTER_EMAIL as a repo variable or secret."
+            exit 1
+          fi
 
       - name: Preflight release checks (iOS)
         run: bash scripts/preflight-release.sh --platform ios --layer 1
@@ -107,15 +120,6 @@ jobs:
       - name: Install Fastlane
         run: gem install fastlane
         working-directory: ios/OpenClawConsole
-
-      - name: Write App Store Connect key
-        env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
 
       - name: Configure git credentials for match
         env:
@@ -146,16 +150,22 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_GROUPS_SECRET: ${{ secrets.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL: ${{ vars.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
-      - name: Assign processed build to TestFlight beta groups
+      - name: Verify TestFlight build delivery to internal beta groups
         env:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_GROUPS }}
           TESTFLIGHT_GROUPS_SECRET: ${{ secrets.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL: ${{ vars.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
         run: ruby scripts/assign_testflight_build_to_groups.rb ios/OpenClawConsole/fastlane/testflight_build.json
 
       - name: Upload IPA artifact

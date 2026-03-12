@@ -79,6 +79,20 @@ def request_json(jwt:, method:, path:, payload: nil)
   parsed
 end
 
+def request_json_collection(jwt:, path:)
+  items = []
+  next_path = path
+
+  while next_path
+    response = request_json(jwt: jwt, method: :get, path: next_path)
+    items.concat(response.fetch("data", []))
+    next_url = response.dig("links", "next")
+    next_path = next_url ? URI(next_url).request_uri : nil
+  end
+
+  items
+end
+
 def read_metadata(path)
   JSON.parse(File.read(path))
 rescue Errno::ENOENT
@@ -126,8 +140,7 @@ def build_for_metadata(jwt:, app_id:, build_number:, marketing_version:)
 end
 
 def beta_groups_for_names(jwt:, app_id:, group_names:)
-  response = request_json(jwt: jwt, method: :get, path: "/v1/apps/#{app_id}/betaGroups?limit=200")
-  groups_by_name = response.fetch("data", []).each_with_object({}) do |group, memo|
+  groups_by_name = request_json_collection(jwt: jwt, path: "/v1/apps/#{app_id}/betaGroups?limit=200").each_with_object({}) do |group, memo|
     memo[group.dig("attributes", "name")] = group
   end
 
@@ -140,9 +153,19 @@ def beta_groups_for_names(jwt:, app_id:, group_names:)
   group_names.map { |name| groups_by_name.fetch(name) }
 end
 
+def assigned_group_ids(jwt:, build_id:)
+  request_json_collection(jwt: jwt, path: "/v1/builds/#{build_id}/relationships/betaGroups?limit=200").map do |item|
+    item.fetch("id")
+  end
+end
+
 def add_build_to_groups(jwt:, build_id:, group_ids:)
+  existing_group_ids = assigned_group_ids(jwt: jwt, build_id: build_id)
+  missing_group_ids = group_ids - existing_group_ids
+  return if missing_group_ids.empty?
+
   payload = {
-    data: group_ids.map { |group_id| { type: "betaGroups", id: group_id } }
+    data: missing_group_ids.map { |group_id| { type: "betaGroups", id: group_id } }
   }
   request_json(
     jwt: jwt,
@@ -153,10 +176,28 @@ def add_build_to_groups(jwt:, build_id:, group_ids:)
 end
 
 def verify_group_assignment(jwt:, build_id:, expected_group_ids:)
-  response = request_json(jwt: jwt, method: :get, path: "/v1/builds/#{build_id}/relationships/betaGroups?limit=200")
-  assigned_group_ids = response.fetch("data", []).map { |item| item.fetch("id") }
+  assigned_group_ids = assigned_group_ids(jwt: jwt, build_id: build_id)
   missing_group_ids = expected_group_ids - assigned_group_ids
   fail_with("Build #{build_id} is missing beta group assignments: #{missing_group_ids.join(', ')}") unless missing_group_ids.empty?
+end
+
+def required_tester_email
+  first_present_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL", "TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET")
+end
+
+def verify_required_tester_membership(jwt:, groups:, email:)
+  return if email.nil? || email.empty?
+
+  member_emails = groups.flat_map do |group|
+    request_json_collection(jwt: jwt, path: "/v1/betaGroups/#{group.fetch('id')}/betaTesters?limit=200").map do |tester|
+      tester.dig("attributes", "email")
+    end
+  end.compact.uniq
+
+  return if member_emails.include?(email)
+
+  group_names = groups.map { |group| group.dig("attributes", "name") }.join(", ")
+  fail_with("Required TestFlight tester #{email} is not a member of beta groups: #{group_names}")
 end
 
 metadata_path = ARGV.fetch(0) do
@@ -179,9 +220,15 @@ build = build_for_metadata(
 )
 groups = beta_groups_for_names(jwt: jwt, app_id: app_id, group_names: group_names)
 group_ids = groups.map { |group| group.fetch("id") }
+required_tester = required_tester_email
 
 add_build_to_groups(jwt: jwt, build_id: build.fetch("id"), group_ids: group_ids)
 verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), expected_group_ids: group_ids)
+verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
 
 group_summary = groups.map { |group| group.dig("attributes", "name") }.join(", ")
-puts("✅ Assigned TestFlight build #{marketing_version} (#{build_number}) to beta groups: #{group_summary}")
+if required_tester
+  puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups #{group_summary} with tester #{required_tester}")
+else
+  puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups: #{group_summary}")
+end

@@ -57,6 +57,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites |
 | `FIREBASE_REQUIRED_TESTER_EMAIL` (secret or variable) | Single tester email that must be included on every Firebase internal distribution |
 | `TESTFLIGHT_GROUPS` (secret or variable) | Comma-separated App Store Connect beta groups that must receive each internal TestFlight build |
+| `TESTFLIGHT_REQUIRED_TESTER_EMAIL` (secret or variable) | Internal App Store Connect tester email that must already belong to one of the required TestFlight groups |
 
 ## One-Time Setup Steps
 
@@ -145,6 +146,11 @@ cd ios/OpenClawConsole
 bundle install
 bundle exec fastlane beta
 ```
+
+The iOS internal-delivery path is only considered valid when all of the following are true:
+- `TESTFLIGHT_GROUPS` resolves to at least one internal beta group.
+- `TESTFLIGHT_REQUIRED_TESTER_EMAIL` resolves to an internal App Store Connect user in one of those groups.
+- The workflow verification step confirms the processed build is attached to every required group.
 
 ### Run preflight checks
 
