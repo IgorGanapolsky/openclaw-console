@@ -274,7 +274,7 @@ jobs:
           fi
 
           if [ -n "$(normalize_csv "${FIREBASE_INTERNAL_GROUPS:-}")" ] || [ -n "$(normalize_csv "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")" ]; then
-            echo "❌ Firebase internal audience must be configured as GitHub Actions secrets only. Remove FIREBASE_INTERNAL_GROUPS and FIREBASE_REQUIRED_TESTER_EMAIL repo variables."
+            echo "❌ Firebase internal audience must be configured as GitHub Actions secrets only. Remove FIREBASE_INTERNAL_GROUPS and FIREBASE_REQUIRED_TESTER_EMAIL from the GitHub Actions vars context (repo, environment, or organization)."
             exit 1
           fi
 

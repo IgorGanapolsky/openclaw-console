@@ -60,7 +60,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `FIREBASE_ANDROID_APP_ID` | Override Firebase app ID (normally auto-resolved from google-services.json) |
 | `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
 
-`FIREBASE_INTERNAL_GROUPS` and `FIREBASE_REQUIRED_TESTER_EMAIL` are required for Android internal distribution and must be stored as secrets only. CI fails if repository or `production` environment variables with either name exist.
+`FIREBASE_INTERNAL_GROUPS` and `FIREBASE_REQUIRED_TESTER_EMAIL` are required for Android internal distribution and must be stored as secrets only. CI fails if those names exist anywhere in the GitHub Actions `vars` context, including repository variables, `production` environment variables, and organization variables when applicable.
 
 `TESTFLIGHT_GROUPS` and `TESTFLIGHT_REQUIRED_TESTER_EMAIL` are required for iOS internal distribution. They may be stored as secrets or repo variables, but when both forms exist they must match.
 
@@ -95,7 +95,7 @@ firebase login:ci
 
 Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
-The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist as repository or `production` environment variables.
+The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist anywhere in the GitHub Actions `vars` context.
 
 For Android proof, a successful `firebase appdistribution:distribute ... --groups` call is the release-level assignment step. CI follow-up checks confirm the returned release URLs and, when the current auth can read App Distribution groups/testers, the configured group/tester access prerequisites. They do not claim a second independent release-to-group readback that Firebase does not expose.
 
