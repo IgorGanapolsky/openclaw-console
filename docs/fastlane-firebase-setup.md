@@ -45,7 +45,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `KEY_ALIAS` | Key alias in the keystore | From when you created the keystore |
 | `KEY_PASSWORD` | Key password | From when you created the keystore |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON (preferred auth) | Google Cloud Console → IAM → Service accounts |
-| `FIREBASE_TOKEN` | Firebase CLI token (verified fallback when no dedicated Firebase service account is configured) | Run `firebase login:ci` locally |
+| `FIREBASE_TOKEN` | Firebase CLI token (deprecated compatibility fallback) | Run `firebase login:ci` locally |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (last-resort fallback, only if that service account also has Firebase App Distribution upload permission) | Google Cloud Console → IAM → Service accounts |
 
 ### Optional
@@ -89,7 +89,7 @@ firebase login:ci
 # Copy the printed token -> save as FIREBASE_TOKEN only as a fallback path.
 ```
 
-Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the verified fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
+Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
 The workflow refuses ambiguous audience configuration. If the same Firebase/TestFlight audience key exists as both a GitHub Actions secret and variable with different values, the run fails instead of guessing.
 

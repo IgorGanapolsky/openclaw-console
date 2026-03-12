@@ -146,11 +146,10 @@ platform :ios do
       groups: testflight_groups,
       distribute_external: false,
       notify_external_testers: false,
+      submit_beta_review: false,
       skip_waiting_for_build_processing: false,
       wait_processing_timeout_duration: 1800,
-      changelog: ENV["TESTFLIGHT_CHANGELOG"] || "Internal auto-distribution from #{ENV['GITHUB_SHA'] || 'local'}",
-      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console internal beta build.",
-      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"
+      changelog: ENV["TESTFLIGHT_CHANGELOG"] || "Internal auto-distribution from #{ENV['GITHUB_SHA'] || 'local'}"
     )
   end
 

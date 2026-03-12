@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to distribute (optional, defaults to the branch or tag you dispatch from)"
+        description: "Git ref to distribute (optional, defaults to develop)"
         required: false
         type: string
 
 concurrency:
-  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || inputs.ref || github.ref_name }}
+  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.name || 'manual' }}-${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}
   cancel-in-progress: true
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
           REASON="not_eligible"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            REF="${INPUT_REF:-$GITHUB_REF_NAME}"
+            REF="${INPUT_REF:-develop}"
             SHOULD_RUN="true"
             REASON="manual_dispatch"
           elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" && "$WORKFLOW_BRANCH" == "develop" ]]; then
