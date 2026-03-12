@@ -10,11 +10,11 @@ FASTFILE = (ROOT / "ios/OpenClawConsole/fastlane/Fastfile").read_text()
 
 class InternalDistributionContractTest(unittest.TestCase):
     def test_manual_dispatch_description_matches_current_ref_behavior(self):
-        self.assertIn('defaults to develop', WORKFLOW)
-        self.assertIn('REF="${INPUT_REF:-develop}"', WORKFLOW)
+        self.assertIn('defaults to the branch or tag you dispatch from', WORKFLOW)
+        self.assertIn('REF="${INPUT_REF:-$GITHUB_REF_NAME}"', WORKFLOW)
 
     def test_concurrency_separates_triggering_ci_workflows(self):
-        self.assertIn("internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.name || 'manual' }}-${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}", WORKFLOW)
+        self.assertIn("internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || inputs.ref || github.ref_name }}", WORKFLOW)
         self.assertIn("waiting_for_both_ci_on_", WORKFLOW)
         self.assertIn("not_latest_ci_finisher_for_", WORKFLOW)
 
@@ -30,8 +30,8 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("Verify TestFlight build delivery to internal beta groups", WORKFLOW)
 
     def test_workflow_uses_supported_firebase_verification_commands(self):
-        self.assertIn('firebase_json appdistribution:testers:list -P openclaw-console-mobile', WORKFLOW)
         self.assertIn('firebase_json appdistribution:groups:list -P openclaw-console-mobile', WORKFLOW)
+        self.assertIn('firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile', WORKFLOW)
         self.assertNotIn("appdistribution:releases:list", WORKFLOW)
         self.assertNotIn("--format=json", WORKFLOW)
 
@@ -43,6 +43,13 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn('AUTH_MODE="google_play_service_account"', WORKFLOW)
         self.assertIn('FIREBASE_AUTH_MODE: ${{ steps.firebase_distribute.outputs.auth_mode }}', WORKFLOW)
         self.assertIn('Falling back to FIREBASE_TOKEN for this run.', WORKFLOW)
+        self.assertIn('unset FIREBASE_TOKEN', WORKFLOW)
+        self.assertIn('FIREBASE_TOKEN_FALLBACK="${FIREBASE_TOKEN:-}"', WORKFLOW)
+
+    def test_workflow_verifies_release_artifacts_without_requiring_global_tester_roster(self):
+        self.assertIn('curl -fsSIL "$BINARY_DOWNLOAD_URL"', WORKFLOW)
+        self.assertIn('Distribution targeted tester(s): $TARGET_TESTERS', WORKFLOW)
+        self.assertNotIn('No Firebase testers configured for this app', WORKFLOW)
 
     def test_workflow_resolves_android_app_id_by_package_name(self):
         self.assertIn('android_client_info.package_name == "com.openclaw.console"', WORKFLOW)

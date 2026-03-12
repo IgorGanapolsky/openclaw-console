@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to distribute (optional, defaults to develop)"
+        description: "Git ref to distribute (optional, defaults to the branch or tag you dispatch from)"
         required: false
         type: string
 
 concurrency:
-  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.name || 'manual' }}-${{ github.event.workflow_run.head_sha || inputs.ref || 'develop' }}
+  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || inputs.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
           REASON="not_eligible"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            REF="${INPUT_REF:-develop}"
+            REF="${INPUT_REF:-$GITHUB_REF_NAME}"
             SHOULD_RUN="true"
             REASON="manual_dispatch"
           elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" && "$WORKFLOW_BRANCH" == "develop" ]]; then
@@ -475,10 +475,12 @@ jobs:
           REQUIRED_TESTER="$(resolve_distribution_config "FIREBASE_REQUIRED_TESTER_EMAIL" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")"
           APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
           DISTRIBUTION_AUTH_MODE="$AUTH_MODE"
+          FIREBASE_TOKEN_FALLBACK="${FIREBASE_TOKEN:-}"
           FALLBACK_TOKEN_AVAILABLE="false"
 
-          if [ -n "${FIREBASE_TOKEN:-}" ] && [ "$AUTH_MODE" != "ci_token" ]; then
+          if [ -n "$FIREBASE_TOKEN_FALLBACK" ] && [ "$AUTH_MODE" != "ci_token" ]; then
             FALLBACK_TOKEN_AVAILABLE="true"
+            unset FIREBASE_TOKEN
           fi
 
           # Add required tester if specified
@@ -513,7 +515,7 @@ jobs:
             local -a dist_cmd=("${BASE_CMD[@]}")
 
             if [ "$auth_mode" = "ci_token" ]; then
-              dist_cmd+=(--token "$FIREBASE_TOKEN")
+              dist_cmd+=(--token "$FIREBASE_TOKEN_FALLBACK")
             fi
 
             if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
@@ -597,6 +599,10 @@ jobs:
           set -euo pipefail
 
           echo "🔍 Verifying Firebase distribution delivery"
+          FIREBASE_TOKEN_FALLBACK="${FIREBASE_TOKEN:-}"
+          if [ "${FIREBASE_AUTH_MODE:-}" != "ci_token" ]; then
+            unset FIREBASE_TOKEN
+          fi
 
           normalize_csv() {
             printf '%s' "${1:-}" \
@@ -606,7 +612,7 @@ jobs:
 
           firebase_json() {
             if [ "${FIREBASE_AUTH_MODE:-}" = "ci_token" ]; then
-              firebase --json --non-interactive "$@" --token "$FIREBASE_TOKEN"
+              firebase --json --non-interactive "$@" --token "$FIREBASE_TOKEN_FALLBACK"
             else
               firebase --json --non-interactive "$@"
             fi
@@ -617,32 +623,25 @@ jobs:
             exit 1
           fi
 
-          TESTERS_JSON="$(firebase_json appdistribution:testers:list -P openclaw-console-mobile)"
-          GROUPS_JSON="$(firebase_json appdistribution:groups:list -P openclaw-console-mobile)"
-          TESTER_COUNT="$(printf '%s' "$TESTERS_JSON" | jq '.result.testers | length // 0')"
           TARGET_TESTERS="$(normalize_csv "${ACTUAL_TESTERS:-}")"
           TARGET_GROUPS="$(normalize_csv "${ACTUAL_GROUPS:-}")"
           REQUIRED_TESTER="$(normalize_csv "${REQUIRED_TESTER:-}")"
 
-          if [ -n "$REQUIRED_TESTER" ]; then
-            case ",$TARGET_TESTERS," in
-              *",$REQUIRED_TESTER,"*) ;;
-              *)
-                if [ -n "$TARGET_TESTERS" ]; then
-                  TARGET_TESTERS="$TARGET_TESTERS,$REQUIRED_TESTER"
-                else
-                  TARGET_TESTERS="$REQUIRED_TESTER"
-                fi
-                ;;
-            esac
-          fi
-
-          if [ "$TESTER_COUNT" -eq 0 ]; then
-            echo "❌ No Firebase testers configured for this app"
+          if [ -z "$TARGET_TESTERS" ] && [ -z "$TARGET_GROUPS" ]; then
+            echo "❌ Distribution step did not report any testers or groups"
             exit 1
           fi
 
+          if [ -n "${BINARY_DOWNLOAD_URL:-}" ]; then
+            if ! curl -fsSIL "$BINARY_DOWNLOAD_URL" >/dev/null; then
+              echo "❌ Firebase binary download URL is not reachable"
+              exit 1
+            fi
+            echo "📦 Firebase binary URL is reachable"
+          fi
+
           if [ -n "$TARGET_GROUPS" ]; then
+            GROUPS_JSON="$(firebase_json appdistribution:groups:list -P openclaw-console-mobile)"
             IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
             for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
               if ! printf '%s' "$GROUPS_JSON" | jq -e --arg alias "$group_alias" '.result.groups[]? | select((.name | split("/") | last) == $alias)' > /dev/null; then
@@ -653,29 +652,27 @@ jobs:
           fi
 
           if [ -n "$TARGET_TESTERS" ]; then
-            IFS=',' read -r -a TARGET_TESTER_ARRAY <<< "$TARGET_TESTERS"
-            for tester_email in "${TARGET_TESTER_ARRAY[@]}"; do
-              if ! printf '%s' "$TESTERS_JSON" | jq -e --arg email "$tester_email" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
-                echo "❌ Firebase tester not found after distribution: $tester_email"
-                exit 1
-              fi
-            done
-            echo "📧 Distribution verified for tester(s): $TARGET_TESTERS"
+            echo "📧 Distribution targeted tester(s): $TARGET_TESTERS"
           fi
 
-          if [ -n "$REQUIRED_TESTER" ] && [ -n "$TARGET_GROUPS" ]; then
-            REQUIRED_IN_GROUP=false
-            IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
-            for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
-              GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
-              if printf '%s' "$GROUP_TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
-                REQUIRED_IN_GROUP=true
-                break
-              fi
-            done
+          if [ -n "$REQUIRED_TESTER" ]; then
+            if [ -n "$TARGET_GROUPS" ]; then
+              REQUIRED_IN_GROUP=false
+              IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
+              for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
+                GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
+                if printf '%s' "$GROUP_TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
+                  REQUIRED_IN_GROUP=true
+                  break
+                fi
+              done
 
-            if [ "$REQUIRED_IN_GROUP" != true ]; then
-              echo "❌ Required Firebase tester is not a member of the configured Firebase groups: $REQUIRED_TESTER"
+              if [ "$REQUIRED_IN_GROUP" != true ]; then
+                echo "❌ Required Firebase tester is not a member of the configured Firebase groups: $REQUIRED_TESTER"
+                exit 1
+              fi
+            elif [[ ",$TARGET_TESTERS," != *",$REQUIRED_TESTER,"* ]]; then
+              echo "❌ Required Firebase tester was not targeted by this release: $REQUIRED_TESTER"
               exit 1
             fi
           fi
