@@ -9,6 +9,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.openclaw.console.R
 import java.util.Locale
+
+// Extension function for backward compatibility with older Kotlin versions
+private fun String.capitalizeCompat(): String {
+    return if (isEmpty()) this else this[0].uppercase() + substring(1)
+}
 import com.openclaw.console.data.model.ApprovalRequest
 import com.openclaw.console.data.model.Incident
 import com.openclaw.console.data.model.IncidentSeverity
@@ -97,7 +102,7 @@ class NotificationService private constructor(private val context: Context) {
                 .setSmallIcon(R.drawable.ic_security) // Assumes security icon exists
                 .setContentTitle("Approval Required")
                 .setContentText("${approval.agentName}: ${approval.title}")
-                .setSubText(approval.actionType.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() })
+                .setSubText(approval.actionType.capitalizeCompat())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(false) // Keep until user responds
