@@ -26,7 +26,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
         "/v1/betaGroups/group-build" => {
           "data" => {
             "id" => "group-build",
-            "attributes" => { "name" => "App Store Connect Users" }
+            "attributes" => { "name" => "Internal QA" }
           }
         }
       }
@@ -36,39 +36,17 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
     end
 
-    assert_includes stdout, "via build beta groups App Store Connect Users"
+    assert_includes stdout, "via build beta groups Internal QA"
     assert_includes stdout, "tester tester@example.com"
   end
 
-  def test_succeeds_via_direct_tester_assignment_when_no_group_relationships_exist
+  def test_fails_when_build_beta_groups_do_not_match_configured_group_names
     verifier = build_verifier(
       group_names: ["Internal QA"],
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/apps/app-id/betaGroups?limit=200" => [],
         "/v1/builds/build-id/relationships/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/individualTesters?limit=200" => [
-          { "attributes" => { "email" => "tester@example.com" } }
-        ]
-      }
-    )
-
-    stdout, = capture_io do
-      verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
-    end
-
-    assert_includes stdout, "via direct tester assignment"
-    assert_includes stdout, "tester@example.com"
-  end
-
-  def test_fails_when_neither_group_nor_individual_assignment_proves_access
-    verifier = build_verifier(
-      group_names: ["Internal QA"],
-      required_tester: "tester@example.com",
-      collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/individualTesters?limit=200" => []
       }
     )
 
@@ -76,8 +54,36 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
     end
 
-    assert_includes error.message, "no beta groups for this app or build"
-    assert_includes error.message, "tester@example.com"
+    assert_includes error.message, "Missing TestFlight beta groups: Internal QA"
+    assert_includes error.message, "Build build-id is assigned to: none"
+  end
+
+  def test_fails_when_build_relationship_uses_the_wrong_group_name
+    verifier = build_verifier(
+      group_names: ["Internal QA"],
+      required_tester: "tester@example.com",
+      collection_map: {
+        "/v1/apps/app-id/betaGroups?limit=200" => [],
+        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [
+          { "id" => "group-build" }
+        ]
+      },
+      request_map: {
+        "/v1/betaGroups/group-build" => {
+          "data" => {
+            "id" => "group-build",
+            "attributes" => { "name" => "App Store Connect Users" }
+          }
+        }
+      }
+    )
+
+    error = assert_raises(RuntimeError) do
+      verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
+    end
+
+    assert_includes error.message, "Missing TestFlight beta groups: Internal QA"
+    assert_includes error.message, "Build build-id is assigned to: App Store Connect Users"
   end
 
   private

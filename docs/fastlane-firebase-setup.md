@@ -167,7 +167,7 @@ bundle exec fastlane beta
 The iOS internal-delivery path is only considered valid when all of the following are true:
 - `TESTFLIGHT_GROUPS` resolves to at least one internal beta group.
 - `TESTFLIGHT_REQUIRED_TESTER_EMAIL` resolves to an internal App Store Connect user in one of those groups.
-- The workflow verification step confirms the processed build is attached to every required group, or when App Store Connect exposes no app beta groups it confirms the required tester has access through the build's beta groups or an individual tester assignment.
+- The workflow verification step confirms the processed build is attached to every required group, or when App Store Connect exposes no app beta groups it confirms the build relationship still exposes those exact configured groups and the required tester is a member of them. Direct tester-only proof is not accepted.
 
 ### Run preflight checks
 
