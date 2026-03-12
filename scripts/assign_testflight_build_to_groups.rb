@@ -48,6 +48,25 @@ def base64url(value)
   Base64.urlsafe_encode64(value, padding: false)
 end
 
+def ecdsa_der_to_jose(signature, size:)
+  sequence = OpenSSL::ASN1.decode(signature)
+  values = sequence.value
+  fail_with("Invalid ECDSA signature format") unless values.is_a?(Array) && values.length == 2
+
+  values.map do |component|
+    fail_with("Invalid ECDSA signature component") unless component.is_a?(OpenSSL::ASN1::Integer)
+
+    hex = component.value.to_i.to_s(16)
+    hex = "0#{hex}" if hex.length.odd?
+    bytes = [hex].pack("H*")
+    fail_with("ECDSA signature component exceeds #{size} bytes") if bytes.bytesize > size
+
+    bytes.rjust(size, "\x00")
+  end.join
+rescue OpenSSL::ASN1::ASN1Error => e
+  fail_with("Invalid ECDSA signature format: #{e.message}")
+end
+
 def build_jwt
   key_id = first_present_env("APPSTORE_KEY_ID") || fail_with("APPSTORE_KEY_ID is required")
   issuer_id = first_present_env("APPSTORE_ISSUER_ID") || fail_with("APPSTORE_ISSUER_ID is required")
@@ -59,8 +78,9 @@ def build_jwt
   payload = { iss: issuer_id, iat: now, exp: now + 600, aud: "appstoreconnect-v1" }
   signing_input = "#{base64url(header.to_json)}.#{base64url(payload.to_json)}"
   signature = OpenSSL::PKey.read(private_key).sign("sha256", signing_input)
+  jose_signature = ecdsa_der_to_jose(signature, size: 32)
 
-  "#{signing_input}.#{base64url(signature)}"
+  "#{signing_input}.#{base64url(jose_signature)}"
 end
 
 def request_json(jwt:, method:, path:, payload: nil)
@@ -206,34 +226,36 @@ def verify_required_tester_membership(jwt:, groups:, email:)
   fail_with("Required TestFlight tester #{email} is not a member of beta groups: #{group_names}")
 end
 
-metadata_path = ARGV.fetch(0) do
-  fail_with("Usage: #{$PROGRAM_NAME} path/to/testflight_build.json")
-end
-metadata = read_metadata(metadata_path)
-bundle_id = metadata.fetch("bundle_id")
-marketing_version = metadata.fetch("marketing_version")
-build_number = metadata.fetch("build_number").to_s
-group_names = strict_csv_env("TESTFLIGHT_GROUPS_SECRET", "TESTFLIGHT_GROUPS")
-fail_with("No TESTFLIGHT_GROUPS configured. Refusing to claim TestFlight delivery without an explicit beta group.") if group_names.empty?
+if $PROGRAM_NAME == __FILE__
+  metadata_path = ARGV.fetch(0) do
+    fail_with("Usage: #{$PROGRAM_NAME} path/to/testflight_build.json")
+  end
+  metadata = read_metadata(metadata_path)
+  bundle_id = metadata.fetch("bundle_id")
+  marketing_version = metadata.fetch("marketing_version")
+  build_number = metadata.fetch("build_number").to_s
+  group_names = strict_csv_env("TESTFLIGHT_GROUPS_SECRET", "TESTFLIGHT_GROUPS")
+  fail_with("No TESTFLIGHT_GROUPS configured. Refusing to claim TestFlight delivery without an explicit beta group.") if group_names.empty?
 
-jwt = build_jwt
-app_id = app_id_for_bundle(jwt: jwt, bundle_id: bundle_id)
-build = build_for_metadata(
-  jwt: jwt,
-  app_id: app_id,
-  build_number: build_number,
-  marketing_version: marketing_version
-)
-groups = beta_groups_for_names(jwt: jwt, app_id: app_id, group_names: group_names)
-group_ids = groups.map { |group| group.fetch("id") }
-required_tester = required_tester_email
+  jwt = build_jwt
+  app_id = app_id_for_bundle(jwt: jwt, bundle_id: bundle_id)
+  build = build_for_metadata(
+    jwt: jwt,
+    app_id: app_id,
+    build_number: build_number,
+    marketing_version: marketing_version
+  )
+  groups = beta_groups_for_names(jwt: jwt, app_id: app_id, group_names: group_names)
+  group_ids = groups.map { |group| group.fetch("id") }
+  required_tester = required_tester_email
 
-verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), expected_group_ids: group_ids)
-verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
+  verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), expected_group_ids: group_ids)
+  verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
 
-group_summary = groups.map { |group| group.dig("attributes", "name") }.join(", ")
-if required_tester
-  puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups #{group_summary} with tester #{required_tester}")
-else
-  puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups: #{group_summary}")
+  group_summary = groups.map { |group| group.dig("attributes", "name") }.join(", ")
+  if required_tester
+    puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups #{group_summary} with tester #{required_tester}")
+  else
+    puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups: #{group_summary}")
+  end
 end

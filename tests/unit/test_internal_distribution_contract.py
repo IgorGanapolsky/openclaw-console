@@ -1,5 +1,8 @@
 import unittest
+import base64
+import os
 from pathlib import Path
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -47,7 +50,8 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("Missing FIREBASE_REQUIRED_TESTER_EMAIL secret. Android internal distribution requires a proof tester in the target group.", WORKFLOW)
         self.assertIn("FIREBASE_REQUIRED_TESTER_EMAIL must contain exactly one tester email.", WORKFLOW)
         self.assertIn('appdistribution:testers:add --group-alias="$group_alias" "$REQUIRED_TESTER" -P "$FIREBASE_PROJECT_ID"', WORKFLOW)
-        self.assertIn('appdistribution:group:create "$group_alias" "$group_alias" -P "$FIREBASE_PROJECT_ID"', WORKFLOW)
+        self.assertIn("Refusing to auto-create groups because FIREBASE_INTERNAL_GROUPS must name the real internal audience.", WORKFLOW)
+        self.assertNotIn('appdistribution:group:create "$group_alias" "$group_alias" -P "$FIREBASE_PROJECT_ID"', WORKFLOW)
         self.assertNotIn('resolve_distribution_config "FIREBASE_INTERNAL_TESTERS"', WORKFLOW)
         self.assertNotIn('resolve_distribution_config "FIREBASE_INTERNAL_GROUPS"', WORKFLOW)
         self.assertNotIn('resolve_distribution_config "FIREBASE_REQUIRED_TESTER_EMAIL"', WORKFLOW)
@@ -105,6 +109,7 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("environment_secret_exists", SETUP_SCRIPT)
         self.assertIn("variable_exists", SETUP_SCRIPT)
         self.assertIn("environment_variable_exists", SETUP_SCRIPT)
+        self.assertIn("config_exists_repo_or_env_scope", SETUP_SCRIPT)
         self.assertIn("delete_environment_secret_if_present", SETUP_SCRIPT)
         self.assertIn("delete_environment_variable_if_present", SETUP_SCRIPT)
         self.assertIn('gh variable delete "$name" --repo="$REPO" --env "$ENVIRONMENT_NAME"', SETUP_SCRIPT)
@@ -118,6 +123,7 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("repository + production-environment state directly", SETUP_SCRIPT)
         self.assertIn("Organization-scoped Actions config is not inspected here", SETUP_SCRIPT)
         self.assertIn("Workflow readiness is not yet verified.", SETUP_SCRIPT)
+        self.assertIn("Required release-delivery config is still missing from repo/${ENVIRONMENT_NAME} scopes", SETUP_SCRIPT)
         self.assertIn("Organization-scoped Actions secrets can also satisfy", SETUP_SCRIPT)
         self.assertIn("Repo/${ENVIRONMENT_NAME} scopes are configured", SETUP_SCRIPT)
         self.assertIn("verify org-level Actions secrets/vars separately before treating workflow readiness as proved", SETUP_SCRIPT)
@@ -149,11 +155,42 @@ class InternalDistributionContractTest(unittest.TestCase):
     def test_testflight_verifier_supports_base64_keys_and_required_tester_membership(self):
         verifier = (ROOT / "scripts/assign_testflight_build_to_groups.rb").read_text()
         self.assertIn('Base64.decode64(private_key)', verifier)
+        self.assertIn("ecdsa_der_to_jose", verifier)
+        self.assertIn("OpenSSL::ASN1.decode(signature)", verifier)
+        self.assertIn('if $PROGRAM_NAME == __FILE__', verifier)
         self.assertIn('"/v1/betaGroups/#{group.fetch(\'id\')}/betaTesters?limit=200"', verifier)
         self.assertIn("TESTFLIGHT_REQUIRED_TESTER_EMAIL", verifier)
         self.assertIn('"/v1/builds?#{query}"', verifier)
         self.assertIn('strict_csv_env("TESTFLIGHT_GROUPS_SECRET", "TESTFLIGHT_GROUPS")', verifier)
         self.assertNotIn("add_build_to_groups", verifier)
+
+    def test_testflight_verifier_emits_jose_es256_signature(self):
+        private_key = subprocess.check_output(
+            ["openssl", "ecparam", "-name", "prime256v1", "-genkey", "-noout"],
+            text=True,
+        )
+        env = os.environ.copy()
+        env["APPSTORE_KEY_ID"] = "ABC123DEF4"
+        env["APPSTORE_ISSUER_ID"] = "12345678-1234-1234-1234-123456789012"
+        env["APPSTORE_PRIVATE_KEY"] = base64.b64encode(private_key.encode()).decode()
+        script = """
+require "base64"
+require File.expand_path("scripts/assign_testflight_build_to_groups.rb", Dir.pwd)
+token = build_jwt
+parts = token.split(".")
+abort("wrong-part-count") unless parts.length == 3
+padding = "=" * ((4 - parts[2].length % 4) % 4)
+signature = Base64.urlsafe_decode64(parts[2] + padding)
+abort("wrong-signature-length-#{signature.bytesize}") unless signature.bytesize == 64
+puts "ok"
+"""
+        output = subprocess.check_output(
+            ["ruby", "-e", script],
+            cwd=ROOT,
+            env=env,
+            text=True,
+        ).strip()
+        self.assertEqual("ok", output)
 
 
 if __name__ == "__main__":

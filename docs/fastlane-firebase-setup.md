@@ -64,7 +64,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 
 `TESTFLIGHT_GROUPS` and `TESTFLIGHT_REQUIRED_TESTER_EMAIL` are required for iOS internal distribution. They may be stored as secrets or GitHub Actions variables, but when both forms exist they must match.
 
-`scripts/setup-secrets.sh` writes repository secrets, removes conflicting repository/`production` variables, and verifies those two scopes directly. If this repo lives in an organization, check org-level Actions secrets and variables separately before treating workflow readiness as fully proved.
+`scripts/setup-secrets.sh` writes repository secrets by default, removes conflicting repository/`production` variables for the Android-only Firebase audience, and verifies repository + `production` environment config directly. Its readiness check accepts TestFlight audience values from either secrets or variables to match the workflow. If this repo lives in an organization, check org-level Actions secrets and variables separately before treating workflow readiness as fully proved.
 
 ## One-Time Setup Steps
 
@@ -97,7 +97,7 @@ firebase login:ci
 
 Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
-The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist anywhere in the GitHub Actions `vars` context. Before distribution, CI also ensures the required tester belongs to each configured Firebase group alias, creating a missing group alias with the same display name when the current Firebase auth can do so.
+The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist anywhere in the GitHub Actions `vars` context. Before distribution, CI also ensures the required tester belongs to each configured Firebase group alias, and it fails if any configured group alias does not already exist.
 
 For Android proof, a successful `firebase appdistribution:distribute ... --groups` call is the release-level assignment step. CI follow-up checks confirm the returned release URLs and, when the current auth can read App Distribution groups/testers, the configured group/tester access prerequisites. They do not claim a second independent release-to-group readback that Firebase does not expose.
 

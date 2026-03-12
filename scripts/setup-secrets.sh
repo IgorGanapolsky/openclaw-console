@@ -152,6 +152,11 @@ secret_exists_repo_or_env_scope() {
     secret_exists "$name" || environment_secret_exists "$name"
 }
 
+config_exists_repo_or_env_scope() {
+    local name="$1"
+    secret_exists_repo_or_env_scope "$name" || variable_exists "$name" || environment_variable_exists "$name"
+}
+
 set_secret_authoritative() {
     local name="$1"
     local value="$2"
@@ -399,8 +404,14 @@ echo ""
 echo -e "${YELLOW}Step 5/5: Verification${NC}"
 
 missing=()
-for name in APPSTORE_PRIVATE_KEY APPSTORE_ISSUER_ID APPSTORE_KEY_ID APPLE_TEAM_ID MATCH_GIT_URL MATCH_GIT_BASIC_AUTHORIZATION MATCH_PASSWORD ADMIN_TOKEN GOOGLE_SERVICES_JSON ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD FIREBASE_PROJECT_ID FIREBASE_INTERNAL_GROUPS FIREBASE_REQUIRED_TESTER_EMAIL TESTFLIGHT_GROUPS TESTFLIGHT_REQUIRED_TESTER_EMAIL; do
+for name in APPSTORE_PRIVATE_KEY APPSTORE_ISSUER_ID APPSTORE_KEY_ID APPLE_TEAM_ID MATCH_GIT_URL MATCH_GIT_BASIC_AUTHORIZATION MATCH_PASSWORD ADMIN_TOKEN GOOGLE_SERVICES_JSON ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD FIREBASE_PROJECT_ID FIREBASE_INTERNAL_GROUPS FIREBASE_REQUIRED_TESTER_EMAIL; do
     if ! secret_exists_repo_or_env_scope "$name"; then
+        missing+=("$name")
+    fi
+done
+
+for name in TESTFLIGHT_GROUPS TESTFLIGHT_REQUIRED_TESTER_EMAIL; do
+    if ! config_exists_repo_or_env_scope "$name"; then
         missing+=("$name")
     fi
 done
@@ -427,7 +438,7 @@ echo "Note: the workflow guard reads the GitHub Actions vars context. If this re
 echo ""
 
 if [ "${#missing[@]}" -gt 0 ]; then
-    echo -e "${RED}Workflow readiness is not yet verified. Required secrets are still missing from repo/${ENVIRONMENT_NAME} scopes:${NC}"
+    echo -e "${RED}Workflow readiness is not yet verified. Required release-delivery config is still missing from repo/${ENVIRONMENT_NAME} scopes:${NC}"
     printf '  - %s\n' "${missing[@]}"
     echo "Organization-scoped Actions secrets can also satisfy \${{ secrets.* }}, but this script does not inspect them."
     exit 1
