@@ -2,7 +2,7 @@
   "totalFeedback": 1,
   "thumbsUp": 0,
   "thumbsDown": 1,
-  "lastUpdated": "2026-03-10T16:15:08.065Z",
+  "lastUpdated": "2026-03-12T19:00:45.718Z",
   "currentSessionId": null,
   "sequenceCount": 1,
   "topPatterns": {
@@ -42,9 +42,9 @@
   },
   "longestPositiveStreak": 0,
   "longestNegativeStreak": 1,
-  "total": 3,
+  "total": 7,
   "positive": 2,
   "rejected": null,
-  "accepted": 2,
-  "negative": null
+  "accepted": 6,
+  "negative": 4
 }

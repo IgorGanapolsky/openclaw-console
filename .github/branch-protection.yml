@@ -6,17 +6,25 @@ main:
     strict: true
     contexts:
       - "Skills Tests"
-      - "Architecture Lint Kotlin"
-      - "Architecture Lint Swift"
+      - "Architecture Lint (Kotlin)"
+      - "Architecture Lint (Swift)"
       - "Android Build Check"
       - "iOS Build Check"
       - "Secrets Scan"
+      - "Dependency Audit"
+      - "CodeQL Analysis (java-kotlin)"
+      - "CodeQL Analysis (javascript-typescript)"
+      - "CodeQL Analysis (swift)"
+      - "Require develop or release branch"
+      - "Claude Review"
   enforce_admins: true
   required_pull_request_reviews:
     dismissal_restrictions: {}
     dismiss_stale_reviews: true
     require_code_owner_reviews: false
     required_approving_review_count: 0
+    require_last_push_approval: false
+  required_conversation_resolution: false
   restrictions: null
   allow_force_pushes: false
   allow_deletions: false
@@ -26,10 +34,13 @@ develop:
     strict: true
     contexts:
       - "Skills Tests"
-      - "Architecture Lint Kotlin"
-      - "Architecture Lint Swift"
+      - "Architecture Lint (Kotlin)"
+      - "Architecture Lint (Swift)"
   enforce_admins: true
   required_pull_request_reviews:
     dismiss_stale_reviews: true
+    require_code_owner_reviews: false
     required_approving_review_count: 0
+    require_last_push_approval: false
+  required_conversation_resolution: false
   restrictions: null

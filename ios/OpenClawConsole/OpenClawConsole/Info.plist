@@ -5,6 +5,8 @@
 	<!-- App Identity -->
 	<key>CFBundleDisplayName</key>
 	<string>OpenClaw Console</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.openclaw.console</string>
 	<key>CFBundleName</key>

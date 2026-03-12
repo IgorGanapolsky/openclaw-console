@@ -6,6 +6,7 @@ import com.openclaw.console.data.model.ApprovalResponse
 import com.openclaw.console.data.model.WebSocketEvent
 import com.openclaw.console.data.network.ApiService
 import com.openclaw.console.data.network.WebSocketClient
+import com.openclaw.console.service.NotificationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,7 +17,8 @@ import java.time.Instant
 
 class ApprovalRepository(
     private val apiService: ApiService,
-    private val wsClient: WebSocketClient
+    private val wsClient: WebSocketClient,
+    private val notificationService: NotificationService
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -42,6 +44,8 @@ class ApprovalRepository(
                         val existing = _pendingApprovals.value
                         if (existing.none { it.id == event.request.id }) {
                             _pendingApprovals.value = listOf(event.request) + existing
+                            // Trigger notification for new approval request (matches iOS behavior)
+                            notificationService.scheduleApprovalNotification(event.request)
                         }
                     }
                     else -> {}
@@ -99,6 +103,9 @@ class ApprovalRepository(
 
         // Remove from pending list regardless of HTTP result (optimistic)
         _pendingApprovals.value = _pendingApprovals.value.filter { it.id != approvalId }
+
+        // Remove delivered notification (matches iOS behavior)
+        notificationService.removeDeliveredApproval(approvalId)
 
         return result
     }

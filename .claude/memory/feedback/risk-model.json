@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "algorithm": "adaboost-stumps",
+  "trainedAt": "2026-03-12T19:00:45.878Z",
+  "exampleCount": 8,
+  "highRiskExamples": 6,
+  "baseRate": 0.75,
+  "featureRegistry": {
+    "topTags": [
+      "truthfulness",
+      "firebase",
+      "release-verification",
+      "testflight",
+      "architecture",
+      "assumption",
+      "auto-capture",
+      "automation"
+    ],
+    "topSkills": [
+      "release-verification"
+    ],
+    "domains": [
+      "general",
+      "testing",
+      "security",
+      "performance",
+      "ui-components",
+      "api-integration",
+      "git-workflow",
+      "documentation",
+      "debugging",
+      "architecture",
+      "data-modeling"
+    ]
+  },
+  "featureNames": [
+    "recentTrend",
+    "sequenceLength",
+    "recentNegativeCount",
+    "recentPositiveCount",
+    "avgTimeGap",
+    "maxTimeGap",
+    "tagCount",
+    "filePathCount",
+    "hasErrorType",
+    "hasRubric",
+    "rubricWeightedScore",
+    "failingCriteriaCount",
+    "failingGuardrailsCount",
+    "judgeDisagreementCount",
+    "actionNegativeRate",
+    "containsRiskWord",
+    "containsVerificationWord",
+    "containsSafetyWord",
+    "containsSuccessWord",
+    "domain:general",
+    "domain:testing",
+    "domain:security",
+    "domain:performance",
+    "domain:ui-components",
+    "domain:api-integration",
+    "domain:git-workflow",
+    "domain:documentation",
+    "domain:debugging",
+    "domain:architecture",
+    "domain:data-modeling",
+    "tag:truthfulness",
+    "tag:firebase",
+    "tag:release-verification",
+    "tag:testflight",
+    "tag:architecture",
+    "tag:assumption",
+    "tag:auto-capture",
+    "tag:automation",
+    "skill:release-verification"
+  ],
+  "learners": [
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    }
+  ],
+  "patterns": {
+    "tags": [
+      {
+        "key": "truthfulness",
+        "total": 3,
+        "highRisk": 3,
+        "riskRate": 1
+      },
+      {
+        "key": "firebase",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      },
+      {
+        "key": "release-verification",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      },
+      {
+        "key": "testflight",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      }
+    ],
+    "domains": [
+      {
+        "key": "testing",
+        "total": 3,
+        "highRisk": 3,
+        "riskRate": 1
+      },
+      {
+        "key": "general",
+        "total": 5,
+        "highRisk": 3,
+        "riskRate": 0.6
+      }
+    ],
+    "skills": [
+      {
+        "key": "release-verification",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      }
+    ]
+  },
+  "metrics": {
+    "trainingAccuracy": 1,
+    "rounds": 8,
+    "mode": "boosted"
+  }
+}

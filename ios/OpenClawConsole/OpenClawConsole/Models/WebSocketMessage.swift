@@ -194,6 +194,7 @@ struct BridgeSession: Codable, Identifiable {
     }
 }
 
+// Note: GitState is defined in Agent.swift
 // MARK: - Connected Payload
 
 struct ConnectedPayload: Codable {
