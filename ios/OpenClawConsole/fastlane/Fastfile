@@ -14,6 +14,23 @@ def app_store_api_key_from_env
   )
 end
 
+def csv_env(name)
+  ENV.fetch(name, "")
+    .split(/[,\n;]/)
+    .map(&:strip)
+    .reject(&:empty?)
+    .uniq
+end
+
+def required_testflight_groups!
+  groups = csv_env("TESTFLIGHT_GROUPS")
+  if groups.empty?
+    UI.user_error!("TESTFLIGHT_GROUPS must list at least one internal TestFlight group so CI can deliver processed builds instead of upload-only artifacts.")
+  end
+
+  groups
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -50,6 +67,10 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       build_number: next_build_number
     )
+
+    testflight_groups = required_testflight_groups!
+    changelog = ENV["TESTFLIGHT_CHANGELOG"] || "Internal beta build #{next_build_number} for version #{marketing_version}."
+    UI.message("Targeting TestFlight internal groups: #{testflight_groups.join(', ')}")
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
       update_code_signing_settings(
@@ -101,7 +122,11 @@ platform :ios do
     end
 
     upload_to_testflight(
-      skip_waiting_for_build_processing: true,
+      skip_waiting_for_build_processing: false,
+      distribute_external: false,
+      notify_external_testers: false,
+      groups: testflight_groups,
+      changelog: changelog,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"

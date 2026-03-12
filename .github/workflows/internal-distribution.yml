@@ -78,9 +78,11 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TESTFLIGHT_GROUPS: ${{ secrets.TESTFLIGHT_GROUPS }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN APPLE_TEAM_ID TESTFLIGHT_GROUPS; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -124,6 +126,8 @@ jobs:
 
       - name: Setup signing certificates and profiles (match)
         env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
@@ -132,14 +136,17 @@ jobs:
         run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
-      - name: Build and upload to TestFlight
+      - name: Build, process, and distribute to TestFlight
         env:
           CI: "true"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_GROUPS: ${{ secrets.TESTFLIGHT_GROUPS }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -305,18 +312,39 @@ jobs:
       - name: Distribute to internal Firebase tester(s)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
-          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_PROJECT_ID_SECRET: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_INTERNAL_TESTERS_VAR: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS_VAR: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_VAR: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
         run: |
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
 
+          coalesce() {
+            for value in "$@"; do
+              if [ -n "${value:-}" ]; then
+                printf '%s' "$value"
+                return 0
+              fi
+            done
+          }
+
+          normalize_csv() {
+            printf '%s' "${1:-}" \
+              | tr '\n\r;' ',' \
+              | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
+          }
+
+          PROJECT_ID="${FIREBASE_PROJECT_ID_SECRET:-openclaw-console-mobile}"
+
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
-          if ! firebase projects:list --json | jq -e '.[] | select(.projectId == "openclaw-console-mobile")' > /dev/null; then
-            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
+          if ! firebase projects:list --json | jq -e --arg project_id "$PROJECT_ID" '.[] | select(.projectId == $project_id)' > /dev/null; then
+            echo "❌ Firebase project $PROJECT_ID not accessible or does not exist"
             exit 1
           fi
 
@@ -344,9 +372,9 @@ jobs:
           fi
 
           # Prepare distribution command
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
-          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
-          REQUIRED_TESTER="${FIREBASE_REQUIRED_TESTER_EMAIL:-}"
+          TESTERS="$(normalize_csv "$(coalesce "${FIREBASE_INTERNAL_TESTERS_VAR:-}" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}")")"
+          DIST_GROUPS="$(normalize_csv "$(coalesce "${FIREBASE_INTERNAL_GROUPS_VAR:-}" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}")")"
+          REQUIRED_TESTER="$(normalize_csv "$(coalesce "${FIREBASE_REQUIRED_TESTER_EMAIL_VAR:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}")")"
           APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
 
           # Add required tester if specified
@@ -362,12 +390,21 @@ jobs:
             fi
           fi
 
+          if [ -z "$TESTERS" ] && [ -z "$DIST_GROUPS" ]; then
+            echo "❌ No Firebase tester audience configured. Set FIREBASE_INTERNAL_TESTERS or FIREBASE_INTERNAL_GROUPS as a repo variable or secret."
+            exit 1
+          fi
+
+          TESTER_COUNT=$(printf '%s' "$TESTERS" | awk -F',' 'NF { print NF }' || true)
+          GROUP_COUNT=$(printf '%s' "$DIST_GROUPS" | awk -F',' 'NF { print NF }' || true)
+          echo "📧 Firebase audience configuration: testers=${TESTER_COUNT:-0} groups=${GROUP_COUNT:-0}"
+
           # Build Firebase command
           BASE_CMD=(
             firebase appdistribution:distribute
             "$APK_PATH"
             --app "$FIREBASE_APP_ID"
-            --project openclaw-console-mobile
+            --project "$PROJECT_ID"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
 
@@ -408,16 +445,47 @@ jobs:
 
       - name: Verify Firebase distribution actually worked
         env:
+          FIREBASE_PROJECT_ID_SECRET: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_INTERNAL_TESTERS_VAR: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS_VAR: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_VAR: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
         run: |
           set -euo pipefail
 
+          coalesce() {
+            for value in "$@"; do
+              if [ -n "${value:-}" ]; then
+                printf '%s' "$value"
+                return 0
+              fi
+            done
+          }
+
+          normalize_csv() {
+            printf '%s' "${1:-}" \
+              | tr '\n\r;' ',' \
+              | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
+          }
+
           echo "🔍 Verifying Firebase distribution delivery"
+          PROJECT_ID="${FIREBASE_PROJECT_ID_SECRET:-openclaw-console-mobile}"
+          TESTERS="$(normalize_csv "$(coalesce "${FIREBASE_INTERNAL_TESTERS_VAR:-}" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}")")"
+          DIST_GROUPS="$(normalize_csv "$(coalesce "${FIREBASE_INTERNAL_GROUPS_VAR:-}" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}")")"
+          REQUIRED_TESTER="$(normalize_csv "$(coalesce "${FIREBASE_REQUIRED_TESTER_EMAIL_VAR:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}")")"
+
+          if [ -z "$TESTERS" ] && [ -z "$DIST_GROUPS" ]; then
+            echo "❌ Verification failed: no Firebase tester audience is configured."
+            exit 1
+          fi
 
           # Get latest release info to verify upload worked
           RELEASE_INFO=$(firebase appdistribution:releases:list \
             --app "$FIREBASE_APP_ID" \
-            --project openclaw-console-mobile \
+            --project "$PROJECT_ID" \
             --format=json | jq -r '.[0] // empty')
 
           if [ -z "$RELEASE_INFO" ] || [ "$RELEASE_INFO" = "null" ]; then
@@ -436,19 +504,26 @@ jobs:
           echo "📱 Latest release: $RELEASE_ID (build: $BUILD_VERSION)"
 
           # Verify tester configuration
-          TESTER_COUNT=$(firebase appdistribution:testers:list \
+          TESTERS_JSON=$(firebase appdistribution:testers:list \
             --app "$FIREBASE_APP_ID" \
-            --project openclaw-console-mobile \
-            --format=json | jq 'length // 0')
+            --project "$PROJECT_ID" \
+            --format=json)
+          TESTER_COUNT=$(printf '%s' "$TESTERS_JSON" | jq 'length // 0')
 
           if [ "$TESTER_COUNT" -eq 0 ]; then
-            echo "⚠️ WARNING: No testers configured - build uploaded but no email invitations sent"
-          else
-            echo "📧 Distribution verified: Release $RELEASE_ID sent to $TESTER_COUNT testers"
+            echo "❌ No Firebase testers registered for this app - release delivery is not provable"
+            exit 1
           fi
 
+          if [ -n "$REQUIRED_TESTER" ] && ! printf '%s' "$TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.[] | select(.email == $email)' > /dev/null; then
+            echo "❌ Required Firebase tester is not registered for this app: $REQUIRED_TESTER"
+            exit 1
+          fi
+
+          echo "📧 Distribution verified: Release $RELEASE_ID is available in Firebase App Distribution with $TESTER_COUNT registered testers"
+
           # Get Firebase console URL for manual verification
-          CONSOLE_URL="https://console.firebase.google.com/project/openclaw-console-mobile/appdistribution/app/android:com.openclaw.console"
+          CONSOLE_URL="https://console.firebase.google.com/project/${PROJECT_ID}/appdistribution/app/android:com.openclaw.console"
           echo "🔗 Firebase console: $CONSOLE_URL"
 
           echo "✅ Firebase App Distribution verification complete"
