@@ -1,5 +1,7 @@
 default_platform(:ios)
 
+require "json"
+
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
@@ -49,6 +51,17 @@ platform :ios do
     increment_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
       build_number: next_build_number
+    )
+
+    File.write(
+      "fastlane/testflight_build.json",
+      JSON.pretty_generate(
+        {
+          bundle_id: "com.openclaw.console",
+          marketing_version: marketing_version,
+          build_number: next_build_number
+        }
+      )
     )
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
@@ -101,7 +114,7 @@ platform :ios do
     end
 
     upload_to_testflight(
-      skip_waiting_for_build_processing: true,
+      skip_waiting_for_build_processing: false,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"

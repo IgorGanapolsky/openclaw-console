@@ -45,6 +45,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `KEY_PASSWORD` | Key password | From when you created the keystore |
 | `FIREBASE_TOKEN` | Firebase CLI token | Run `firebase login:ci` locally |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (fallback auth for Firebase) | Google Cloud Console → IAM → Service accounts |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON (preferred auth) | Google Cloud Console → IAM → Service accounts |
 
 ### Optional
 
@@ -54,6 +55,8 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
 | `FIREBASE_INTERNAL_TESTERS` (secret or variable) | Comma-separated tester emails for Firebase App Distribution invites |
 | `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites |
+| `FIREBASE_REQUIRED_TESTER_EMAIL` (secret or variable) | Single tester email that must be included on every Firebase internal distribution |
+| `TESTFLIGHT_GROUPS` (secret or variable) | Comma-separated App Store Connect beta groups that must receive each internal TestFlight build |
 
 ## One-Time Setup Steps
 
