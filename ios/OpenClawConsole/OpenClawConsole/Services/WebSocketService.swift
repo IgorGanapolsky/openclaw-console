@@ -167,27 +167,27 @@ final class WebSocketService: NSObject {
     private func decodeInboundEvent(_ eventType: InboundEventType, payloadData: Data) -> InboundEvent? {
         switch eventType {
         case .agentUpdate:
-            decode(payloadData, as: AgentStatusUpdate.self, map: InboundEvent.agentUpdate)
+            return decode(payloadData, as: AgentStatusUpdate.self, map: InboundEvent.agentUpdate)
         case .taskUpdate:
-            decode(payloadData, as: OCTaskUpdate.self, map: InboundEvent.taskUpdate)
+            return decode(payloadData, as: OCTaskUpdate.self, map: InboundEvent.taskUpdate)
         case .taskStep:
-            decode(payloadData, as: TaskStep.self, map: InboundEvent.taskStep)
+            return decode(payloadData, as: TaskStep.self, map: InboundEvent.taskStep)
         case .incidentNew:
-            decode(payloadData, as: Incident.self, map: InboundEvent.incidentNew)
+            return decode(payloadData, as: Incident.self, map: InboundEvent.incidentNew)
         case .incidentUpdate:
-            decode(payloadData, as: IncidentUpdate.self, map: InboundEvent.incidentUpdate)
+            return decode(payloadData, as: IncidentUpdate.self, map: InboundEvent.incidentUpdate)
         case .approvalRequest:
-            decode(payloadData, as: ApprovalRequest.self, map: InboundEvent.approvalRequest)
+            return decode(payloadData, as: ApprovalRequest.self, map: InboundEvent.approvalRequest)
         case .chatResponse:
-            decode(payloadData, as: ChatMessage.self, map: InboundEvent.chatResponse)
+            return decode(payloadData, as: ChatMessage.self, map: InboundEvent.chatResponse)
         case .bridgeSessionNew:
-            decode(payloadData, as: BridgeSession.self, map: InboundEvent.bridgeSessionNew)
+            return decode(payloadData, as: BridgeSession.self, map: InboundEvent.bridgeSessionNew)
         case .bridgeSessionUpdate:
-            decode(payloadData, as: BridgeSession.self, map: InboundEvent.bridgeSessionUpdate)
+            return decode(payloadData, as: BridgeSession.self, map: InboundEvent.bridgeSessionUpdate)
         case .recurringTaskUpdated:
-            decode(payloadData, as: RecurringTask.self, map: InboundEvent.recurringTaskUpdated)
+            return decode(payloadData, as: RecurringTask.self, map: InboundEvent.recurringTaskUpdated)
         case .gitStateChanged:
-            decode(payloadData, as: GitStateUpdatePayload.self) { .gitStateChanged($0.agentId, $0.gitState) }
+            return decode(payloadData, as: GitStateUpdatePayload.self) { .gitStateChanged($0.agentId, $0.gitState) }
         case .connected:
             return decode(payloadData, as: ConnectedPayload.self) { [weak self] payload in
                 self?.reconnectAttempt = 0
@@ -195,7 +195,7 @@ final class WebSocketService: NSObject {
                 return .connected(sessionId: payload.sessionId, gatewayVersion: payload.gatewayVersion)
             }
         case .error:
-            decode(payloadData, as: ErrorPayload.self) { .error(code: $0.code, message: $0.message) }
+            return decode(payloadData, as: ErrorPayload.self) { .error(code: $0.code, message: $0.message) }
         }
     }
 
