@@ -10,6 +10,7 @@ import com.openclaw.console.data.network.ConnectionState
 import com.openclaw.console.data.network.WebSocketClient
 import com.openclaw.console.data.repository.*
 import com.openclaw.console.service.SecureStorage
+import com.openclaw.console.service.NotificationService
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
  * App-level ViewModel that owns the active gateway connection and shared repositories.
  * Survives configuration changes as it lives at the Activity level.
  */
-class AppViewModel(application: Application) : ViewModel() {
+class AppViewModel(private val application: Application) : ViewModel() {
 
     val secureStorage = SecureStorage(application)
     val gatewayRepository = GatewayRepository(secureStorage)
@@ -85,7 +86,7 @@ class AppViewModel(application: Application) : ViewModel() {
         _incidentRepository.value = IncidentRepository(api, ws)
         _bridgeRepository.value = BridgeRepository(api, ws)
         _loopRepository.value = LoopRepository(api, ws)
-        _approvalRepository.value = ApprovalRepository(api, ws)
+        _approvalRepository.value = ApprovalRepository(api, ws, NotificationService.getInstance(application))
 
         ws.connect()
 

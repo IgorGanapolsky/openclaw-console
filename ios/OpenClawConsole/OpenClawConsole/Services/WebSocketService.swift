@@ -49,8 +49,11 @@ final class WebSocketService: NSObject {
     @ObservationIgnored private var reconnectTask: _Concurrency.Task<Void, Never>?
     @ObservationIgnored private var pingTask: _Concurrency.Task<Void, Never>?
     @ObservationIgnored private var receiveTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var healthCheckTask: _Concurrency.Task<Void, Never>?
 
     private var shouldReconnect: Bool = false
+    private var lastPongReceived: Date = Date()
+    private var connectionHealthy: Bool = true
 
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -73,6 +76,7 @@ final class WebSocketService: NSObject {
         reconnectTask?.cancel()
         pingTask?.cancel()
         receiveTask?.cancel()
+        healthCheckTask?.cancel()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         connectionState = .disconnected
@@ -104,6 +108,7 @@ final class WebSocketService: NSObject {
         }
 
         startPingLoop()
+        startHealthCheck()
     }
 
     // MARK: - Receive Loop
@@ -229,7 +234,7 @@ final class WebSocketService: NSObject {
         task.send(.string(text)) { _ in }
     }
 
-    // MARK: - Ping
+    // MARK: - Ping & Health Check
 
     private func startPingLoop() {
         pingTask?.cancel()
@@ -237,8 +242,45 @@ final class WebSocketService: NSObject {
             while let self, !_Concurrency.Task.isCancelled {
                 try? await _Concurrency.Task.sleep(nanoseconds: 30_000_000_000) // 30s
                 guard !_Concurrency.Task.isCancelled else { break }
-                self.webSocketTask?.sendPing { _ in }
+                self.webSocketTask?.sendPing { [weak self] error in
+                    if error == nil {
+                        self?.lastPongReceived = Date()
+                    }
+                }
             }
+        }
+    }
+
+    private func startHealthCheck() {
+        healthCheckTask?.cancel()
+        healthCheckTask = _Concurrency.Task { [weak self] in
+            while let self, !_Concurrency.Task.isCancelled {
+                try? await _Concurrency.Task.sleep(nanoseconds: 60_000_000_000) // 60s health check
+                guard !_Concurrency.Task.isCancelled else { break }
+                await self.performHealthCheck()
+            }
+        }
+    }
+
+    @MainActor
+    private func performHealthCheck() {
+        let now = Date()
+        let timeSinceLastPong = now.timeIntervalSince(lastPongReceived)
+
+        // If no pong in 90 seconds, consider connection unhealthy
+        if timeSinceLastPong > 90 {
+            connectionHealthy = false
+            if shouldReconnect && connectionState != .connecting {
+                Task {
+                    await handleDisconnect(error: NSError(
+                        domain: "WebSocket",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Connection health check failed"]
+                    ))
+                }
+            }
+        } else {
+            connectionHealthy = true
         }
     }
 

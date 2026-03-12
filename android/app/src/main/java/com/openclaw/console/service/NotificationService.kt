@@ -10,7 +10,8 @@ import androidx.core.app.NotificationManagerCompat
 import com.openclaw.console.R
 import com.openclaw.console.data.model.ApprovalRequest
 import com.openclaw.console.data.model.Incident
-import com.openclaw.console.ui.MainActivity
+import com.openclaw.console.data.model.IncidentSeverity
+import com.openclaw.console.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -79,11 +80,10 @@ class NotificationService private constructor(private val context: Context) {
      */
     fun scheduleApprovalNotification(approval: ApprovalRequest) {
         scope.launch {
-            val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                putExtra("approval_id", approval.id)
-                putExtra("navigation_target", "approvals")
-            }
+            val openAppIntent = Intent(context, MainActivity::class.java)
+            openAppIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            openAppIntent.putExtra("approval_id", approval.id)
+            openAppIntent.putExtra("navigation_target", "approvals")
 
             val openAppPendingIntent = PendingIntent.getActivity(
                 context,
@@ -96,7 +96,7 @@ class NotificationService private constructor(private val context: Context) {
                 .setSmallIcon(R.drawable.ic_security) // Assumes security icon exists
                 .setContentTitle("Approval Required")
                 .setContentText("${approval.agentName}: ${approval.title}")
-                .setSubText(approval.actionType.replaceFirstChar { it.uppercase() })
+                .setSubText(approval.actionType.capitalize())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(false) // Keep until user responds
@@ -134,14 +134,13 @@ class NotificationService private constructor(private val context: Context) {
      * Mirrors iOS scheduleCriticalIncidentNotification functionality.
      */
     fun scheduleCriticalIncidentNotification(incident: Incident) {
-        if (incident.severity != "critical") return
+        if (incident.severity != IncidentSeverity.CRITICAL) return
 
         scope.launch {
-            val openAppIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                putExtra("incident_id", incident.id)
-                putExtra("navigation_target", "incidents")
-            }
+            val openAppIntent = Intent(context, MainActivity::class.java)
+            openAppIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            openAppIntent.putExtra("incident_id", incident.id)
+            openAppIntent.putExtra("navigation_target", "incidents")
 
             val openAppPendingIntent = PendingIntent.getActivity(
                 context,
@@ -204,12 +203,11 @@ class NotificationService private constructor(private val context: Context) {
     }
 
     private fun createApprovalActionIntent(approvalId: String, action: String): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("approval_id", approvalId)
-            putExtra("approval_action", action)
-            putExtra("navigation_target", "approvals")
-        }
+        val intent = Intent(context, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        intent.putExtra("approval_id", approvalId)
+        intent.putExtra("approval_action", action)
+        intent.putExtra("navigation_target", "approvals")
 
         return PendingIntent.getActivity(
             context,
