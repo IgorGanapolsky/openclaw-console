@@ -292,6 +292,7 @@ jobs:
             firebase appdistribution:distribute
             android/app/build/outputs/apk/release/app-release.apk
             --app "$FIREBASE_APP_ID"
+            --project openclaw-console-mobile
             --testers "$TESTERS"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
