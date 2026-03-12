@@ -44,7 +44,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `KEYSTORE_PASSWORD` | Keystore password | From when you created the keystore |
 | `KEY_ALIAS` | Key alias in the keystore | From when you created the keystore |
 | `KEY_PASSWORD` | Key password | From when you created the keystore |
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON (preferred auth) | Google Cloud Console → IAM → Service accounts |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON with `roles/firebaseappdistro.admin` on the Firebase project (preferred auth) | Google Cloud Console → IAM → Service accounts |
 | `FIREBASE_TOKEN` | Firebase CLI token (deprecated compatibility fallback) | Run `firebase login:ci` locally |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (last-resort fallback, only if that service account also has Firebase App Distribution upload permission) | Google Cloud Console → IAM → Service accounts |
 
@@ -54,9 +54,8 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 |-----------------|-------------|
 | `FIREBASE_ANDROID_APP_ID` | Override Firebase app ID (normally auto-resolved from google-services.json) |
 | `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
-| `FIREBASE_INTERNAL_TESTERS` (secret or variable) | Comma-separated tester emails for Firebase App Distribution invites. If both exist, they must match. |
-| `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites. If both exist, they must match. |
-| `FIREBASE_REQUIRED_TESTER_EMAIL` (secret or variable) | Single tester email that must be included on every Firebase internal distribution. If both exist, they must match. |
+| `FIREBASE_INTERNAL_GROUPS` (secret only) | Comma-separated Firebase tester group aliases for Android internal distribution. CI fails if a repo variable with this name exists. |
+| `FIREBASE_REQUIRED_TESTER_EMAIL` (secret only) | Single tester email that must already belong to one of the configured Firebase groups. CI fails if a repo variable with this name exists. |
 | `TESTFLIGHT_GROUPS` (secret or variable) | Comma-separated App Store Connect beta groups that must receive each internal TestFlight build. If both exist, they must match. |
 | `TESTFLIGHT_REQUIRED_TESTER_EMAIL` (secret or variable) | Internal App Store Connect tester email that must already belong to one of the required TestFlight groups. If both exist, they must match. |
 
@@ -65,7 +64,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 ### 1. Create Firebase Project
 
 1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create project "OpenClaw Console" (or use an existing one)
+2. Create or reuse the Firebase project `openclaw-console-mobile`
 3. Add Android app with package name `com.openclaw.console`
 4. Download `google-services.json`
 5. Add iOS app with bundle ID `com.openclaw.console`
@@ -74,14 +73,14 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 ### 2. Set Up Firebase App Distribution
 
 1. Firebase Console → Release & Monitor → App Distribution
-2. Create tester group "qa-team" and add `iganapolsky@gmail.com`
-3. Create tester group "developers"
+2. Create at least one Firebase tester group, for example `qa-team`
+3. Add the required proof tester email to that group before enabling CI
 
 ### 3. Create Firebase App Distribution Auth
 
 ```bash
 # Preferred: create a dedicated Firebase service account JSON
-# and grant it the Firebase App Distribution Admin role.
+# and grant it roles/firebaseappdistro.admin on the Firebase project.
 
 # Optional deprecated fallback:
 npm install -g firebase-tools
@@ -91,7 +90,7 @@ firebase login:ci
 
 Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
-The workflow refuses ambiguous audience configuration. If the same Firebase/TestFlight audience key exists as both a GitHub Actions secret and variable with different values, the run fails instead of guessing.
+The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, and it fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist as repo variables.
 
 ### 4. Create Android Keystore
 

@@ -35,10 +35,16 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertNotIn("appdistribution:releases:list", WORKFLOW)
         self.assertNotIn("--format=json", WORKFLOW)
 
-    def test_workflow_prefers_secret_backed_audience_and_ci_token_before_google_play_fallback(self):
-        self.assertIn('resolve_distribution_config "FIREBASE_INTERNAL_TESTERS"', WORKFLOW)
-        self.assertIn('resolve_distribution_config "FIREBASE_INTERNAL_GROUPS"', WORKFLOW)
-        self.assertIn('resolve_distribution_config "FIREBASE_REQUIRED_TESTER_EMAIL"', WORKFLOW)
+    def test_workflow_requires_secret_only_group_based_firebase_audience(self):
+        self.assertIn("FIREBASE_INTERNAL_TESTERS direct-email distribution is no longer supported", WORKFLOW)
+        self.assertIn("Firebase internal audience must be configured as GitHub Actions secrets only.", WORKFLOW)
+        self.assertIn("Missing FIREBASE_INTERNAL_GROUPS secret. Android internal distribution requires explicit Firebase tester groups.", WORKFLOW)
+        self.assertIn("Missing FIREBASE_REQUIRED_TESTER_EMAIL secret. Android internal distribution requires a proof tester in the target group.", WORKFLOW)
+        self.assertNotIn('resolve_distribution_config "FIREBASE_INTERNAL_TESTERS"', WORKFLOW)
+        self.assertNotIn('resolve_distribution_config "FIREBASE_INTERNAL_GROUPS"', WORKFLOW)
+        self.assertNotIn('resolve_distribution_config "FIREBASE_REQUIRED_TESTER_EMAIL"', WORKFLOW)
+
+    def test_workflow_prefers_ci_token_before_google_play_fallback(self):
         self.assertIn('AUTH_MODE="ci_token"', WORKFLOW)
         self.assertIn('AUTH_MODE="google_play_service_account"', WORKFLOW)
         self.assertIn('FIREBASE_AUTH_MODE: ${{ steps.firebase_distribute.outputs.auth_mode }}', WORKFLOW)
@@ -46,10 +52,14 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn('unset FIREBASE_TOKEN', WORKFLOW)
         self.assertIn('FIREBASE_TOKEN_FALLBACK="${FIREBASE_TOKEN:-}"', WORKFLOW)
 
-    def test_workflow_verifies_release_artifacts_without_requiring_global_tester_roster(self):
+    def test_workflow_verifies_group_based_release_access_path(self):
+        self.assertIn('echo "requested_groups=$DIST_GROUPS"', WORKFLOW)
+        self.assertIn('REQUESTED_GROUPS: ${{ steps.firebase_distribute.outputs.requested_groups }}', WORKFLOW)
+        self.assertIn('if ! curl -fsSIL "$TESTING_URL" >/dev/null; then', WORKFLOW)
         self.assertIn('curl -fsSIL "$BINARY_DOWNLOAD_URL"', WORKFLOW)
-        self.assertIn('Distribution targeted tester(s): $TARGET_TESTERS', WORKFLOW)
-        self.assertNotIn('No Firebase testers configured for this app', WORKFLOW)
+        self.assertIn('Firebase release was distributed to group alias(es): $TARGET_GROUPS', WORKFLOW)
+        self.assertIn('Required Firebase proof tester is on the configured group access path', WORKFLOW)
+        self.assertNotIn('Distribution targeted tester(s): $TARGET_TESTERS', WORKFLOW)
 
     def test_workflow_resolves_android_app_id_by_package_name(self):
         self.assertIn('android_client_info.package_name == "com.openclaw.console"', WORKFLOW)
@@ -60,6 +70,8 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("TESTFLIGHT_REQUIRED_TESTER_EMAIL", SETUP_SCRIPT)
         self.assertIn("FIREBASE_SERVICE_ACCOUNT_JSON", SETUP_SCRIPT)
         self.assertIn("set_secret_authoritative", SETUP_SCRIPT)
+        self.assertIn("delete_secret_if_present FIREBASE_INTERNAL_TESTERS", SETUP_SCRIPT)
+        self.assertNotIn('Firebase internal tester emails (comma-separated, or \'skip\')', SETUP_SCRIPT)
 
     def test_fastfile_persists_metadata_beside_lane_and_requires_groups(self):
         self.assertIn('File.join(__dir__, "testflight_build.json")', FASTFILE)

@@ -212,15 +212,27 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
-      - name: Fail fast on Android distribution auth inputs
+      - name: Fail fast on Android distribution auth and audience inputs
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
         run: |
           set -euo pipefail
+          normalize_csv() {
+            printf '%s' "${1:-}" \
+              | tr $'\n\r;' ',' \
+              | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
+          }
+
           if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
             echo "❌ Missing required secret: GOOGLE_SERVICES_JSON"
             exit 1
@@ -245,6 +257,36 @@ jobs:
           fi
 
           echo "✅ Firebase auth method: $AUTH_METHOD"
+
+          LEGACY_TESTERS_SECRET="$(normalize_csv "${FIREBASE_INTERNAL_TESTERS_SECRET:-}")"
+          LEGACY_TESTERS_VAR="$(normalize_csv "${FIREBASE_INTERNAL_TESTERS:-}")"
+          TARGET_GROUPS="$(normalize_csv "${FIREBASE_INTERNAL_GROUPS_SECRET:-}")"
+          REQUIRED_TESTER="$(normalize_csv "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}")"
+
+          if [ -n "$LEGACY_TESTERS_SECRET" ] || [ -n "$LEGACY_TESTERS_VAR" ]; then
+            echo "❌ FIREBASE_INTERNAL_TESTERS direct-email distribution is no longer supported. Use FIREBASE_INTERNAL_GROUPS plus FIREBASE_REQUIRED_TESTER_EMAIL secrets."
+            exit 1
+          fi
+
+          if [ -n "$(normalize_csv "${FIREBASE_INTERNAL_GROUPS:-}")" ] || [ -n "$(normalize_csv "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")" ]; then
+            echo "❌ Firebase internal audience must be configured as GitHub Actions secrets only. Remove FIREBASE_INTERNAL_GROUPS and FIREBASE_REQUIRED_TESTER_EMAIL repo variables."
+            exit 1
+          fi
+
+          if [ -z "$TARGET_GROUPS" ]; then
+            echo "❌ Missing FIREBASE_INTERNAL_GROUPS secret. Android internal distribution requires explicit Firebase tester groups."
+            exit 1
+          fi
+
+          if [ -z "$REQUIRED_TESTER" ]; then
+            echo "❌ Missing FIREBASE_REQUIRED_TESTER_EMAIL secret. Android internal distribution requires a proof tester in the target group."
+            exit 1
+          fi
+
+          if [[ "$REQUIRED_TESTER" == *,* ]]; then
+            echo "❌ FIREBASE_REQUIRED_TESTER_EMAIL must contain exactly one tester email."
+            exit 1
+          fi
 
       - name: Preflight release checks (Android)
         run: bash scripts/preflight-release.sh --platform android --layer 1
@@ -375,11 +417,7 @@ jobs:
         id: firebase_distribute
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
-          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
           FIREBASE_AUTH_MODE: ${{ steps.firebase_auth.outputs.mode }}
@@ -387,38 +425,10 @@ jobs:
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
 
-          first_present() {
-            local value
-            for value in "$@"; do
-              if [ -n "${value//[[:space:]]/}" ]; then
-                printf '%s' "$value"
-                return 0
-              fi
-            done
-            return 1
-          }
-
           normalize_csv() {
             printf '%s' "${1:-}" \
               | tr $'\n\r;' ',' \
               | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
-          }
-
-          resolve_distribution_config() {
-            local label="$1"
-            local secret_value="${2:-}"
-            local variable_value="${3:-}"
-            local normalized_secret normalized_variable
-
-            normalized_secret="$(normalize_csv "$secret_value")"
-            normalized_variable="$(normalize_csv "$variable_value")"
-
-            if [ -n "$normalized_secret" ] && [ -n "$normalized_variable" ] && [ "$normalized_secret" != "$normalized_variable" ]; then
-              echo "❌ $label differs between the GitHub secret and variable. Refusing ambiguous Firebase audience configuration."
-              exit 1
-            fi
-
-            first_present "$normalized_secret" "$normalized_variable" || true
           }
 
           firebase_cli() {
@@ -470,9 +480,8 @@ jobs:
           fi
 
           # Prepare distribution command
-          TESTERS="$(resolve_distribution_config "FIREBASE_INTERNAL_TESTERS" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}" "${FIREBASE_INTERNAL_TESTERS:-}")"
-          DIST_GROUPS="$(resolve_distribution_config "FIREBASE_INTERNAL_GROUPS" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}" "${FIREBASE_INTERNAL_GROUPS:-}")"
-          REQUIRED_TESTER="$(resolve_distribution_config "FIREBASE_REQUIRED_TESTER_EMAIL" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")"
+          DIST_GROUPS="$(normalize_csv "${FIREBASE_INTERNAL_GROUPS_SECRET:-}")"
+          REQUIRED_TESTER="$(normalize_csv "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}")"
           APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
           DISTRIBUTION_AUTH_MODE="$AUTH_MODE"
           FIREBASE_TOKEN_FALLBACK="${FIREBASE_TOKEN:-}"
@@ -483,21 +492,18 @@ jobs:
             unset FIREBASE_TOKEN
           fi
 
-          # Add required tester if specified
-          if [ -n "$REQUIRED_TESTER" ]; then
-            if [ -n "$TESTERS" ]; then
-              # Check if already included
-              if [[ ",$TESTERS," != *",$REQUIRED_TESTER,"* ]]; then
-                TESTERS="$TESTERS,$REQUIRED_TESTER"
-                echo "Added required Firebase tester: $REQUIRED_TESTER"
-              fi
-            else
-              TESTERS="$REQUIRED_TESTER"
-            fi
+          if [ -z "$DIST_GROUPS" ]; then
+            echo "❌ FIREBASE_INTERNAL_GROUPS secret is required for Android internal distribution proof."
+            exit 1
           fi
 
-          if [ -z "$TESTERS" ] && [ -z "$DIST_GROUPS" ]; then
-            echo "❌ No Firebase testers/groups configured. Refusing upload-only internal distribution."
+          if [ -z "$REQUIRED_TESTER" ]; then
+            echo "❌ FIREBASE_REQUIRED_TESTER_EMAIL secret is required for Android internal distribution proof."
+            exit 1
+          fi
+
+          if [[ "$REQUIRED_TESTER" == *,* ]]; then
+            echo "❌ FIREBASE_REQUIRED_TESTER_EMAIL must contain exactly one tester email."
             exit 1
           fi
 
@@ -518,11 +524,7 @@ jobs:
               dist_cmd+=(--token "$FIREBASE_TOKEN_FALLBACK")
             fi
 
-            if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
-              dist_cmd+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
-            elif [ -n "$TESTERS" ]; then
-              dist_cmd+=(--testers "$TESTERS")
-            elif [ -n "$DIST_GROUPS" ]; then
+            if [ -n "$DIST_GROUPS" ]; then
               dist_cmd+=(--groups "$DIST_GROUPS")
             fi
 
@@ -555,8 +557,7 @@ jobs:
                 echo "firebase_console_url=$FIREBASE_CONSOLE_URL"
                 echo "testing_url=$TESTING_URL"
                 echo "binary_download_url=$BINARY_DOWNLOAD_URL"
-                echo "testers=$TESTERS"
-                echo "groups=$DIST_GROUPS"
+                echo "requested_groups=$DIST_GROUPS"
                 echo "required_tester=$REQUIRED_TESTER"
                 echo "auth_mode=$DISTRIBUTION_AUTH_MODE"
               } >> "$GITHUB_OUTPUT"
@@ -591,8 +592,7 @@ jobs:
           FIREBASE_CONSOLE_URL: ${{ steps.firebase_distribute.outputs.firebase_console_url }}
           TESTING_URL: ${{ steps.firebase_distribute.outputs.testing_url }}
           BINARY_DOWNLOAD_URL: ${{ steps.firebase_distribute.outputs.binary_download_url }}
-          ACTUAL_TESTERS: ${{ steps.firebase_distribute.outputs.testers }}
-          ACTUAL_GROUPS: ${{ steps.firebase_distribute.outputs.groups }}
+          REQUESTED_GROUPS: ${{ steps.firebase_distribute.outputs.requested_groups }}
           REQUIRED_TESTER: ${{ steps.firebase_distribute.outputs.required_tester }}
           FIREBASE_AUTH_MODE: ${{ steps.firebase_distribute.outputs.auth_mode }}
         run: |
@@ -623,14 +623,24 @@ jobs:
             exit 1
           fi
 
-          TARGET_TESTERS="$(normalize_csv "${ACTUAL_TESTERS:-}")"
-          TARGET_GROUPS="$(normalize_csv "${ACTUAL_GROUPS:-}")"
+          TARGET_GROUPS="$(normalize_csv "${REQUESTED_GROUPS:-}")"
           REQUIRED_TESTER="$(normalize_csv "${REQUIRED_TESTER:-}")"
 
-          if [ -z "$TARGET_TESTERS" ] && [ -z "$TARGET_GROUPS" ]; then
-            echo "❌ Distribution step did not report any testers or groups"
+          if [ -z "$TARGET_GROUPS" ]; then
+            echo "❌ Distribution step did not report any Firebase groups"
             exit 1
           fi
+
+          if [ -z "$REQUIRED_TESTER" ]; then
+            echo "❌ Distribution step did not report the required Firebase proof tester"
+            exit 1
+          fi
+
+          if ! curl -fsSIL "$TESTING_URL" >/dev/null; then
+            echo "❌ Firebase testing URL is not reachable"
+            exit 1
+          fi
+          echo "🔗 Firebase testing URL is reachable"
 
           if [ -n "${BINARY_DOWNLOAD_URL:-}" ]; then
             if ! curl -fsSIL "$BINARY_DOWNLOAD_URL" >/dev/null; then
@@ -651,36 +661,28 @@ jobs:
             done
           fi
 
-          if [ -n "$TARGET_TESTERS" ]; then
-            echo "📧 Distribution targeted tester(s): $TARGET_TESTERS"
-          fi
-
-          if [ -n "$REQUIRED_TESTER" ]; then
-            if [ -n "$TARGET_GROUPS" ]; then
-              REQUIRED_IN_GROUP=false
-              IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
-              for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
-                GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
-                if printf '%s' "$GROUP_TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
-                  REQUIRED_IN_GROUP=true
-                  break
-                fi
-              done
-
-              if [ "$REQUIRED_IN_GROUP" != true ]; then
-                echo "❌ Required Firebase tester is not a member of the configured Firebase groups: $REQUIRED_TESTER"
-                exit 1
-              fi
-            elif [[ ",$TARGET_TESTERS," != *",$REQUIRED_TESTER,"* ]]; then
-              echo "❌ Required Firebase tester was not targeted by this release: $REQUIRED_TESTER"
-              exit 1
+          REQUIRED_IN_GROUP=false
+          IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
+          for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
+            GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
+            if printf '%s' "$GROUP_TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
+              REQUIRED_IN_GROUP=true
+              break
             fi
+          done
+
+          if [ "$REQUIRED_IN_GROUP" != true ]; then
+            echo "❌ Required Firebase tester is not a member of the configured Firebase groups: $REQUIRED_TESTER"
+            exit 1
           fi
+
+          echo "👥 Firebase release was distributed to group alias(es): $TARGET_GROUPS"
+          echo "📧 Required Firebase proof tester is on the configured group access path: $REQUIRED_TESTER"
 
           echo "🔗 Firebase console: $FIREBASE_CONSOLE_URL"
           echo "🔗 Firebase testing URL: $TESTING_URL"
           if [ -n "${BINARY_DOWNLOAD_URL:-}" ]; then
-            echo "🔗 Firebase binary URL: $BINARY_DOWNLOAD_URL"
+            echo "📦 Firebase binary URL: $BINARY_DOWNLOAD_URL"
           fi
           echo "🔐 Firebase auth mode used for distribution: ${FIREBASE_AUTH_MODE:-unknown}"
 

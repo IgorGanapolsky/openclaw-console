@@ -43,6 +43,16 @@ set_secret_authoritative() {
     gh variable delete "$name" --repo="$REPO" >/dev/null 2>&1 || true
 }
 
+delete_secret_if_present() {
+    local name="$1"
+    gh secret delete "$name" --repo="$REPO" >/dev/null 2>&1 || true
+}
+
+delete_variable_if_present() {
+    local name="$1"
+    gh variable delete "$name" --repo="$REPO" >/dev/null 2>&1 || true
+}
+
 # ──────────────────────────────────
 # 1. iOS Signing Certificate (.p12)
 # ──────────────────────────────────
@@ -188,14 +198,13 @@ if [ "${FB_ANDROID:-skip}" != "skip" ] && [ -n "$FB_ANDROID" ]; then
 fi
 
 echo ""
-read -p "Firebase internal tester emails (comma-separated, or 'skip'): " FB_TESTERS
-if [ "${FB_TESTERS:-skip}" != "skip" ] && [ -n "$FB_TESTERS" ]; then
-    set_secret_authoritative FIREBASE_INTERNAL_TESTERS "$FB_TESTERS"
-    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_TESTERS set${NC}"
-    SECRETS_SET=$((SECRETS_SET+1))
-fi
+delete_secret_if_present FIREBASE_INTERNAL_TESTERS
+delete_variable_if_present FIREBASE_INTERNAL_TESTERS
+delete_variable_if_present FIREBASE_INTERNAL_GROUPS
+delete_variable_if_present FIREBASE_REQUIRED_TESTER_EMAIL
+echo "Firebase Android internal delivery is group-based only. Legacy FIREBASE_INTERNAL_TESTERS settings were removed."
 
-read -p "Firebase required tester email for proof (or 'skip'): " FB_REQUIRED_TESTER
+read -p "Firebase required tester email for group-based proof (or 'skip'): " FB_REQUIRED_TESTER
 if [ "${FB_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$FB_REQUIRED_TESTER" ]; then
     set_secret_authoritative FIREBASE_REQUIRED_TESTER_EMAIL "$FB_REQUIRED_TESTER"
     echo -e "${GREEN}  ✓ FIREBASE_REQUIRED_TESTER_EMAIL set${NC}"
