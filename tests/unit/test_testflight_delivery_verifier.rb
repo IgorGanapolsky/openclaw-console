@@ -55,7 +55,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [],
-        "/v1/apps/app-id/betaTesters?limit=200" => [
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&limit=200" => [
           { "attributes" => { "email" => "tester@example.com" } }
         ]
       },
@@ -188,7 +188,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => [],
-        "/v1/apps/app-id/betaTesters?limit=200" => []
+        "/v1/betaTesters?filter%5Bapps%5D=app-id&limit=200" => []
       },
       response_map: {
         "/v1/betaTesters?filter%5Bapps%5D=app-id&filter%5Bemail%5D=tester%40example.com&include=betaGroups&limit=200" => {

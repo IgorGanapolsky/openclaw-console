@@ -159,7 +159,7 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("OpenSSL::ASN1.decode(signature)", verifier)
         self.assertIn('if $PROGRAM_NAME == __FILE__', verifier)
         self.assertIn('"/v1/betaGroups/#{group.fetch(\'id\')}/builds?limit=200"', verifier)
-        self.assertIn('"/v1/apps/#{app_id}/betaTesters?limit=200"', verifier)
+        self.assertIn('"/v1/betaTesters?#{query}"', verifier)
         self.assertIn('"/v1/betaGroups?#{query}"', verifier)
         self.assertIn('"/v1/betaTesters?#{query}"', verifier)
         self.assertIn('"filter[email]" => email', verifier)

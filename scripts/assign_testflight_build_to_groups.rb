@@ -190,7 +190,8 @@ def beta_groups_by_name(jwt:, app_id:)
 end
 
 def app_beta_tester_emails(jwt:, app_id:)
-  request_json_collection(jwt: jwt, path: "/v1/apps/#{app_id}/betaTesters?limit=200").map do |tester|
+  query = URI.encode_www_form("filter[apps]" => app_id, limit: 200)
+  request_json_collection(jwt: jwt, path: "/v1/betaTesters?#{query}").map do |tester|
     tester.dig("attributes", "email")
   end.compact.uniq
 end
