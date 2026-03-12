@@ -284,6 +284,19 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
+      - name: Validate Firebase project configuration
+        run: |
+          set -euo pipefail
+          echo "🔍 Pre-flight Firebase project verification"
+          # FIXED: Use .result[] instead of .[] to match Firebase CLI 2026 JSON structure
+          # OLD (buggy): firebase projects:list --json | jq -e '.[] | select(.projectId == "openclaw-console-mobile")'
+          # NEW (works): firebase projects:list --json | jq -e '.result[] | select(.projectId == "openclaw-console-mobile")'
+          if ! firebase projects:list --json | jq -e '.result[] | select(.projectId == "openclaw-console-mobile")' > /dev/null; then
+            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
+            exit 1
+          fi
+          echo "✅ Firebase project verification passed"
+
       - name: Prepare Firebase auth credentials
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
@@ -319,11 +332,10 @@ jobs:
 
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
-          PROJECTS_LIST=$(firebase projects:list --json || echo '{"projects":[]}')
-          # Handle different JSON structures (top-level array, or .result array, or .projects array)
-          if ! echo "$PROJECTS_LIST" | jq -e 'if type == "array" then .[] else (.projects[]? // .result[]?) end | select(.projectId == "'"$FIREBASE_PROJECT_ID"'")' > /dev/null; then
-            echo "⚠️ WARNING: Firebase project $FIREBASE_PROJECT_ID not explicitly found in projects:list"
-            echo "Proceeding anyway as service account may have restricted list permissions"
+          # Validate Firebase project exists in accessible projects list
+          if ! firebase projects:list --json | jq -e '.result[] | select(.projectId == "openclaw-console-mobile")' > /dev/null; then
+            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
+            exit 1
           fi
 
           # Validate package name matches Firebase app
