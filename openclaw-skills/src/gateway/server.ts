@@ -53,7 +53,14 @@ export function createGatewayServer(
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     next();
   });
-  app.options('*', (_req, res) => { res.sendStatus(204); });
+  // Handle CORS preflight for all routes
+  app.use((_req, res, next) => {
+    if (_req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
 
   // ── Health ───────────────────────────────────────────────────────────────
 
@@ -180,6 +187,91 @@ export function createGatewayServer(
       content: `[${agent.name}] Acknowledged: "${body.message}"`,
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // ── Memory Gateway ────────────────────────────────────────────────────────
+
+  app.get('/api/memory/context', auth, async (req: Request, res: Response) => {
+    try {
+      const query = String(req.query['q'] || '');
+      if (!query) {
+        res.status(400).json({ error: { code: 4000, message: 'Query parameter "q" is required' } });
+        return;
+      }
+
+      const agentId = req.query['agent_id'] ? String(req.query['agent_id']) : undefined;
+      const taskType = req.query['task_type'] ? String(req.query['task_type']) : undefined;
+      const tags = req.query['tags'] ? String(req.query['tags']).split(',').map(t => t.trim()) : undefined;
+
+      const context = await state.memory.recallContext({
+        query,
+        agentId,
+        taskType,
+        tags,
+      });
+
+      res.json(context);
+    } catch (error) {
+      console.error('[memory] Failed to get context:', error);
+      res.status(500).json({
+        error: {
+          code: 5000,
+          message: 'Failed to retrieve memory context'
+        }
+      });
+    }
+  });
+
+  app.post('/api/memory/feedback', auth, async (req: Request, res: Response) => {
+    try {
+      const { signal, context, agent_id, task_id, incident_id, tags, what_went_wrong, what_worked } = req.body;
+
+      if (!signal || !['up', 'down'].includes(signal)) {
+        res.status(400).json({ error: { code: 4000, message: 'signal must be "up" or "down"' } });
+        return;
+      }
+
+      if (!context || typeof context !== 'string') {
+        res.status(400).json({ error: { code: 4000, message: 'context is required' } });
+        return;
+      }
+
+      const result = await state.memory.captureFeedback({
+        signal,
+        context,
+        agentId: agent_id,
+        taskId: task_id,
+        incidentId: incident_id,
+        tags,
+        whatWentWrong: what_went_wrong,
+        whatWorked: what_worked,
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('[memory] Failed to capture feedback:', error);
+      res.status(500).json({
+        error: {
+          code: 5000,
+          message: 'Failed to capture feedback'
+        }
+      });
+    }
+  });
+
+  app.get('/api/memory/stats', auth, async (_req: Request, res: Response) => {
+    try {
+      const stats = await state.memory.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('[memory] Failed to get stats:', error);
+      res.status(500).json({
+        error: {
+          code: 5000,
+          message: 'Failed to retrieve memory stats'
+        }
+      });
+    }
   });
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────

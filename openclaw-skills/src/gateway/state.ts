@@ -23,6 +23,7 @@ import type {
   ApprovalResponse,
   ResourceLink,
 } from '../types/protocol.js';
+import { MemoryGatewayService, type MemoryConfig } from './memory.js';
 
 // ── Event map for type-safe EventEmitter ─────────────────────────────────────
 
@@ -71,11 +72,21 @@ interface PendingApproval {
 /** Centralized in-memory store with event emission on mutations. */
 export class StateManager {
   public readonly events: TypedStateEmitter = new TypedStateEmitter();
+  public readonly memory: MemoryGatewayService;
 
   private agents: Map<string, Agent> = new Map();
   private tasks: Map<string, Task> = new Map();
   private incidents: Map<string, Incident> = new Map();
   private approvals: Map<string, PendingApproval> = new Map();
+
+  constructor(memoryConfig?: MemoryConfig) {
+    this.memory = new MemoryGatewayService(memoryConfig);
+  }
+
+  /** Initialize the state manager and memory gateway */
+  async initialize(): Promise<void> {
+    await this.memory.initialize();
+  }
 
   // ── Agent ─────────────────────────────────────────────────────────────────
 
@@ -94,10 +105,18 @@ export class StateManager {
   public updateAgentStatus(agentId: string, status: AgentStatus): Agent | null {
     const agent = this.agents.get(agentId);
     if (!agent) return null;
+
+    const previousStatus = agent.status;
     agent.status = status;
     agent.last_active = new Date().toISOString();
     this.agents.set(agentId, agent);
     this.events.emit('agent_updated', agent);
+
+    // Capture memory for significant status changes
+    this.memory.onAgentStatusChange(agent, previousStatus).catch(err =>
+      console.warn('[memory] Failed to capture agent status change:', err)
+    );
+
     return agent;
   }
 
@@ -158,11 +177,22 @@ export class StateManager {
   public updateTaskStatus(taskId: string, status: TaskStatus): Task | null {
     const task = this.tasks.get(taskId);
     if (!task) return null;
+
+    const wasCompleted = task.status === 'done' || task.status === 'failed';
     task.status = status;
     task.updated_at = new Date().toISOString();
     this.tasks.set(taskId, task);
     this.events.emit('task_updated', task);
     this.recomputeAgentCounters(task.agent_id);
+
+    // Capture memory when task reaches a final state
+    const isNowCompleted = status === 'done' || status === 'failed';
+    if (!wasCompleted && isNowCompleted) {
+      this.memory.onTaskComplete(task).catch(err =>
+        console.warn('[memory] Failed to capture task completion:', err)
+      );
+    }
+
     return task;
   }
 
@@ -292,6 +322,12 @@ export class StateManager {
     this.approvals.delete(response.approval_id);
     this.recomputeAgentCounters(pending.request.agent_id);
     this.events.emit('approval_responded', response, pending.request);
+
+    // Capture memory for approval response
+    this.memory.onApprovalResponse(pending.request, response).catch(err =>
+      console.warn('[memory] Failed to capture approval response:', err)
+    );
+
     pending.resolve(response);
     return pending.request;
   }

@@ -62,12 +62,42 @@ final class APIService {
         return e
     }()
 
-    // MARK: - Generic Request
+    // MARK: - HTTP Method Enum
 
-    private func request<T: Decodable>(
+    enum HTTPMethod: String {
+        case GET
+        case POST
+        case PUT
+        case DELETE
+    }
+
+    // MARK: - Generic Request (Public)
+
+    func request<T: Decodable>(
+        endpoint: String,
+        method: HTTPMethod = .GET,
+        body: (any Encodable)? = nil,
+        queryParams: [String: String]? = nil,
+        responseType: T.Type,
+        gateway: GatewayConnection? = nil
+    ) async throws -> T {
+        let path = endpoint.hasPrefix("/") ? endpoint : "/api/\(endpoint)"
+        return try await internalRequest(
+            method: method.rawValue,
+            path: path,
+            body: body,
+            queryParams: queryParams,
+            gateway: gateway
+        )
+    }
+
+    // MARK: - Generic Request (Private)
+
+    private func internalRequest<T: Decodable>(
         method: String = "GET",
         path: String,
         body: (any Encodable)? = nil,
+        queryParams: [String: String]? = nil,
         gateway: GatewayConnection? = nil
     ) async throws -> T {
         let gw = gateway ?? activeGateway
@@ -76,8 +106,14 @@ final class APIService {
             throw OpenClawError.httpError(401, "No token available for gateway")
         }
 
-        let urlString = gw.baseURL + path
-        guard let url = URL(string: urlString) else {
+        var urlComponents = URLComponents(string: gw.baseURL + path)
+
+        // Add query parameters if provided
+        if let queryParams, !queryParams.isEmpty {
+            urlComponents?.queryItems = queryParams.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+
+        guard let url = urlComponents?.url else {
             throw OpenClawError.invalidURL
         }
 
@@ -121,44 +157,44 @@ final class APIService {
     // MARK: - Health Check
 
     func healthCheck(gateway: GatewayConnection) async throws -> HealthResponse {
-        try await request(path: "/api/health", gateway: gateway)
+        try await internalRequest(path: "/api/health", gateway: gateway)
     }
 
     // MARK: - Agents
 
     func fetchAgents() async throws -> [Agent] {
-        try await request(path: "/api/agents")
+        try await internalRequest(path: "/api/agents")
     }
 
     func fetchAgent(id: String) async throws -> Agent {
-        try await request(path: "/api/agents/\(id)")
+        try await internalRequest(path: "/api/agents/\(id)")
     }
 
     // MARK: - Tasks
 
     func fetchTasks(for agentId: String) async throws -> [OCTask] {
-        try await request(path: "/api/agents/\(agentId)/tasks")
+        try await internalRequest(path: "/api/agents/\(agentId)/tasks")
     }
 
     func fetchTask(agentId: String, taskId: String) async throws -> OCTask {
-        try await request(path: "/api/agents/\(agentId)/tasks/\(taskId)")
+        try await internalRequest(path: "/api/agents/\(agentId)/tasks/\(taskId)")
     }
 
     // MARK: - Incidents
 
     func fetchIncidents() async throws -> [Incident] {
-        try await request(path: "/api/incidents")
+        try await internalRequest(path: "/api/incidents")
     }
 
     // MARK: - Approvals
 
     func fetchPendingApprovals() async throws -> [ApprovalRequest] {
-        try await request(path: "/api/approvals/pending")
+        try await internalRequest(path: "/api/approvals/pending")
     }
 
     func submitApprovalResponse(_ response: ApprovalResponse) async throws {
         struct EmptyResponse: Decodable {}
-        let _: EmptyResponse = try await request(
+        let _: EmptyResponse = try await internalRequest(
             method: "POST",
             path: "/api/approvals/\(response.approvalId)/respond",
             body: response
@@ -168,7 +204,7 @@ final class APIService {
     // MARK: - Chat
 
     func sendChatMessage(_ request: ChatMessageRequest) async throws -> ChatMessage {
-        try await self.request(
+        try await self.internalRequest(
             method: "POST",
             path: "/api/agents/\(request.agentId)/chat",
             body: request

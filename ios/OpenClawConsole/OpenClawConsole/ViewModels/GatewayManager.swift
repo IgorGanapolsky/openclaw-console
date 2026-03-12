@@ -63,6 +63,7 @@ final class GatewayManager {
 
     private func updateAPIService() {
         APIService.shared.activeGateway = activeGateway
+        MemoryGatewayService.shared.updateConfiguration(gateway: activeGateway)
     }
 
     // MARK: - CRUD

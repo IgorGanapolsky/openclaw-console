@@ -20,9 +20,16 @@ async function main(): Promise<void> {
   console.info(`  Version: ${DEFAULT_CONFIG.version}`);
   console.info('='.repeat(60));
 
-  // ── 1. Initialize state ─────────────────────────────────────────────────
+  // ── 1. Initialize state and memory ──────────────────────────────────────
 
-  const state = new StateManager();
+  const state = new StateManager({
+    dataDir: process.env.OPENCLAW_MEMORY_DIR,
+    autoCapture: process.env.OPENCLAW_AUTO_CAPTURE !== 'false',
+    maxRecallItems: parseInt(process.env.OPENCLAW_MAX_RECALL_ITEMS || '5', 10),
+  });
+
+  await state.initialize();
+  console.info('[startup] Memory gateway initialized');
 
   // ── 2. Register configured agents ───────────────────────────────────────
 

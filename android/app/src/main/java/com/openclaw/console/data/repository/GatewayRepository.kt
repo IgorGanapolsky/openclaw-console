@@ -12,7 +12,10 @@ import kotlinx.serialization.json.Json
 
 private val json = Json { ignoreUnknownKeys = true }
 
-class GatewayRepository(private val secureStorage: SecureStorage) {
+class GatewayRepository(
+    private val secureStorage: SecureStorage,
+    private val memoryRepository: MemoryGatewayRepository
+) {
 
     private val _gateways = MutableStateFlow<List<GatewayConnection>>(emptyList())
     val gateways: StateFlow<List<GatewayConnection>> = _gateways
@@ -38,7 +41,11 @@ class GatewayRepository(private val secureStorage: SecureStorage) {
         _gateways.value = loaded
 
         val activeId = secureStorage.getActiveGatewayId()
-        _activeGateway.value = loaded.find { it.id == activeId }
+        val active = loaded.find { it.id == activeId }
+        _activeGateway.value = active
+
+        // Update memory gateway configuration
+        updateMemoryGateway(active)
     }
 
     suspend fun saveGateway(gateway: GatewayConnection, token: String) {
@@ -69,6 +76,16 @@ class GatewayRepository(private val secureStorage: SecureStorage) {
             secureStorage.saveActiveGatewayId(gatewayId)
         }
         loadGateways()
+    }
+
+    private fun updateMemoryGateway(gateway: GatewayConnection?) {
+        if (gateway != null) {
+            val token = getToken(gateway.id)
+            val apiService = if (token != null) ApiService(gateway.baseUrl, token) else null
+            memoryRepository.updateConfiguration(apiService, gateway.baseUrl, token)
+        } else {
+            memoryRepository.updateConfiguration(null, null, null)
+        }
     }
 
     suspend fun testConnection(baseUrl: String, token: String): Result<Boolean> {

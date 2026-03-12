@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "rlhf-feedback-loop": "^0.6.13",
     "uuid": "^13.0.0",
     "ws": "^8.16.0"
   },
