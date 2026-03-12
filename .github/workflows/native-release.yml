@@ -110,10 +110,16 @@ jobs:
         env:
           GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
+          # Configure git credentials for match repository access
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
+          # Disable git prompts and set safe defaults for CI
+          git config --global core.askpass ""
+          git config --global credential.helper ""
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
       - name: Setup signing certificates and profiles (match)
-        continue-on-error: true
         env:
           CI: "true"
           FASTLANE_SKIP_UPDATE_CHECK: "true"
