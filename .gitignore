@@ -47,6 +47,10 @@ vendor/bundle/
 *.gem
 Gemfile.lock
 
+# Python
+__pycache__/
+*.pyc
+
 # Firebase
 google-services.json
 GoogleService-Info.plist
