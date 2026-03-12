@@ -51,7 +51,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `FIREBASE_TOKEN` | Firebase CLI token (deprecated compatibility fallback) | Run `firebase login:ci` locally |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (last-resort fallback, only if that service account also has Firebase App Distribution upload permission) | Google Cloud Console → IAM → Service accounts |
 | `FIREBASE_INTERNAL_GROUPS` | Comma-separated Firebase tester group aliases for Android internal distribution | Firebase Console → App Distribution → Testers & Groups |
-| `FIREBASE_REQUIRED_TESTER_EMAIL` | Single tester email that must already belong to one of the configured Firebase groups | Firebase Console → App Distribution → Testers & Groups |
+| `FIREBASE_REQUIRED_TESTER_EMAIL` | Single tester email that CI ensures belongs to the configured Firebase groups before distribution, then uses as the proof target | Firebase Console → App Distribution → Testers & Groups |
 
 ### Optional
 
@@ -81,7 +81,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 
 1. Firebase Console → Release & Monitor → App Distribution
 2. Create at least one Firebase tester group, for example `qa-team`
-3. Add the required proof tester email to that group before enabling CI
+3. Add the required proof tester email to that group now, or let CI add it during distribution if the group already exists
 
 ### 3. Create Firebase App Distribution Auth
 
@@ -97,7 +97,7 @@ firebase login:ci
 
 Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
-The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist anywhere in the GitHub Actions `vars` context. Before distribution, CI also ensures the required tester belongs to each configured Firebase group alias, and it fails if any configured group alias does not already exist.
+The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist anywhere in the GitHub Actions `vars` context. Before distribution, CI ensures the required tester belongs to each configured Firebase group alias, and it fails if any configured group alias does not already exist.
 
 For Android proof, a successful `firebase appdistribution:distribute ... --groups` call is the release-level assignment step. CI follow-up checks confirm the returned release URLs and, when the current auth can read App Distribution groups/testers, the configured group/tester access prerequisites. They do not claim a second independent release-to-group readback that Firebase does not expose.
 
@@ -167,7 +167,7 @@ bundle exec fastlane beta
 The iOS internal-delivery path is only considered valid when all of the following are true:
 - `TESTFLIGHT_GROUPS` resolves to at least one internal beta group.
 - `TESTFLIGHT_REQUIRED_TESTER_EMAIL` resolves to an internal App Store Connect user in one of those groups.
-- The workflow verification step confirms the processed build is attached to every required group, or confirms the required tester is individually assigned to the processed build when App Store Connect returns no beta groups for the app.
+- The workflow verification step confirms the processed build is attached to every required group, or when App Store Connect exposes no app beta groups it confirms the required tester has access through the build's beta groups or an individual tester assignment.
 
 ### Run preflight checks
 

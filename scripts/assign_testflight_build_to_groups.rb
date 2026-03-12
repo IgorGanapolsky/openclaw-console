@@ -187,6 +187,10 @@ def beta_groups_by_name(jwt:, app_id:)
   end
 end
 
+def beta_groups_for_build(jwt:, build_id:)
+  request_json_collection(jwt: jwt, path: "/v1/builds/#{build_id}/betaGroups?limit=200")
+end
+
 def assigned_group_ids(jwt:, build_id:)
   request_json_collection(jwt: jwt, path: "/v1/builds/#{build_id}/relationships/betaGroups?limit=200").map do |item|
     item.fetch("id")
@@ -224,11 +228,7 @@ def verify_required_tester_membership(jwt:, groups:, email:)
   fail_with("Required TestFlight tester #{email} is not a member of beta groups: #{group_names}")
 end
 
-if $PROGRAM_NAME == __FILE__
-  metadata_path = ARGV.fetch(0) do
-    fail_with("Usage: #{$PROGRAM_NAME} path/to/testflight_build.json")
-  end
-  metadata = read_metadata(metadata_path)
+def verify_testflight_build_delivery(metadata:)
   bundle_id = metadata.fetch("bundle_id")
   marketing_version = metadata.fetch("marketing_version")
   build_number = metadata.fetch("build_number").to_s
@@ -261,21 +261,49 @@ if $PROGRAM_NAME == __FILE__
     else
       puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups: #{group_summary}")
     end
-  elsif available_group_names.empty? && required_tester
-    individual_tester_emails = individual_tester_emails_for_build(jwt: jwt, build_id: build.fetch("id"))
-    unless individual_tester_emails.include?(required_tester)
-      fail_with(
-        "Missing TestFlight beta groups: #{missing_group_names.join(', ')}. " \
-        "App Store Connect returned no beta groups for this app, and required tester #{required_tester} " \
-        "is not individually assigned to build #{build.fetch('id')}."
-      )
+  elsif available_group_names.empty?
+    build_groups = beta_groups_for_build(jwt: jwt, build_id: build.fetch("id"))
+
+    unless build_groups.empty?
+      verify_required_tester_membership(jwt: jwt, groups: build_groups, email: required_tester)
+      build_group_summary = build_groups.map { |group| group.dig("attributes", "name") }.join(", ")
+
+      if required_tester
+        puts(
+          "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via build beta groups #{build_group_summary} " \
+          "with tester #{required_tester} because App Store Connect returned no app beta groups."
+        )
+      else
+        puts(
+          "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via build beta groups #{build_group_summary} " \
+          "because App Store Connect returned no app beta groups."
+        )
+      end
+      return
     end
 
-    puts(
-      "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via direct tester assignment " \
-      "for #{required_tester} because App Store Connect returned no beta groups for this app."
+    individual_tester_emails = individual_tester_emails_for_build(jwt: jwt, build_id: build.fetch("id"))
+    if required_tester && individual_tester_emails.include?(required_tester)
+      puts(
+        "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via direct tester assignment " \
+        "for #{required_tester} because App Store Connect returned no app beta groups or build beta groups."
+      )
+      return
+    end
+
+    fail_with(
+      "Missing TestFlight beta groups: #{missing_group_names.join(', ')}. " \
+      "App Store Connect returned no beta groups for this app or build, and required tester #{required_tester} " \
+      "is not individually assigned to build #{build.fetch('id')}."
     )
   else
     fail_with("Missing TestFlight beta groups: #{missing_group_names.join(', ')}. Available groups: #{available_group_names.join(', ')}")
   end
+end
+
+if $PROGRAM_NAME == __FILE__
+  metadata_path = ARGV.fetch(0) do
+    fail_with("Usage: #{$PROGRAM_NAME} path/to/testflight_build.json")
+  end
+  verify_testflight_build_delivery(metadata: read_metadata(metadata_path))
 end
