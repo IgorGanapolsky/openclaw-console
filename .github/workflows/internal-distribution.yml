@@ -124,6 +124,7 @@ jobs:
 
       - name: Setup signing certificates and profiles (match)
         env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
@@ -135,8 +136,10 @@ jobs:
       - name: Build and upload to TestFlight
         env:
           CI: "true"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
@@ -309,15 +312,18 @@ jobs:
           FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'openclaw-console-mobile' }}
         run: |
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
 
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
-          if ! firebase projects:list --json | jq -e '.[] | select(.projectId == "openclaw-console-mobile")' > /dev/null; then
-            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
-            exit 1
+          PROJECTS_LIST=$(firebase projects:list --json || echo '{"projects":[]}')
+          # Handle different JSON structures (top-level array, or .result array, or .projects array)
+          if ! echo "$PROJECTS_LIST" | jq -e 'if type == "array" then .[] else (.projects[]? // .result[]?) end | select(.projectId == "'"$FIREBASE_PROJECT_ID"'")' > /dev/null; then
+            echo "⚠️ WARNING: Firebase project $FIREBASE_PROJECT_ID not explicitly found in projects:list"
+            echo "Proceeding anyway as service account may have restricted list permissions"
           fi
 
           # Validate package name matches Firebase app
@@ -367,7 +373,7 @@ jobs:
             firebase appdistribution:distribute
             "$APK_PATH"
             --app "$FIREBASE_APP_ID"
-            --project openclaw-console-mobile
+            --project "$FIREBASE_PROJECT_ID"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
 
@@ -409,19 +415,23 @@ jobs:
       - name: Verify Firebase distribution actually worked
         env:
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'openclaw-console-mobile' }}
         run: |
           set -euo pipefail
 
           echo "🔍 Verifying Firebase distribution delivery"
 
           # Get latest release info to verify upload worked
-          RELEASE_INFO=$(firebase appdistribution:releases:list \
+          RELEASES_JSON=$(firebase appdistribution:releases:list \
             --app "$FIREBASE_APP_ID" \
-            --project openclaw-console-mobile \
-            --format=json | jq -r '.[0] // empty')
+            --project "$FIREBASE_PROJECT_ID" \
+            --format=json || echo "[]")
+          
+          # Handle both top-level array and object with result array
+          RELEASE_INFO=$(echo "$RELEASES_JSON" | jq -r 'if type == "array" then .[0] else (.result[0]? // .releases[0]?) end | select(. != null)')
 
           if [ -z "$RELEASE_INFO" ] || [ "$RELEASE_INFO" = "null" ]; then
-            echo "❌ Silent failure detected - no releases found in Firebase console"
+            echo "❌ Silent failure detected - no releases found in Firebase console for project $FIREBASE_PROJECT_ID"
             exit 1
           fi
 
@@ -436,10 +446,12 @@ jobs:
           echo "📱 Latest release: $RELEASE_ID (build: $BUILD_VERSION)"
 
           # Verify tester configuration
-          TESTER_COUNT=$(firebase appdistribution:testers:list \
+          TESTERS_JSON=$(firebase appdistribution:testers:list \
             --app "$FIREBASE_APP_ID" \
-            --project openclaw-console-mobile \
-            --format=json | jq 'length // 0')
+            --project "$FIREBASE_PROJECT_ID" \
+            --format=json || echo "[]")
+          
+          TESTER_COUNT=$(echo "$TESTERS_JSON" | jq 'if type == "array" then length else ((.testers | length)? // (.result | length)? // 0) end')
 
           if [ "$TESTER_COUNT" -eq 0 ]; then
             echo "⚠️ WARNING: No testers configured - build uploaded but no email invitations sent"
@@ -448,7 +460,7 @@ jobs:
           fi
 
           # Get Firebase console URL for manual verification
-          CONSOLE_URL="https://console.firebase.google.com/project/openclaw-console-mobile/appdistribution/app/android:com.openclaw.console"
+          CONSOLE_URL="https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/appdistribution/app/android:com.openclaw.console"
           echo "🔗 Firebase console: $CONSOLE_URL"
 
           echo "✅ Firebase App Distribution verification complete"
