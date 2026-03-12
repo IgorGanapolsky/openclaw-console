@@ -30,14 +30,15 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("Verify TestFlight build delivery to internal beta groups", WORKFLOW)
 
     def test_workflow_uses_supported_firebase_verification_commands(self):
-        self.assertIn('firebase_json appdistribution:groups:list -P openclaw-console-mobile', WORKFLOW)
-        self.assertIn('firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile', WORKFLOW)
+        self.assertIn('firebase_json appdistribution:groups:list -P "$FIREBASE_PROJECT_ID"', WORKFLOW)
+        self.assertIn('firebase_json appdistribution:testers:list "$group_alias" -P "$FIREBASE_PROJECT_ID"', WORKFLOW)
         self.assertNotIn("appdistribution:releases:list", WORKFLOW)
         self.assertNotIn("--format=json", WORKFLOW)
 
     def test_workflow_requires_secret_only_group_based_firebase_audience(self):
         self.assertIn("FIREBASE_INTERNAL_TESTERS direct-email distribution is no longer supported", WORKFLOW)
         self.assertIn("Firebase internal audience must be configured as GitHub Actions secrets only.", WORKFLOW)
+        self.assertIn('echo "❌ Missing required secret: FIREBASE_PROJECT_ID"', WORKFLOW)
         self.assertIn("Missing FIREBASE_INTERNAL_GROUPS secret. Android internal distribution requires explicit Firebase tester groups.", WORKFLOW)
         self.assertIn("Missing FIREBASE_REQUIRED_TESTER_EMAIL secret. Android internal distribution requires a proof tester in the target group.", WORKFLOW)
         self.assertNotIn('resolve_distribution_config "FIREBASE_INTERNAL_TESTERS"', WORKFLOW)
@@ -55,6 +56,8 @@ class InternalDistributionContractTest(unittest.TestCase):
     def test_workflow_verifies_group_based_release_access_path(self):
         self.assertIn('echo "requested_groups=$DIST_GROUPS"', WORKFLOW)
         self.assertIn('REQUESTED_GROUPS: ${{ steps.firebase_distribute.outputs.requested_groups }}', WORKFLOW)
+        self.assertIn('echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"', WORKFLOW)
+        self.assertIn('--project "$FIREBASE_PROJECT_ID"', WORKFLOW)
         self.assertIn('if ! curl -fsSIL "$TESTING_URL" >/dev/null; then', WORKFLOW)
         self.assertIn('curl -fsSIL "$BINARY_DOWNLOAD_URL"', WORKFLOW)
         self.assertIn('Firebase release was distributed to group alias(es): $TARGET_GROUPS', WORKFLOW)
@@ -69,6 +72,7 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("TESTFLIGHT_GROUPS", SETUP_SCRIPT)
         self.assertIn("TESTFLIGHT_REQUIRED_TESTER_EMAIL", SETUP_SCRIPT)
         self.assertIn("FIREBASE_SERVICE_ACCOUNT_JSON", SETUP_SCRIPT)
+        self.assertIn("FIREBASE_PROJECT_ID", SETUP_SCRIPT)
         self.assertIn("set_secret_authoritative", SETUP_SCRIPT)
         self.assertIn("delete_secret_if_present FIREBASE_INTERNAL_TESTERS", SETUP_SCRIPT)
         self.assertNotIn('Firebase internal tester emails (comma-separated, or \'skip\')', SETUP_SCRIPT)

@@ -182,6 +182,14 @@ if [[ "${SET_FIREBASE_TOKEN:-N}" =~ ^[Yy]$ ]]; then
 fi
 
 echo ""
+read -p "Firebase project ID for App Distribution (or 'skip'): " FB_PROJECT_ID
+if [ "${FB_PROJECT_ID:-skip}" != "skip" ] && [ -n "$FB_PROJECT_ID" ]; then
+    set_secret_authoritative FIREBASE_PROJECT_ID "$FB_PROJECT_ID"
+    echo -e "${GREEN}  ✓ FIREBASE_PROJECT_ID set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+echo ""
 echo "Find your Firebase App IDs at: https://console.firebase.google.com → Project Settings → Your Apps"
 read -p "Firebase iOS App ID (or 'skip'): " FB_IOS
 if [ "${FB_IOS:-skip}" != "skip" ] && [ -n "$FB_IOS" ]; then

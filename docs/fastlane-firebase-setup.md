@@ -44,6 +44,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `KEYSTORE_PASSWORD` | Keystore password | From when you created the keystore |
 | `KEY_ALIAS` | Key alias in the keystore | From when you created the keystore |
 | `KEY_PASSWORD` | Key password | From when you created the keystore |
+| `FIREBASE_PROJECT_ID` | Firebase project ID used for App Distribution verification and upload | Firebase Console → Project settings → General |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON with `roles/firebaseappdistro.admin` on the Firebase project (preferred auth) | Google Cloud Console → IAM → Service accounts |
 | `FIREBASE_TOKEN` | Firebase CLI token (deprecated compatibility fallback) | Run `firebase login:ci` locally |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (last-resort fallback, only if that service account also has Firebase App Distribution upload permission) | Google Cloud Console → IAM → Service accounts |
@@ -64,7 +65,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 ### 1. Create Firebase Project
 
 1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create or reuse the Firebase project `openclaw-console-mobile`
+2. Create or reuse the Firebase project whose ID you will store in `FIREBASE_PROJECT_ID`
 3. Add Android app with package name `com.openclaw.console`
 4. Download `google-services.json`
 5. Add iOS app with bundle ID `com.openclaw.console`
@@ -90,7 +91,7 @@ firebase login:ci
 
 Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
-The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, and it fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist as repo variables.
+The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist as repo variables.
 
 ### 4. Create Android Keystore
 

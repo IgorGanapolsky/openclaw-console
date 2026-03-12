@@ -219,6 +219,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
           FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
           FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
@@ -241,6 +242,10 @@ jobs:
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
             exit 1
           fi
+          if [ -z "${FIREBASE_PROJECT_ID:-}" ]; then
+            echo "❌ Missing required secret: FIREBASE_PROJECT_ID"
+            exit 1
+          fi
 
           # Explicit authentication precedence (2026 best practices)
           AUTH_METHOD=""
@@ -250,7 +255,7 @@ jobs:
             AUTH_METHOD="ci_token_fallback"
           elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
             AUTH_METHOD="google_play_service_account_fallback"
-            echo "⚠️ WARNING: GOOGLE_PLAY_JSON_KEY is only a last-resort fallback for Firebase App Distribution. It must have Firebase App Distribution upload permission on project openclaw-console-mobile."
+            echo "⚠️ WARNING: GOOGLE_PLAY_JSON_KEY is only a last-resort fallback for Firebase App Distribution. It must have Firebase App Distribution upload permission on project ${FIREBASE_PROJECT_ID}."
           else
             echo "❌ Firebase authentication required. Set FIREBASE_SERVICE_ACCOUNT_JSON (preferred), FIREBASE_TOKEN (verified fallback), or GOOGLE_PLAY_JSON_KEY (last-resort fallback)."
             exit 1
@@ -318,13 +323,30 @@ jobs:
         working-directory: android
         env:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           set -euo pipefail
+          PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
           APP_ID="$(jq -r '
             .client[]
             | select(.client_info.android_client_info.package_name == "com.openclaw.console")
             | .client_info.mobilesdk_app_id // empty
           ' app/google-services.json | head -1)"
+
+          if [ -n "${FIREBASE_PROJECT_ID:-}" ] && [ -n "$PROJECT_ID" ] && [ "$PROJECT_ID" != "${FIREBASE_PROJECT_ID}" ]; then
+            echo "❌ GOOGLE_SERVICES_JSON project_id=$PROJECT_ID does not match FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}"
+            exit 1
+          fi
+
+          if [ -z "$PROJECT_ID" ] && [ -n "${FIREBASE_PROJECT_ID:-}" ]; then
+            PROJECT_ID="${FIREBASE_PROJECT_ID}"
+          fi
+
+          if [ -z "$PROJECT_ID" ]; then
+            echo "❌ Could not resolve Firebase project id. Set FIREBASE_PROJECT_ID or include project_info.project_id in GOOGLE_SERVICES_JSON."
+            exit 1
+          fi
+
           if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
             APP_ID="$FIREBASE_ANDROID_APP_ID"
           fi
@@ -333,7 +355,9 @@ jobs:
             exit 1
           fi
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
           echo "Resolved Firebase app id: $APP_ID"
+          echo "Resolved Firebase project id: $PROJECT_ID"
 
       - name: Decode keystore
         env:
@@ -420,6 +444,7 @@ jobs:
           FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
           FIREBASE_AUTH_MODE: ${{ steps.firebase_auth.outputs.mode }}
         run: |
           set -Eeuo pipefail
@@ -441,8 +466,8 @@ jobs:
 
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
-          if ! firebase_cli projects:list --json | jq -e '.. | objects | .projectId? // empty | select(. == "openclaw-console-mobile")' > /dev/null; then
-            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
+          if ! firebase_cli projects:list --json | jq -e --arg project "$FIREBASE_PROJECT_ID" '.. | objects | .projectId? // empty | select(. == $project)' > /dev/null; then
+            echo "❌ Firebase project $FIREBASE_PROJECT_ID not accessible or does not exist"
             exit 1
           fi
 
@@ -512,7 +537,7 @@ jobs:
             firebase appdistribution:distribute
             "$APK_PATH"
             --app "$FIREBASE_APP_ID"
-            --project openclaw-console-mobile
+            --project "$FIREBASE_PROJECT_ID"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
 
@@ -594,6 +619,7 @@ jobs:
           BINARY_DOWNLOAD_URL: ${{ steps.firebase_distribute.outputs.binary_download_url }}
           REQUESTED_GROUPS: ${{ steps.firebase_distribute.outputs.requested_groups }}
           REQUIRED_TESTER: ${{ steps.firebase_distribute.outputs.required_tester }}
+          FIREBASE_PROJECT_ID: ${{ steps.firebase.outputs.project_id }}
           FIREBASE_AUTH_MODE: ${{ steps.firebase_distribute.outputs.auth_mode }}
         run: |
           set -euo pipefail
@@ -651,7 +677,7 @@ jobs:
           fi
 
           if [ -n "$TARGET_GROUPS" ]; then
-            GROUPS_JSON="$(firebase_json appdistribution:groups:list -P openclaw-console-mobile)"
+            GROUPS_JSON="$(firebase_json appdistribution:groups:list -P "$FIREBASE_PROJECT_ID")"
             IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
             for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
               if ! printf '%s' "$GROUPS_JSON" | jq -e --arg alias "$group_alias" '.result.groups[]? | select((.name | split("/") | last) == $alias)' > /dev/null; then
@@ -664,7 +690,7 @@ jobs:
           REQUIRED_IN_GROUP=false
           IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
           for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
-            GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
+            GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P "$FIREBASE_PROJECT_ID")"
             if printf '%s' "$GROUP_TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
               REQUIRED_IN_GROUP=true
               break
