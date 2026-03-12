@@ -1,5 +1,5 @@
 {
-  "last_turn_at": "2026-03-12T18:04:08.011Z",
-  "turn_count": 82,
-  "last_agent_output": "Captured.\n\nFailure recorded: I overstated Firebase/TestFlight delivery based on CI success without v"
+  "last_turn_at": "2026-03-12T19:47:29.970Z",
+  "turn_count": 99,
+  "last_agent_output": "The current iOS path is not a real “deliver to internal testers and prove it” pipeline. It has three"
 }

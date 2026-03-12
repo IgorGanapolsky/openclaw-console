@@ -187,4 +187,31 @@ platform :ios do
       release_notes: "Dev build from develop branch (#{ENV['GITHUB_SHA'] || 'local'})"
     )
   end
+
+  desc "Clean up old/expired certificates and provisioning profiles"
+  lane :cleanup_certificates do
+    api_key = app_store_api_key_from_env
+
+    unless api_key
+      UI.user_error!("App Store Connect API key required for certificate cleanup")
+    end
+
+    UI.message("Cleaning up old certificates and profiles...")
+
+    # This will show current certificates and profiles
+    # Manual cleanup may be required through match or App Store Connect
+    match(
+      type: "appstore",
+      app_identifier: ["com.openclaw.console"],
+      readonly: true,
+      api_key: api_key,
+      verbose: true
+    )
+
+    UI.important("Review the certificates listed above.")
+    UI.important("If you have too many certificates, you may need to:")
+    UI.important("1. Revoke old certificates via App Store Connect")
+    UI.important("2. Run: fastlane match nuke appstore --readonly false")
+    UI.important("3. Then regenerate with: fastlane match appstore --readonly false")
+  end
 end

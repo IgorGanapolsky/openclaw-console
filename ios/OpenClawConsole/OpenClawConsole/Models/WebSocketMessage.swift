@@ -194,19 +194,7 @@ struct BridgeSession: Codable, Identifiable {
     }
 }
 
-// MARK: - Git State
-
-struct GitState: Codable {
-    let branch: String
-    let status: String
-    let hasChanges: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case branch
-        case status
-        case hasChanges = "has_changes"
-    }
-}
+// Note: GitState is defined in Agent.swift
 // MARK: - Connected Payload
 
 struct ConnectedPayload: Codable {
