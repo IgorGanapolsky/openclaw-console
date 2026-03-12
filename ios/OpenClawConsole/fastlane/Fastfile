@@ -111,7 +111,6 @@ platform :ios do
   desc "Setup certificates and profiles via match"
   lane :setup do
     setup_ci if ENV["CI"] == "true"
-    ensure_xcode_project!
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
