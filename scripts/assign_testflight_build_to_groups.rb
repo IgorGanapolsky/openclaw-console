@@ -188,7 +188,9 @@ def beta_groups_by_name(jwt:, app_id:)
 end
 
 def beta_groups_for_build(jwt:, build_id:)
-  request_json_collection(jwt: jwt, path: "/v1/builds/#{build_id}/betaGroups?limit=200")
+  assigned_group_ids(jwt: jwt, build_id: build_id).map do |group_id|
+    request_json(jwt: jwt, method: :get, path: "/v1/betaGroups/#{group_id}").fetch("data")
+  end
 end
 
 def assigned_group_ids(jwt:, build_id:)

@@ -15,15 +15,20 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/betaGroups?limit=200" => [
-          {
-            "id" => "group-build",
-            "attributes" => { "name" => "App Store Connect Users" }
-          }
+        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [
+          { "id" => "group-build" }
         ],
         "/v1/betaGroups/group-build/betaTesters?limit=200" => [
           { "attributes" => { "email" => "tester@example.com" } }
         ]
+      },
+      request_map: {
+        "/v1/betaGroups/group-build" => {
+          "data" => {
+            "id" => "group-build",
+            "attributes" => { "name" => "App Store Connect Users" }
+          }
+        }
       }
     )
 
@@ -41,7 +46,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/betaGroups?limit=200" => [],
+        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [],
         "/v1/builds/build-id/individualTesters?limit=200" => [
           { "attributes" => { "email" => "tester@example.com" } }
         ]
@@ -62,7 +67,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/betaGroups?limit=200" => [],
+        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [],
         "/v1/builds/build-id/individualTesters?limit=200" => []
       }
     )
@@ -77,7 +82,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
 
   private
 
-  def build_verifier(group_names:, required_tester:, collection_map:)
+  def build_verifier(group_names:, required_tester:, collection_map:, request_map: {})
     verifier = Object.new
 
     verifier.define_singleton_method(:strict_csv_env) do |primary_name, _secondary_name|
@@ -100,6 +105,12 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
     verifier.define_singleton_method(:request_json_collection) do |jwt:, path:|
       collection_map.fetch(path) do
         raise "Unexpected collection path: #{path}"
+      end
+    end
+
+    verifier.define_singleton_method(:request_json) do |jwt:, method:, path:, payload: nil|
+      request_map.fetch(path) do
+        raise "Unexpected request path: #{path}"
       end
     end
 
