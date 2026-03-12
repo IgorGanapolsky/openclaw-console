@@ -87,4 +87,11 @@ class ApprovalViewModel : ViewModel() {
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null, screenState = ApprovalScreenState.IDLE)
     }
+
+    fun onError(message: String) {
+        _uiState.value = _uiState.value.copy(
+            error = message,
+            screenState = ApprovalScreenState.ERROR
+        )
+    }
 }

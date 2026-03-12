@@ -147,7 +147,7 @@ struct TaskDetailView: View {
                     .foregroundColor(chatInput.isEmpty ? .secondary : .blue)
             }
             .disabled(chatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                      || vm.isSendingMessage)
+                        || vm.isSendingMessage)
             .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.horizontal, 16)

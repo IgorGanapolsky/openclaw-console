@@ -5,6 +5,7 @@
 
 import Foundation
 import LocalAuthentication
+import Observation
 
 // MARK: - Biometric Error
 
@@ -57,6 +58,7 @@ enum BiometricType {
 
 // MARK: - BiometricService
 
+@Observable
 final class BiometricService {
 
     static let shared = BiometricService()

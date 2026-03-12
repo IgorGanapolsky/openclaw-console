@@ -1,138 +1,23 @@
-require "shellwords"
-
 default_platform(:ios)
-
-def ensure_xcode_project!
-  project_root = File.expand_path("..", __dir__)
-  xcodeproj_path = File.join(project_root, "OpenClawConsole.xcodeproj", "project.pbxproj")
-  project_spec = File.join(project_root, "project.yml")
-
-  return if File.exist?(xcodeproj_path)
-
-  unless File.exist?(project_spec)
-    UI.user_error!("Missing OpenClawConsole.xcodeproj and project.yml. Cannot build iOS app.")
-  end
-
-  unless system("command -v xcodegen >/dev/null 2>&1")
-    UI.user_error!("xcodegen is required to generate OpenClawConsole.xcodeproj")
-  end
-
-  UI.message("OpenClawConsole.xcodeproj not found. Generating from project.yml via xcodegen.")
-  Dir.chdir(project_root) do
-    sh("xcodegen generate")
-  end
-
-  unless File.exist?(xcodeproj_path)
-    UI.user_error!("xcodegen did not generate OpenClawConsole.xcodeproj")
-  end
-end
 
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
-  UI.message("Creating App Store Connect API key with ID: #{ENV['APPSTORE_KEY_ID']}")
-
   key_content = ENV["APPSTORE_PRIVATE_KEY"]
   is_base64 = key_content&.include?("-----BEGIN PRIVATE KEY-----") ? false : true
 
-  UI.message("Key format detected: #{is_base64 ? 'Base64' : 'Raw PEM'}")
-
-  begin
-    api_key = app_store_connect_api_key(
-      key_id: ENV["APPSTORE_KEY_ID"],
-      issuer_id: ENV["APPSTORE_ISSUER_ID"],
-      key_content: key_content,
-      is_key_content_base64: is_base64
-    )
-    UI.success("App Store Connect API key created successfully")
-    return api_key
-  rescue => e
-    UI.error("Failed to create App Store Connect API key: #{e.message}")
-    return nil
-  end
-end
-
-def resolved_appstore_key_path
-  key_id = ENV["APPSTORE_KEY_ID"]
-  return nil if key_id.to_s.empty?
-
-  explicit_key_path = ENV["APPSTORE_KEY_PATH"]
-  return explicit_key_path unless explicit_key_path.to_s.empty?
-
-  File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{key_id}.p8")
-end
-
-def parse_csv_env(name)
-  ENV.fetch(name, "")
-    .split(",")
-    .map { |v| v.strip }
-    .reject(&:empty?)
-end
-
-def env_true?(name)
-  %w[1 true yes on].include?(ENV.fetch(name, "").strip.downcase)
-end
-
-def signing_xcargs
-  args = []
-  args << "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}" unless ENV["APPLE_TEAM_ID"].to_s.empty?
-  args << "-allowProvisioningUpdates"
-
-  key_path = resolved_appstore_key_path
-  has_api_key_auth = (
-    ENV["CI"] == "true" &&
-    !ENV["APPSTORE_KEY_ID"].to_s.empty? &&
-    !ENV["APPSTORE_ISSUER_ID"].to_s.empty? &&
-    !key_path.to_s.empty? &&
-    File.exist?(key_path)
+  app_store_connect_api_key(
+    key_id: ENV["APPSTORE_KEY_ID"],
+    issuer_id: ENV["APPSTORE_ISSUER_ID"],
+    key_content: key_content,
+    is_key_content_base64: is_base64
   )
-
-  if has_api_key_auth
-    args << "-authenticationKeyPath #{Shellwords.escape(key_path)}"
-    args << "-authenticationKeyID #{ENV['APPSTORE_KEY_ID']}"
-    args << "-authenticationKeyIssuerID #{ENV['APPSTORE_ISSUER_ID']}"
-  end
-
-  args.join(" ")
-end
-
-def sync_match_with_bootstrap(api_key:, readonly:)
-  # Ensure we have a valid API key before proceeding
-  unless api_key
-    UI.user_error!("App Store Connect API key is required for match in CI environment")
-  end
-
-  # Force API key authentication by clearing Apple ID credentials
-  ENV.delete("FASTLANE_USER")
-  ENV.delete("FASTLANE_PASSWORD")
-  ENV.delete("FASTLANE_SESSION")
-
-  options = {
-    type: "appstore",
-    app_identifier: ["com.openclaw.console"],
-    readonly: readonly,
-    api_key: api_key,
-    keychain_name: ENV["MATCH_KEYCHAIN_NAME"],
-    keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
-  }
-
-  match(options)
-rescue => e
-  readonly_block = readonly && (
-    e.to_s.include?("No code signing identity found") ||
-    e.to_s.include?("enabled `readonly`")
-  )
-  raise e unless readonly_block
-
-  UI.important("Readonly match failed due missing signing identity. Retrying once with readonly:false to bootstrap signing assets.")
-  match(options.merge(readonly: false))
 end
 
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
     setup_ci if ENV["CI"] == "true"
-    ensure_xcode_project!
 
     # Use App Store Connect API key if available
     api_key = app_store_api_key_from_env
@@ -167,139 +52,75 @@ platform :ios do
     )
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
-      begin
-        update_code_signing_settings(
-          path: "OpenClawConsole.xcodeproj",
-          use_automatic_signing: true,
-          targets: ["OpenClawConsole"],
-          team_id: ENV["APPLE_TEAM_ID"]
-        )
-      rescue => e
-        UI.important("Skipping automatic-signing project mutation: #{e}")
-      end
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: true,
+        targets: ["OpenClawConsole"],
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
     end
 
     if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"]
-      begin
-        # CI runners do not have Apple ID accounts configured; force manual signing
-        # with match-managed App Store profiles for deterministic archives.
-        sync_match_with_bootstrap(api_key: api_key, readonly: true)
+      # CI runners do not have Apple ID accounts configured; force manual signing
+      # with match-managed App Store profiles for deterministic archives.
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: true,
+        api_key: api_key
+      )
 
-        app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
+      app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
 
-        begin
-          update_code_signing_settings(
-            path: "OpenClawConsole.xcodeproj",
-            use_automatic_signing: false,
-            targets: ["OpenClawConsole"],
-            code_sign_identity: "Apple Distribution",
-            profile_name: app_profile,
-            team_id: ENV["APPLE_TEAM_ID"]
-          )
-        rescue => e
-          UI.important("Skipping manual-signing project mutation: #{e}")
-        end
+      update_code_signing_settings(
+        path: "OpenClawConsole.xcodeproj",
+        use_automatic_signing: false,
+        targets: ["OpenClawConsole"],
+        code_sign_identity: "Apple Distribution",
+        profile_name: app_profile,
+        team_id: ENV["APPLE_TEAM_ID"]
+      )
 
-        build_app(
-          scheme: "OpenClawConsole",
-          export_method: "app-store",
-          xcargs: signing_xcargs,
-          export_options: {
-            signingStyle: "manual",
-            provisioningProfiles: {
-              "com.openclaw.console" => app_profile
-            }
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        export_options: {
+          signingStyle: "manual",
+          provisioningProfiles: {
+            "com.openclaw.console" => app_profile
           }
-        )
-      rescue => e
-        cert_limit_hit = e.to_s.include?("maximum number of available Distribution certificates")
-        raise e unless cert_limit_hit
-
-        UI.important("Match provisioning hit certificate limit. Falling back to automatic signing for this build.")
-        build_app(
-          scheme: "OpenClawConsole",
-          export_method: "app-store",
-          xcargs: signing_xcargs
-        )
-      end
+        }
+      )
     else
       # Local/dev fallback
       build_app(
         scheme: "OpenClawConsole",
         export_method: "app-store",
-        xcargs: signing_xcargs
+        xcargs: "-allowProvisioningUpdates"
       )
     end
 
-    tf_testers = parse_csv_env("TESTFLIGHT_TESTERS").uniq
-    required_tf_testers = parse_csv_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL").uniq
-    required_tf_testers.each do |required_email|
-      next if tf_testers.include?(required_email)
-
-      tf_testers << required_email
-      UI.message("Added required TestFlight tester: #{required_email}")
-    end
-    tf_groups = parse_csv_env("TESTFLIGHT_GROUPS").uniq
-    distribute_external_requested = env_true?("TESTFLIGHT_DISTRIBUTE_EXTERNAL")
-    audience_configured = !tf_testers.empty? || !tf_groups.empty? || distribute_external_requested
-
-    upload_options = {
-      skip_waiting_for_build_processing: !audience_configured,
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
-      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com"
-    }
-
-    unless tf_groups.empty?
-      upload_options[:groups] = tf_groups
-    end
-    if audience_configured
-      notify_external = env_true?("TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS")
-      upload_options[:notify_external_testers] = notify_external
-    end
-    if distribute_external_requested
-      upload_options[:distribute_external] = true
-    end
-    upload_options[:submit_beta_review] = env_true?("TESTFLIGHT_SUBMIT_BETA_REVIEW")
-
-    upload_to_testflight(upload_options)
-
-    if !tf_testers.empty? && tf_groups.empty?
-      UI.user_error!("TESTFLIGHT_TESTERS requires TESTFLIGHT_GROUPS so testers can be assigned to a beta group")
-    end
-
-    unless tf_testers.empty?
-      require "pilot/tester_manager"
-      tester_manager = Pilot::TesterManager.new
-
-      tf_testers.each do |email|
-        tester_manager.add_tester(
-          api_key: api_key,
-          app_identifier: "com.openclaw.console",
-          groups: tf_groups,
-          email: email
-        )
-      end
-    end
+      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"
+    )
   end
 
   desc "Setup certificates and profiles via match"
   lane :setup do
     setup_ci if ENV["CI"] == "true"
-    ensure_xcode_project!
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
-      readonly_mode = ENV["CI"] == "true"
 
-      begin
-        sync_match_with_bootstrap(api_key: api_key, readonly: readonly_mode)
-      rescue => e
-        cert_limit_hit = e.to_s.include?("maximum number of available Distribution certificates")
-        raise e unless cert_limit_hit
-
-        UI.important("Setup lane hit distribution certificate limit. Continuing; beta lane will attempt automatic-signing fallback.")
-      end
+      match(
+        type: "appstore",
+        app_identifier: ["com.openclaw.console"],
+        readonly: false,
+        api_key: api_key
+      )
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
     end
@@ -307,7 +128,6 @@ platform :ios do
 
   desc "Distribute to Firebase App Distribution"
   lane :firebase_dev do
-    ensure_xcode_project!
     increment_build_number(
       build_number: latest_testflight_build_number + 1
     )

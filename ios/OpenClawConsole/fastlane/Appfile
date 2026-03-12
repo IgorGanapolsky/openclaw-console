@@ -1,5 +1,4 @@
 app_identifier("com.openclaw.console")
-# Using App Store Connect API key authentication instead of Apple ID
-# apple_id(ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com") # Deprecated
+apple_id(ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com")
 itc_team_id(ENV["ITC_TEAM_ID"] || "128096325")
 team_id(ENV["APPLE_TEAM_ID"])

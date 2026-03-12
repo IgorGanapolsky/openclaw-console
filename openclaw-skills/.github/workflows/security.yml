@@ -1,0 +1,161 @@
+name: Security Pipeline
+on:
+  schedule:
+    - cron: "0 0 * * *" # Run daily at midnight
+  workflow_dispatch: # Allow manual triggers
+  push:
+    branches: [main, develop]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "yarn.lock"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.tsx"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        scan-type: [dependencies, code, mobile]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: matrix.scan-type == 'dependencies'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: native-android/package-lock.json
+
+      # Dependency Security Scans
+      - name: Run npm audit
+        if: matrix.scan-type == 'dependencies'
+        working-directory: native-android
+        run: npm audit --json > npm-audit.json || true
+
+      - name: Run Snyk
+        if: matrix.scan-type == 'dependencies' && env.SNYK_TOKEN != ''
+        continue-on-error: true
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ env.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=native-android/package-lock.json
+
+      - name: OWASP Dependency Check
+        if: matrix.scan-type == 'dependencies'
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "RandomTimer-Native"
+          path: "."
+          format: "HTML"
+          args: >
+            --suppression ./.github/config/dependency-check-suppressions.xml
+            --failOnCVSS 7
+            --enableRetired
+
+      # Code Security Scans
+      - name: Run CodeQL Analysis
+        if: matrix.scan-type == 'code'
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        if: matrix.scan-type == 'code'
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
+
+      - name: Install gitleaks (OSS CLI)
+        if: matrix.scan-type == 'code'
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          ARCH="$(uname -m)"
+          case "$ARCH" in
+            x86_64|amd64) ASSET="gitleaks_8.30.0_linux_x64.tar.gz" ;;
+            aarch64|arm64) ASSET="gitleaks_8.30.0_linux_arm64.tar.gz" ;;
+            *) echo "Unsupported arch: $ARCH" && exit 1 ;;
+          esac
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/${ASSET}" -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          install -m 0755 /tmp/gitleaks "$HOME/.local/bin/gitleaks"
+          "$HOME/.local/bin/gitleaks" version
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run Secret Scan
+        if: matrix.scan-type == 'code'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "push" && -n "$BEFORE_SHA" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            RANGE="${BEFORE_SHA}..${HEAD_SHA}"
+            echo "Scanning commit range: $RANGE"
+            gitleaks git --no-banner --redact --exit-code 1 --log-opts "--all $RANGE"
+          elif git rev-parse "${HEAD_SHA}~1" >/dev/null 2>&1; then
+            RANGE="${HEAD_SHA}~1..${HEAD_SHA}"
+            echo "Scanning fallback range: $RANGE"
+            gitleaks git --no-banner --redact --exit-code 1 --log-opts "--all $RANGE"
+          else
+            echo "Scanning full git history fallback"
+            gitleaks git --no-banner --redact --exit-code 1
+          fi
+
+      # Mobile-specific Security Scans
+      - name: Mobile Security Framework (MobSF)
+        if: matrix.scan-type == 'mobile'
+        continue-on-error: true
+        uses: MobSF/mobsfscan@main
+        with:
+          args: ". --json --output mobile-security-results.json"
+
+      - name: Run npm-audit-helper
+        if: matrix.scan-type == 'dependencies'
+        continue-on-error: true
+        working-directory: native-android
+        run: npx npm-audit-helper@latest --audit-level=moderate
+
+      - name: Upload Security Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-results-${{ matrix.scan-type }}
+          path: |
+            native-android/npm-audit.json
+            dependency-check-report.html
+            mobile-security-results.json
+
+  notify:
+    needs: security-scan
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Notify Security Issues
+        if: always() && env.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: |
+            Security scan completed with status: ${{ job.status }}
+            View detailed results in GitHub Actions artifacts
+        env:
+          SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}

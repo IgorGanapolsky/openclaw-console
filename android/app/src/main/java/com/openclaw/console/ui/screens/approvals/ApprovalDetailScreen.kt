@@ -64,12 +64,19 @@ fun ApprovalDetailScreen(
             else
                 "Confirm you want to deny this request"
 
-            when (BiometricHelper.authenticate(activity, title = title, subtitle = subtitle)) {
+            when (val result = BiometricHelper.authenticate(activity, title = title, subtitle = subtitle)) {
                 BiometricResult.Success -> viewModel.onBiometricSuccess()
                 BiometricResult.UserCancelled -> viewModel.onBiometricCancelled()
-                is BiometricResult.Error -> viewModel.onBiometricCancelled()
+                BiometricResult.Lockout -> {
+                    viewModel.onError("Too many failed attempts. Please use your device PIN or wait a moment.")
+                    viewModel.onBiometricCancelled()
+                }
+                is BiometricResult.Error -> {
+                    viewModel.onError("Verification failed: ${result.message}")
+                    viewModel.onBiometricCancelled()
+                }
                 BiometricResult.NotAvailable -> {
-                    // Fall through - no biometric available, still allow action
+                    // Fall through - no biometric available, still allow action in beta
                     viewModel.onBiometricSuccess()
                 }
             }

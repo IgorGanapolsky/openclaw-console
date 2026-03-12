@@ -153,64 +153,65 @@ final class WebSocketService: NSObject {
             return
         }
 
-        let event = decodeEvent(eventType: eventType, payloadData: payloadData)
+        var event: InboundEvent?
+
+        switch eventType {
+        case .agentUpdate:
+            if let obj = try? decoder.decode(AgentStatusUpdate.self, from: payloadData) {
+                event = .agentUpdate(obj)
+            }
+        case .taskUpdate:
+            if let obj = try? decoder.decode(OCTaskUpdate.self, from: payloadData) {
+                event = .taskUpdate(obj)
+            }
+        case .taskStep:
+            if let obj = try? decoder.decode(TaskStep.self, from: payloadData) {
+                event = .taskStep(obj)
+            }
+        case .incidentNew:
+            if let obj = try? decoder.decode(Incident.self, from: payloadData) {
+                event = .incidentNew(obj)
+            }
+        case .incidentUpdate:
+            if let obj = try? decoder.decode(IncidentUpdate.self, from: payloadData) {
+                event = .incidentUpdate(obj)
+            }
+        case .approvalRequest:
+            if let obj = try? decoder.decode(ApprovalRequest.self, from: payloadData) {
+                event = .approvalRequest(obj)
+            }
+        case .chatResponse:
+            if let obj = try? decoder.decode(ChatMessage.self, from: payloadData) {
+                event = .chatResponse(obj)
+            }
+        case .bridgeSessionNew:
+            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
+                event = .bridgeSessionNew(obj)
+            }
+        case .bridgeSessionUpdate:
+            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
+                event = .bridgeSessionUpdate(obj)
+            }
+        case .recurringTaskUpdated:
+            if let obj = try? decoder.decode(RecurringTask.self, from: payloadData) {
+                event = .recurringTaskUpdated(obj)
+            }
+        case .connected:
+            if let obj = try? decoder.decode(ConnectedPayload.self, from: payloadData) {
+                event = .connected(sessionId: obj.sessionId, gatewayVersion: obj.gatewayVersion)
+                reconnectAttempt = 0
+                connectionState = .connected(sessionId: obj.sessionId)
+            }
+        case .error:
+            if let obj = try? decoder.decode(ErrorPayload.self, from: payloadData) {
+                event = .error(code: obj.code, message: obj.message)
+            }
+        }
 
         if let event {
             eventSubject.send(event)
             lastEvent = event
         }
-    }
-
-    private func decodeEvent(eventType: InboundEventType, payloadData: Data) -> InboundEvent? {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
-        switch eventType {
-        case .agentUpdate:
-            if let obj = try? decoder.decode(AgentStatusUpdate.self, from: payloadData) {
-                return .agentUpdate(obj)
-            }
-        case .taskUpdate:
-            if let obj = try? decoder.decode(OCTaskUpdate.self, from: payloadData) {
-                return .taskUpdate(obj)
-            }
-        case .taskStep:
-            if let obj = try? decoder.decode(TaskStep.self, from: payloadData) {
-                return .taskStep(obj)
-            }
-        case .incidentNew:
-            if let obj = try? decoder.decode(Incident.self, from: payloadData) {
-                return .incidentNew(obj)
-            }
-        case .incidentUpdate:
-            if let obj = try? decoder.decode(IncidentUpdate.self, from: payloadData) {
-                return .incidentUpdate(obj)
-            }
-        case .approvalRequest:
-            if let obj = try? decoder.decode(ApprovalRequest.self, from: payloadData) {
-                return .approvalRequest(obj)
-            }
-        case .chatResponse:
-            if let obj = try? decoder.decode(ChatMessage.self, from: payloadData) {
-                return .chatResponse(obj)
-            }
-        case .bridgeSessionNew, .bridgeSessionUpdate, .recurringTaskUpdated, .gitStateChanged:
-            // Bridge session, recurring task, and git state events are not yet implemented
-            // These cases are handled to make the switch exhaustive for forward compatibility
-            break
-        case .connected:
-            if let obj = try? decoder.decode(ConnectedPayload.self, from: payloadData) {
-                reconnectAttempt = 0
-                connectionState = .connected(sessionId: obj.sessionId)
-                return .connected(sessionId: obj.sessionId, gatewayVersion: obj.gatewayVersion)
-            }
-        case .error:
-            if let obj = try? decoder.decode(ErrorPayload.self, from: payloadData) {
-                return .error(code: obj.code, message: obj.message)
-            }
-        }
-
-        return nil
     }
 
     // MARK: - Send

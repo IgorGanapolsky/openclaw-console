@@ -149,7 +149,7 @@ struct AddGatewayView: View {
 
     // MARK: - Test & Save Logic
 
-    private func testAndSave() {
+    func testAndSave() {
         testResult = nil
         errorMessage = nil
         isTesting = true
