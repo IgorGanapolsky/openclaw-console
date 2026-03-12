@@ -15,6 +15,8 @@ data class SettingsUiState(
 )
 
 data class AddGatewayUiState(
+    val setupLink: String = "",
+    val importMessage: String? = null,
     val name: String = "",
     val baseUrl: String = "",
     val token: String = "",
@@ -58,19 +60,70 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun onNameChange(name: String) {
-        _addGatewayUiState.value = _addGatewayUiState.value.copy(name = name)
+        _addGatewayUiState.value = _addGatewayUiState.value.copy(
+            name = name,
+            importMessage = null
+        )
+    }
+
+    fun onSetupLinkChange(link: String) {
+        _addGatewayUiState.value = _addGatewayUiState.value.copy(
+            setupLink = link,
+            importMessage = null,
+            error = null,
+            testResult = null
+        )
     }
 
     fun onBaseUrlChange(url: String) {
         _addGatewayUiState.value = _addGatewayUiState.value.copy(
             baseUrl = url,
+            importMessage = null,
             showHttpWarning = url.startsWith("http://"),
             testResult = null
         )
     }
 
     fun onTokenChange(token: String) {
-        _addGatewayUiState.value = _addGatewayUiState.value.copy(token = token, testResult = null)
+        _addGatewayUiState.value = _addGatewayUiState.value.copy(
+            token = token,
+            importMessage = null,
+            testResult = null
+        )
+    }
+
+    fun importSetupLink(rawLink: String? = null) {
+        val state = _addGatewayUiState.value
+        val setupLink = rawLink?.trim().takeUnless { it.isNullOrEmpty() } ?: state.setupLink
+        if (setupLink.isBlank()) {
+            _addGatewayUiState.value = state.copy(
+                importMessage = null,
+                error = "Copy a setup link first.",
+                testResult = null
+            )
+            return
+        }
+
+        try {
+            val imported = GatewaySetupLinkParser.parse(setupLink)
+            _addGatewayUiState.value = state.copy(
+                setupLink = setupLink,
+                importMessage = "Setup link imported. Review the details, then test and save.",
+                name = imported.name,
+                baseUrl = imported.baseUrl,
+                token = imported.token,
+                showHttpWarning = imported.baseUrl.startsWith("http://"),
+                error = null,
+                testResult = null
+            )
+        } catch (error: GatewaySetupImportError) {
+            _addGatewayUiState.value = state.copy(
+                importMessage = null,
+                setupLink = setupLink,
+                error = error.message,
+                testResult = null
+            )
+        }
     }
 
     fun testAndSave(onSuccess: () -> Unit) {

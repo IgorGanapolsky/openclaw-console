@@ -13,6 +13,7 @@ struct AddGatewayView: View {
     @State private var name: String = ""
     @State private var baseURL: String = ""
     @State private var token: String = ""
+    @State private var setupLink: String = ""
     @State private var isTesting: Bool = false
     @State private var isSaving: Bool = false
     @State private var testResult: TestResult? = nil
@@ -28,12 +29,14 @@ struct AddGatewayView: View {
     // MARK: - URL Validation
 
     private var urlHasHttpWarning: Bool {
-        baseURL.hasPrefix("http://") // allow-http && !baseURL.hasPrefix("https://")
+        baseURL
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .hasPrefix("http://")
     }
 
     private var urlIsValid: Bool {
-        guard !baseURL.isEmpty else { return false }
-        return baseURL.hasPrefix("http://") // allow-http || baseURL.hasPrefix("https://")
+        GatewaySetupLinkParser.normalizedGatewayBaseURL(baseURL) != nil
     }
 
     private var canSave: Bool {
@@ -44,6 +47,22 @@ struct AddGatewayView: View {
 
     var body: some View {
         Form {
+            if !isEditing {
+                Section {
+                    TextField("Paste setup link", text: $setupLink, axis: .vertical)
+                        .autocorrectionDisabled()
+                        .autocapitalization(.none)
+
+                    Button("Import Link", action: importSetupLink)
+                        .disabled(setupLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                } header: {
+                    Text("Import Setup Link")
+                } footer: {
+                    Text("Paste a setup link from AlphaClaw or another OpenClaw admin tool to prefill the gateway name, URL, and token.")
+                        .font(.caption)
+                }
+            }
+
             // MARK: Identity Section
             Section("Gateway Details") {
                 TextField("Name", text: $name)
@@ -147,16 +166,37 @@ struct AddGatewayView: View {
         }
     }
 
+    func importSetupLink() {
+        do {
+            let imported = try GatewaySetupLinkParser.parse(setupLink)
+            name = imported.name
+            baseURL = imported.baseURL
+            token = imported.token
+            testResult = nil
+            errorMessage = nil
+        } catch let error as GatewaySetupImportError {
+            testResult = nil
+            errorMessage = error.errorDescription
+        } catch {
+            testResult = nil
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Test & Save Logic
 
     func testAndSave() {
         testResult = nil
         errorMessage = nil
+
+        guard let cleanedURL = GatewaySetupLinkParser.normalizedGatewayBaseURL(baseURL) else {
+            errorMessage = GatewaySetupImportError.invalidBaseURL.errorDescription
+            return
+        }
+
         isTesting = true
 
         // Build a temporary gateway for testing
-        let cleanedURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let tempGateway = GatewayConnection(
             id: existingGateway?.id ?? UUID().uuidString,
             name: name,

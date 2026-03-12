@@ -161,12 +161,30 @@ curl -X POST http://localhost:18789/api/tokens/generate \
 
 1. Open the OpenClaw Work Console app on your phone
 2. Go to **Settings** → **Add Gateway**
-3. Enter:
+3. Either paste a setup link from your admin tool, or enter:
    - **Name**: e.g., "My Server"
    - **URL**: `https://agent.yourdomain.com` (or `http://100.x.x.x:18789` via Tailscale)
    - **Token**: The token from Step 6
 4. Tap **Test & Save**
 5. You should see your agents appear on the Agents tab
+
+### Setup Link Format
+
+Admin tools can prefill the mobile form by generating a setup link with `name`, `url` (or `baseUrl`), and `token` query parameters. The link route must end in `connect`.
+
+Example:
+
+```text
+openclawconsole://connect?name=Production&url=https%3A%2F%2Fagent.example.com&token=ocw_abc123
+```
+
+This also works with HTTPS admin URLs such as:
+
+```text
+https://alphaclaw.app/connect?name=Production&url=https%3A%2F%2Fagent.example.com&token=ocw_abc123
+```
+
+The iOS and Android apps both accept pasted links in the Add Gateway screen and validate that the imported gateway URL itself is a real `http://` or `https://` endpoint.
 
 ## Step 8: Enable Approval Gates
 
