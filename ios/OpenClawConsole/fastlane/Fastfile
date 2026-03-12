@@ -35,6 +35,15 @@ def strict_csv_env(primary_name, secondary_name)
   primary_values.any? ? primary_values : secondary_values
 end
 
+def ci_unique_build_number
+  run_id = ENV["GITHUB_RUN_ID"].to_s.strip
+  run_attempt = ENV["GITHUB_RUN_ATTEMPT"].to_s.strip
+  return nil if run_id.empty?
+
+  attempt_component = run_attempt.empty? ? "1" : run_attempt
+  "#{run_id}#{attempt_component}".to_i
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -73,6 +82,12 @@ platform :ios do
       rescue => e
         UI.important("Could not read latest TestFlight build number: #{e}")
       end
+    end
+
+    ci_floor_build_number = ci_unique_build_number
+    if ci_floor_build_number
+      UI.message("Applying CI build floor #{ci_floor_build_number} from GITHUB_RUN_ID/GITHUB_RUN_ATTEMPT")
+      next_build_number = [next_build_number, ci_floor_build_number].max
     end
 
     UI.message("Using build number #{next_build_number} for version #{marketing_version}")

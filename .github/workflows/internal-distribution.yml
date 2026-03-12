@@ -479,6 +479,17 @@ jobs:
             fi
           }
 
+          firebase_cli_with_mode() {
+            local mode="$1"
+            shift
+
+            if [ "$mode" = "ci_token" ]; then
+              firebase "$@" --token "$FIREBASE_TOKEN_FALLBACK"
+            else
+              firebase "$@"
+            fi
+          }
+
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
           if ! firebase_cli projects:list --json | jq -e --arg project "$FIREBASE_PROJECT_ID" '.. | objects | .projectId? // empty | select(. == $project)' > /dev/null; then
@@ -532,6 +543,11 @@ jobs:
             unset FIREBASE_TOKEN
           fi
 
+          GROUP_SETUP_AUTH_MODE="$AUTH_MODE"
+          if [ "$FALLBACK_TOKEN_AVAILABLE" = "true" ]; then
+            GROUP_SETUP_AUTH_MODE="ci_token"
+          fi
+
           if [ -z "$DIST_GROUPS" ]; then
             echo "❌ FIREBASE_INTERNAL_GROUPS secret is required for Android internal distribution proof."
             exit 1
@@ -546,6 +562,36 @@ jobs:
             echo "❌ FIREBASE_REQUIRED_TESTER_EMAIL must contain exactly one tester email."
             exit 1
           fi
+
+          ensure_group_contains_required_tester() {
+            local group_alias="$1"
+            local add_output=""
+
+            echo "🔐 Ensuring Firebase group alias '$group_alias' contains required tester $REQUIRED_TESTER (auth=$GROUP_SETUP_AUTH_MODE)"
+            if add_output="$(firebase_cli_with_mode "$GROUP_SETUP_AUTH_MODE" appdistribution:testers:add --group-alias="$group_alias" "$REQUIRED_TESTER" -P "$FIREBASE_PROJECT_ID" 2>&1)"; then
+              printf '%s\n' "$add_output"
+              return 0
+            fi
+
+            printf '%s\n' "$add_output"
+            if printf '%s' "$add_output" | grep -Eqi 'group.*not found|HTTP Error: 404|Requested entity was not found'; then
+              echo "⚠️ Firebase group alias '$group_alias' was not found. Creating it now."
+              firebase_cli_with_mode "$GROUP_SETUP_AUTH_MODE" appdistribution:group:create "$group_alias" "$group_alias" -P "$FIREBASE_PROJECT_ID"
+              firebase_cli_with_mode "$GROUP_SETUP_AUTH_MODE" appdistribution:testers:add --group-alias="$group_alias" "$REQUIRED_TESTER" -P "$FIREBASE_PROJECT_ID"
+              return 0
+            fi
+
+            echo "❌ Could not ensure tester membership for Firebase group alias '$group_alias'."
+            return 1
+          }
+
+          IFS=',' read -r -a target_groups <<< "$DIST_GROUPS"
+          for group_alias in "${target_groups[@]}"; do
+            group_alias="$(normalize_csv "$group_alias")"
+            if [ -n "$group_alias" ]; then
+              ensure_group_contains_required_tester "$group_alias"
+            fi
+          done
 
           # Build Firebase command
           BASE_CMD=(

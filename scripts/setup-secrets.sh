@@ -3,8 +3,9 @@
 # OpenClaw Console — Release Secret Setup
 # =======================================
 # Configure the GitHub Actions secrets and cleanup needed for internal release delivery.
-# The script verifies repository + production-environment state only and exits non-zero
-# if those scopes would still block the workflow. Organization-scoped config is not checked here.
+# The script can verify repository + production-environment state directly.
+# Organization-scoped Actions config is not inspected here, so workflow readiness is only
+# fully proved after any relevant org-level secrets and variables are checked separately.
 #
 
 set -euo pipefail
@@ -146,14 +147,9 @@ environment_variable_exists() {
     gh variable list --repo="$REPO" --env "$ENVIRONMENT_NAME" | awk '{print $1}' | grep -Fxq "$name"
 }
 
-secret_exists_any_scope() {
+secret_exists_repo_or_env_scope() {
     local name="$1"
     secret_exists "$name" || environment_secret_exists "$name"
-}
-
-variable_exists_any_scope() {
-    local name="$1"
-    variable_exists "$name" || environment_variable_exists "$name"
 }
 
 set_secret_authoritative() {
@@ -404,12 +400,12 @@ echo -e "${YELLOW}Step 5/5: Verification${NC}"
 
 missing=()
 for name in APPSTORE_PRIVATE_KEY APPSTORE_ISSUER_ID APPSTORE_KEY_ID APPLE_TEAM_ID MATCH_GIT_URL MATCH_GIT_BASIC_AUTHORIZATION MATCH_PASSWORD ADMIN_TOKEN GOOGLE_SERVICES_JSON ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD FIREBASE_PROJECT_ID FIREBASE_INTERNAL_GROUPS FIREBASE_REQUIRED_TESTER_EMAIL TESTFLIGHT_GROUPS TESTFLIGHT_REQUIRED_TESTER_EMAIL; do
-    if ! secret_exists_any_scope "$name"; then
+    if ! secret_exists_repo_or_env_scope "$name"; then
         missing+=("$name")
     fi
 done
 
-if ! secret_exists_any_scope FIREBASE_SERVICE_ACCOUNT_JSON && ! secret_exists_any_scope FIREBASE_TOKEN && ! secret_exists_any_scope GOOGLE_PLAY_JSON_KEY; then
+if ! secret_exists_repo_or_env_scope FIREBASE_SERVICE_ACCOUNT_JSON && ! secret_exists_repo_or_env_scope FIREBASE_TOKEN && ! secret_exists_repo_or_env_scope GOOGLE_PLAY_JSON_KEY; then
     missing+=("FIREBASE_AUTH_PATH(FIREBASE_SERVICE_ACCOUNT_JSON|FIREBASE_TOKEN|GOOGLE_PLAY_JSON_KEY)")
 fi
 
@@ -431,17 +427,18 @@ echo "Note: the workflow guard reads the GitHub Actions vars context. If this re
 echo ""
 
 if [ "${#missing[@]}" -gt 0 ]; then
-    echo -e "${RED}Release workflow is still blocked in repo/production scopes. Missing required secrets:${NC}"
+    echo -e "${RED}Workflow readiness is not yet verified. Required secrets are still missing from repo/${ENVIRONMENT_NAME} scopes:${NC}"
     printf '  - %s\n' "${missing[@]}"
+    echo "Organization-scoped Actions secrets can also satisfy \${{ secrets.* }}, but this script does not inspect them."
     exit 1
 fi
 
 echo "=============================================="
-echo -e "${GREEN}  Ready for repo/production scopes: $SECRETS_SET secrets configured and required checks passed.${NC}"
+echo -e "${GREEN}  Repo/${ENVIRONMENT_NAME} scopes are configured: $SECRETS_SET secrets set and local checks passed.${NC}"
 echo "=============================================="
 echo ""
 echo "Next steps:"
 echo "  1. Push any change to ios/ or android/ to trigger CI"
 echo "  2. Once CI passes, the internal-distribution workflow can build"
 echo "     and attempt TestFlight + Firebase App Distribution delivery"
-echo "  3. If this repo lives in an organization, verify org-level Actions secrets/vars separately"
+echo "  3. If this repo lives in an organization, verify org-level Actions secrets/vars separately before treating workflow readiness as proved"
