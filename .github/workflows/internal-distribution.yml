@@ -414,7 +414,28 @@ jobs:
               SUCCESS=true
               echo "✅ Firebase distribution successful on attempt $ATTEMPT"
             else
-              echo "❌ Attempt $ATTEMPT failed"
+              rc=$?
+              echo "❌ Attempt $ATTEMPT failed with exit code $rc"
+              
+              # Fallback to token if permission error (403) and token is available
+              if [ $rc -eq 1 ] && [ "$AUTH_MODE" = "service_account" ] && [ -n "${FIREBASE_TOKEN:-}" ]; then
+                echo "⚠️ Detected potential permission error with service account. Attempting fallback to FIREBASE_TOKEN..."
+                TOKEN_CMD=("${BASE_CMD[@]}" --token "$FIREBASE_TOKEN")
+                if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
+                  TOKEN_CMD+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
+                elif [ -n "$TESTERS" ]; then
+                  TOKEN_CMD+=(--testers "$TESTERS")
+                elif [ -n "$DIST_GROUPS" ]; then
+                  TOKEN_CMD+=(--groups "$DIST_GROUPS")
+                fi
+                
+                if "${TOKEN_CMD[@]}"; then
+                  SUCCESS=true
+                  echo "✅ Firebase distribution successful via FIREBASE_TOKEN fallback"
+                  break
+                fi
+              fi
+
               if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
                 echo "❌ All distribution attempts failed"
                 exit 1
