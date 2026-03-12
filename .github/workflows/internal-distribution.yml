@@ -216,6 +216,9 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
@@ -240,6 +243,18 @@ jobs:
           fi
           if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          if [ -z "${KEYSTORE_PASSWORD:-}" ]; then
+            echo "❌ Missing required secret: KEYSTORE_PASSWORD"
+            exit 1
+          fi
+          if [ -z "${KEY_ALIAS:-}" ]; then
+            echo "❌ Missing required secret: KEY_ALIAS"
+            exit 1
+          fi
+          if [ -z "${KEY_PASSWORD:-}" ]; then
+            echo "❌ Missing required secret: KEY_PASSWORD"
             exit 1
           fi
           if [ -z "${FIREBASE_PROJECT_ID:-}" ]; then

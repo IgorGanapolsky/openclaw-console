@@ -3,8 +3,8 @@
 # OpenClaw Console — Release Secret Setup
 # =======================================
 # Configure the GitHub Actions secrets and cleanup needed for internal release delivery.
-# The script verifies the resulting repo/production-environment state and exits non-zero
-# if the workflow would still be blocked by missing required inputs.
+# The script verifies repository + production-environment state only and exits non-zero
+# if those scopes would still block the workflow. Organization-scoped config is not checked here.
 #
 
 set -euo pipefail
@@ -431,16 +431,17 @@ echo "Note: the workflow guard reads the GitHub Actions vars context. If this re
 echo ""
 
 if [ "${#missing[@]}" -gt 0 ]; then
-    echo -e "${RED}Release workflow is still blocked. Missing required secrets:${NC}"
+    echo -e "${RED}Release workflow is still blocked in repo/production scopes. Missing required secrets:${NC}"
     printf '  - %s\n' "${missing[@]}"
     exit 1
 fi
 
 echo "=============================================="
-echo -e "${GREEN}  Ready: $SECRETS_SET secrets configured and required repo/production checks passed.${NC}"
+echo -e "${GREEN}  Ready for repo/production scopes: $SECRETS_SET secrets configured and required checks passed.${NC}"
 echo "=============================================="
 echo ""
 echo "Next steps:"
 echo "  1. Push any change to ios/ or android/ to trigger CI"
 echo "  2. Once CI passes, the internal-distribution workflow can build"
 echo "     and attempt TestFlight + Firebase App Distribution delivery"
+echo "  3. If this repo lives in an organization, verify org-level Actions secrets/vars separately"

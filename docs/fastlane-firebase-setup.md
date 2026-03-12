@@ -62,7 +62,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 
 `FIREBASE_INTERNAL_GROUPS` and `FIREBASE_REQUIRED_TESTER_EMAIL` are required for Android internal distribution and must be stored as secrets only. CI fails if those names exist anywhere in the GitHub Actions `vars` context, including repository variables, `production` environment variables, and organization variables when applicable.
 
-`TESTFLIGHT_GROUPS` and `TESTFLIGHT_REQUIRED_TESTER_EMAIL` are required for iOS internal distribution. They may be stored as secrets or repo variables, but when both forms exist they must match.
+`TESTFLIGHT_GROUPS` and `TESTFLIGHT_REQUIRED_TESTER_EMAIL` are required for iOS internal distribution. They may be stored as secrets or GitHub Actions variables, but when both forms exist they must match.
 
 ## One-Time Setup Steps
 
