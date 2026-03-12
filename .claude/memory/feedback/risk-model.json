@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "algorithm": "adaboost-stumps",
+  "trainedAt": "2026-03-12T18:04:00.472Z",
+  "exampleCount": 6,
+  "highRiskExamples": 4,
+  "baseRate": 0.6666666666666666,
+  "featureRegistry": {
+    "topTags": [
+      "architecture",
+      "assumption",
+      "auto-capture",
+      "automation",
+      "branch-safety",
+      "distribution",
+      "docker",
+      "factual-error"
+    ],
+    "topSkills": [],
+    "domains": [
+      "general",
+      "testing",
+      "security",
+      "performance",
+      "ui-components",
+      "api-integration",
+      "git-workflow",
+      "documentation",
+      "debugging",
+      "architecture",
+      "data-modeling"
+    ]
+  },
+  "featureNames": [
+    "recentTrend",
+    "sequenceLength",
+    "recentNegativeCount",
+    "recentPositiveCount",
+    "avgTimeGap",
+    "maxTimeGap",
+    "tagCount",
+    "filePathCount",
+    "hasErrorType",
+    "hasRubric",
+    "rubricWeightedScore",
+    "failingCriteriaCount",
+    "failingGuardrailsCount",
+    "judgeDisagreementCount",
+    "actionNegativeRate",
+    "containsRiskWord",
+    "containsVerificationWord",
+    "containsSafetyWord",
+    "containsSuccessWord",
+    "domain:general",
+    "domain:testing",
+    "domain:security",
+    "domain:performance",
+    "domain:ui-components",
+    "domain:api-integration",
+    "domain:git-workflow",
+    "domain:documentation",
+    "domain:debugging",
+    "domain:architecture",
+    "domain:data-modeling",
+    "tag:architecture",
+    "tag:assumption",
+    "tag:auto-capture",
+    "tag:automation",
+    "tag:branch-safety",
+    "tag:distribution",
+    "tag:docker",
+    "tag:factual-error"
+  ],
+  "learners": [
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    },
+    {
+      "feature": "recentTrend",
+      "threshold": 0.33333333333333337,
+      "polarity": -1,
+      "alpha": 6.908
+    }
+  ],
+  "patterns": {
+    "tags": [],
+    "domains": [
+      {
+        "key": "testing",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      },
+      {
+        "key": "general",
+        "total": 4,
+        "highRisk": 2,
+        "riskRate": 0.5
+      }
+    ],
+    "skills": []
+  },
+  "metrics": {
+    "trainingAccuracy": 1,
+    "rounds": 8,
+    "mode": "boosted"
+  }
+}

@@ -114,13 +114,21 @@ platform :ios do
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
+      readonly_mode = ENV["CI"] == "true"
 
-      match(
-        type: "appstore",
-        app_identifier: ["com.openclaw.console"],
-        readonly: false,
-        api_key: api_key
-      )
+      begin
+        match(
+          type: "appstore",
+          app_identifier: ["com.openclaw.console"],
+          readonly: readonly_mode,
+          api_key: api_key
+        )
+      rescue => e
+        cert_limit_hit = e.to_s.include?("maximum number of available Distribution certificates")
+        raise e unless cert_limit_hit
+
+        UI.important("Setup lane hit distribution certificate limit. Continuing; beta lane will attempt automatic-signing fallback.")
+      end
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
     end

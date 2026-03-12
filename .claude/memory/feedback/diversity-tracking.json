@@ -23,9 +23,15 @@
       "positive": 0,
       "negative": 1,
       "lastSeen": "2026-03-10T16:15:08.065Z"
+    },
+    "testing": {
+      "count": 2,
+      "positive": 0,
+      "negative": 2,
+      "lastSeen": "2026-03-12T18:04:00.463Z"
     }
   },
-  "lastUpdated": "2026-03-10T16:15:08.085Z",
-  "diversityScore": "94.0",
-  "recommendation": "Good diversity (94.0%)"
+  "lastUpdated": "2026-03-12T18:04:00.471Z",
+  "diversityScore": "92.8",
+  "recommendation": "Good diversity (92.8%)"
 }

@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.openclaw.console.app-mergeDebugResources-53:/values-h720dp-v13/values-h720dp-v13.xml",
+            "map": [
+                {
+                    "source": "/Users/ganapolsky_i/.gradle/caches/8.10.2/transforms/490e9ff0a935b4e68f99d958566582af/transformed/appcompat-1.2.0/res/values-h720dp-v13/values-h720dp-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "66",
+                        "endOffsets": "117"
+                    }
+                }
+            ]
+        }
+    ]
+}

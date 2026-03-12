@@ -75,7 +75,6 @@ struct MainTabView: View {
                     Label("Bridges", systemImage: "app.connected.to.app.below.fill")
                 }
                 .tag(Tab.bridges)
-
                 // MARK: Settings Tab
                 NavigationStack {
                     GatewayListView()
@@ -127,7 +126,7 @@ struct MainTabView: View {
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
             await bridgeVM.fetchBridges()
-            await loopVM.fetchLoops()
+            // await loopVM.fetchLoops()
             await approvalViewModel.fetchPendingApprovals()
         }
     }

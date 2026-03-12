@@ -87,8 +87,9 @@ OpenClawConsole/
 
 ## Setup
 
-1. Open Xcode → **Open a Package** or create a new iOS App project
-2. Add all source files from this directory
+1. Generate an Xcode project (required for signing/TestFlight):
+   `xcodegen generate`
+2. Open `OpenClawConsole.xcodeproj` in Xcode
 3. Set deployment target to **iOS 17.0**
 4. Add required capabilities in Xcode: **Keychain Sharing** (optional), **Face ID**
 5. The `Info.plist` in this directory contains all required privacy strings

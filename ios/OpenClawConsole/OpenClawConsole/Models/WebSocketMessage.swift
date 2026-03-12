@@ -194,6 +194,19 @@ struct BridgeSession: Codable, Identifiable {
     }
 }
 
+// MARK: - Git State
+
+struct GitState: Codable {
+    let branch: String
+    let status: String
+    let hasChanges: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case branch
+        case status
+        case hasChanges = "has_changes"
+    }
+}
 // MARK: - Connected Payload
 
 struct ConnectedPayload: Codable {
