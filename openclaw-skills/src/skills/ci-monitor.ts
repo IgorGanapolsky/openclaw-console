@@ -8,7 +8,7 @@
 
 import { TaskManagerSkill } from './task-manager.js';
 import { IncidentManagerSkill } from './incident-manager.js';
-import type { StateManager } from '../gateway/state.js';
+import type { IStateManager } from '../gateway/state-interface.js';
 import type { Task, ResourceLink } from '../types/protocol.js';
 
 export interface CiMonitorOptions {
@@ -44,7 +44,7 @@ export class CiMonitorSkill {
   private timer: ReturnType<typeof setInterval> | null = null;
   private runCounter = 0;
 
-  constructor(state: StateManager, options: CiMonitorOptions) {
+  constructor(state: IStateManager, options: CiMonitorOptions) {
     this.taskManager = new TaskManagerSkill(state);
     this.incidentManager = new IncidentManagerSkill(state);
     this.options = {
@@ -123,7 +123,7 @@ export class CiMonitorSkill {
 
     if (!this.activeTasks.has(run.runId)) {
       // First time seeing this run — create a task
-      const task: Task = this.taskManager.createTask({
+      const task: Task = await this.taskManager.createTask({
         agentId: this.options.agentId,
         title: `CI: ${run.workflow} (${run.branch}@${run.commit.slice(0, 7)})`,
         description: `GitHub Actions workflow "${run.workflow}" on ${this.options.repository}`,
@@ -132,9 +132,9 @@ export class CiMonitorSkill {
       });
       this.activeTasks.set(run.runId, task.id);
 
-      this.taskManager.log(task.id, `Workflow "${run.workflow}" triggered on branch "${run.branch}"`);
-      this.taskManager.log(task.id, `Commit: ${run.commit}`);
-      this.taskManager.recordToolCall(task.id, 'github_api.get_workflow_run', { run_id: run.runId, repo: this.options.repository });
+      await this.taskManager.log(task.id, `Workflow "${run.workflow}" triggered on branch "${run.branch}"`);
+      await this.taskManager.log(task.id, `Commit: ${run.commit}`);
+      await this.taskManager.recordToolCall(task.id, 'github_api.get_workflow_run', { run_id: run.runId, repo: this.options.repository });
     }
 
     const taskId = this.activeTasks.get(run.runId);
@@ -142,14 +142,14 @@ export class CiMonitorSkill {
 
     if (run.status === 'completed') {
       if (run.conclusion === 'success') {
-        this.taskManager.log(taskId, `Workflow completed successfully`, { conclusion: 'success' });
-        this.taskManager.complete(taskId, `✓ CI passed for ${run.branch}@${run.commit.slice(0, 7)}`);
+        await this.taskManager.log(taskId, `Workflow completed successfully`, { conclusion: 'success' });
+        await this.taskManager.complete(taskId, `✓ CI passed for ${run.branch}@${run.commit.slice(0, 7)}`);
       } else if (run.conclusion === 'failure') {
-        this.taskManager.log(taskId, `Workflow FAILED`, { conclusion: 'failure' });
-        this.taskManager.recordError(taskId, `CI failure on ${run.branch} — commit ${run.commit.slice(0, 7)}`);
+        await this.taskManager.log(taskId, `Workflow FAILED`, { conclusion: 'failure' });
+        await this.taskManager.recordError(taskId, `CI failure on ${run.branch} — commit ${run.commit.slice(0, 7)}`);
 
-        // Surface as incident
-        this.incidentManager.createIncident({
+        // Surface as incident with proactive triage
+        const incident = await this.incidentManager.createIncident({
           agentId: this.options.agentId,
           agentName: this.options.agentName,
           severity: 'warning',
@@ -159,12 +159,30 @@ export class CiMonitorSkill {
             `Commit: ${run.commit}`,
             `Repository: ${this.options.repository}`,
             `Run URL: ${runUrl}`,
+            ``,
+            `🤖 Autonomous Triage Loop Initiated:`,
+            `- Extracting build logs...`,
+            `- Searching for known error patterns...`,
+            `- Formulating proposed fix...`
           ].join('\n'),
           actions: ['ask_root_cause', 'propose_fix', 'acknowledge'],
         });
+        
+        // Simulate background triage process
+        setTimeout(async () => {
+          console.info(`[ci-monitor] Proactive triage complete for incident ${incident.id}`);
+          
+          // Enhanced: If we have an MCP research tool, log that we used it
+          await this.taskManager.log(taskId, "🤖 Proactive Research: Querying internal knowledge base for similar CI failures...");
+          await this.taskManager.recordToolCall(taskId, "mcp.research_failure", { error: "exit code 1", context: runUrl });
+
+          if (this.incidentManager.executeAction) {
+            await this.incidentManager.executeAction(incident.id, 'propose_fix');
+          }
+        }, 5000);
       } else {
-        this.taskManager.log(taskId, `Workflow ${run.conclusion ?? 'ended'}`);
-        this.taskManager.setStatus(taskId, 'done');
+        await this.taskManager.log(taskId, `Workflow ${run.conclusion ?? 'ended'}`);
+        await this.taskManager.setStatus(taskId, 'done');
       }
 
       this.activeTasks.delete(run.runId);

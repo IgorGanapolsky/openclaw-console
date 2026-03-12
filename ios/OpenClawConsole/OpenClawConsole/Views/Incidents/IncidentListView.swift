@@ -86,8 +86,8 @@ struct IncidentListView: View {
             }
         } label: {
             Image(systemName: viewModel.severityFilter == nil
-                  ? "line.3.horizontal.decrease.circle"
-                  : "line.3.horizontal.decrease.circle.fill")
+                    ? "line.3.horizontal.decrease.circle"
+                    : "line.3.horizontal.decrease.circle.fill")
         }
         .accessibilityLabel("Filter by severity")
     }

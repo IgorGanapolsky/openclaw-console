@@ -1,137 +1,113 @@
 // Services/WebSocketService.swift
-// OpenClaw Work Console
-// WebSocket client using URLSessionWebSocketTask.
-// Features: token auth, exponential backoff reconnect, typed events, keepalive ping.
+// Handles real-time events from the OpenClaw Gateway.
 
 import Foundation
 import Combine
 
-// MARK: - Connection State
-
-enum WebSocketConnectionState: Equatable {
+enum ConnectionState: Equatable {
     case disconnected
     case connecting
     case connected(sessionId: String)
-    case failed(String)
+    case error(String)
 }
 
-private struct OutboundEnvelope<Payload: Encodable>: Encodable {
-    let type: String
-    let payload: Payload
-}
+final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate, ObservableObject {
 
-// MARK: - WebSocketService
+    @Published var connectionState: ConnectionState = .disconnected
+    @Published var lastEvent: InboundEvent?
 
-@Observable
-final class WebSocketService: NSObject {
-
-    // MARK: Published State
-
-    private(set) var connectionState: WebSocketConnectionState = .disconnected
-    private(set) var lastEvent: InboundEvent?
-
-    // MARK: Event Stream
+    private var webSocketTask: URLSessionWebSocketTask?
+    private let urlSession: URLSession
+    private let decoder = JSONDecoder()
+    private var reconnectAttempt = 0
+    private let maxReconnectAttempts = 5
 
     private let eventSubject = PassthroughSubject<InboundEvent, Never>()
     var eventPublisher: AnyPublisher<InboundEvent, Never> {
         eventSubject.eraseToAnyPublisher()
     }
 
-    // MARK: Private
+    // MARK: - Init
 
-    private var webSocketTask: URLSessionWebSocketTask?
-    private var urlSession: URLSession?
-    private var baseURL: String = ""
-    private var token: String = ""
+    override init() {
+        self.urlSession = URLSession(configuration: .default)
+        super.init()
+    }
 
-    private var reconnectAttempt: Int = 0
-    private let maxBackoffSeconds: Double = 30.0
-    @ObservationIgnored private var reconnectTask: _Concurrency.Task<Void, Never>?
-    @ObservationIgnored private var pingTask: _Concurrency.Task<Void, Never>?
-    @ObservationIgnored private var receiveTask: _Concurrency.Task<Void, Never>?
+    // MARK: - Actions
 
-    private var shouldReconnect: Bool = false
+    func connect(url: URL, token: String) {
+        guard connectionState == .disconnected else { return }
 
-    private let decoder: JSONDecoder = {
-        let d = JSONDecoder()
-        d.dateDecodingStrategy = .iso8601
-        return d
-    }()
+        var request = URLRequest(url: url)
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-    // MARK: - Connect
+        webSocketTask = urlSession.webSocketTask(with: request)
+        webSocketTask?.delegate = self
 
-    func connect(baseURL: String, token: String) {
-        self.baseURL = baseURL
-        self.token = token
-        self.shouldReconnect = true
-        self.reconnectAttempt = 0
-        performConnect()
+        connectionState = .connecting
+        webSocketTask?.resume()
+
+        receiveMessage()
     }
 
     func disconnect() {
-        shouldReconnect = false
-        reconnectTask?.cancel()
-        pingTask?.cancel()
-        receiveTask?.cancel()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         connectionState = .disconnected
     }
 
-    // MARK: - Internal Connect
-
-    private func performConnect() {
-        connectionState = .connecting
-
-        let wsURLString = baseURL
-            .replacingOccurrences(of: "https://", with: "wss://")
-            .replacingOccurrences(of: "http://", with: "ws://") // allow-http local-dev-only
-
-        guard let url = URL(string: "\(wsURLString)/ws?token=\(token)") else {
-            connectionState = .failed("Invalid gateway URL")
-            return
+    func send(_ event: OutboundEvent) {
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(event)
+            let message = URLSessionWebSocketTask.Message.data(data)
+            webSocketTask?.send(message) { error in
+                if let error = error {
+                    print("WebSocket send error: \(error)")
+                }
+            }
+        } catch {
+            print("WebSocket encoding error: \(error)")
         }
-
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        urlSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
-
-        webSocketTask = urlSession?.webSocketTask(with: url)
-        webSocketTask?.resume()
-
-        receiveTask = _Concurrency.Task { [weak self] in
-            await self?.receiveLoop()
-        }
-
-        startPingLoop()
     }
 
-    // MARK: - Receive Loop
+    // MARK: - Internal
 
-    private func receiveLoop() async {
-        while let task = webSocketTask, !_Concurrency.Task.isCancelled {
-            do {
-                let message = try await task.receive()
+    private func receiveMessage() {
+        webSocketTask?.receive { [weak self] result in
+            switch result {
+            case .success(let message):
                 switch message {
                 case .string(let text):
-                    parseMessage(text)
+                    self?.parseMessage(text)
                 case .data(let data):
                     if let text = String(data: data, encoding: .utf8) {
-                        parseMessage(text)
+                        self?.parseMessage(text)
                     }
                 @unknown default:
                     break
                 }
-            } catch {
-                if shouldReconnect && !_Concurrency.Task.isCancelled {
-                    await handleDisconnect(error: error)
-                }
-                break
+                self?.receiveMessage()
+
+            case .failure(let error):
+                self?.handleFailure(error)
             }
         }
     }
 
-    // MARK: - Parsing
+    private func handleFailure(_ error: Error) {
+        print("WebSocket failure: \(error)")
+        connectionState = .error(error.localizedDescription)
+
+        if reconnectAttempt < maxReconnectAttempts {
+            reconnectAttempt += 1
+            let delay = pow(2.0, Double(reconnectAttempt))
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                // Logic to reconnect if URL/token are stored
+            }
+        }
+    }
 
     private func parseMessage(_ text: String) {
         guard let data = text.data(using: .utf8) else { return }
@@ -184,6 +160,21 @@ final class WebSocketService: NSObject {
             if let obj = try? decoder.decode(ChatMessage.self, from: payloadData) {
                 event = .chatResponse(obj)
             }
+        case .bridgeSessionNew:
+            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
+                event = .bridgeSessionNew(obj)
+            }
+        case .bridgeSessionUpdate:
+            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
+                event = .bridgeSessionUpdate(obj)
+            }
+        case .recurringTaskUpdated:
+            if let obj = try? decoder.decode(RecurringTask.self, from: payloadData) {
+                event = .recurringTaskUpdated(obj)
+            }
+        case .gitStateChanged:
+            // Handled via other mechanisms or simple notification
+            break
         case .connected:
             if let obj = try? decoder.decode(ConnectedPayload.self, from: payloadData) {
                 event = .connected(sessionId: obj.sessionId, gatewayVersion: obj.gatewayVersion)
@@ -202,81 +193,31 @@ final class WebSocketService: NSObject {
         }
     }
 
-    // MARK: - Send
+    // MARK: - URLSessionWebSocketTaskDelegate
 
-    func send<T: Encodable>(type: OutboundEventType, payload: T) {
-        guard let task = webSocketTask else { return }
-
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-
-        let envelope = OutboundEnvelope(type: type.rawValue, payload: payload)
-        guard let data = try? encoder.encode(envelope),
-              let text = String(data: data, encoding: .utf8) else { return }
-
-        task.send(.string(text)) { _ in }
+    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+        print("WebSocket opened")
     }
 
-    // MARK: - Ping
-
-    private func startPingLoop() {
-        pingTask?.cancel()
-        pingTask = _Concurrency.Task { [weak self] in
-            while let self, !_Concurrency.Task.isCancelled {
-                try? await _Concurrency.Task.sleep(nanoseconds: 30_000_000_000) // 30s
-                guard !_Concurrency.Task.isCancelled else { break }
-                self.webSocketTask?.sendPing { _ in }
-            }
-        }
-    }
-
-    // MARK: - Reconnect
-
-    private func handleDisconnect(error: Error) async {
-        guard shouldReconnect else { return }
-
-        connectionState = .failed(error.localizedDescription)
-
-        let backoff = min(pow(2.0, Double(reconnectAttempt)), maxBackoffSeconds)
-        reconnectAttempt += 1
-
-        try? await _Concurrency.Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
-
-        guard shouldReconnect else { return }
-        performConnect()
-    }
-
-    // MARK: - Subscribe helpers
-
-    func subscribe(to agentIds: [String]) {
-        send(type: .subscribe, payload: SubscribePayload(agents: agentIds))
-    }
-
-    func unsubscribe(from agentIds: [String]) {
-        send(type: .unsubscribe, payload: SubscribePayload(agents: agentIds))
+    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+        print("WebSocket closed")
+        connectionState = .disconnected
     }
 }
 
-// MARK: - URLSessionWebSocketDelegate
+// MARK: - Payloads
 
-extension WebSocketService: URLSessionWebSocketDelegate {
-    func urlSession(_ session: URLSession,
-                    webSocketTask: URLSessionWebSocketTask,
-                    didOpenWithProtocol protocol: String?) {
-        // Connection confirmed at protocol level; actual app-level confirmation
-        // comes via the `connected` event from the server.
-    }
+struct ConnectedPayload: Codable {
+    let sessionId: String
+    let gatewayVersion: String
 
-    func urlSession(_ session: URLSession,
-                    webSocketTask: URLSessionWebSocketTask,
-                    didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
-                    reason: Data?) {
-        guard shouldReconnect else { return }
-        _Concurrency.Task { [weak self] in
-            await self?.handleDisconnect(
-                error: NSError(domain: "WebSocket",
-                               code: closeCode.rawValue,
-                               userInfo: [NSLocalizedDescriptionKey: "Connection closed"]))
-        }
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case gatewayVersion = "gateway_version"
     }
+}
+
+struct ErrorPayload: Codable {
+    let code: Int
+    let message: String
 }

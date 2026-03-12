@@ -20,6 +20,7 @@ export const AGENT_IDS = {
   GITHUB_OPS: 'agent-github-ops-001',
   TRADING_BOT: 'agent-trading-bot-001',
   DEPLOY_MANAGER: 'agent-deploy-mgr-001',
+  GITCLAW_AGENT: 'agent-gitclaw-001',
 } as const;
 
 export type WellKnownAgentId = (typeof AGENT_IDS)[keyof typeof AGENT_IDS];
@@ -45,6 +46,13 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     description: 'Orchestrates deployments across staging and production environments, manages rollbacks and configuration changes.',
     workspace: 'deploy.myorg.internal',
     tags: ['deploy', 'k8s', 'infrastructure', 'devops'],
+  },
+  {
+    id: AGENT_IDS.GITCLAW_AGENT,
+    name: 'GitClaw Agent',
+    description: 'Provides git operations with approval gates, monitors repository state, and manages code workflow automation.',
+    workspace: 'git.repository.local',
+    tags: ['git', 'vcs', 'automation', 'approval-gates', 'repository'],
   },
 ];
 

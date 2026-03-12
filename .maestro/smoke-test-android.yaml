@@ -3,7 +3,7 @@ appId: com.openclaw.console
 # Smoke test: Verify app launches on Android
 - launchApp
 
-# Optional sanity checks (UI can vary by connection/bootstrap state in CI)
+# Keep this smoke check resilient to onboarding/state differences in CI.
 - assertVisible:
-    text: '.*(Agents|Settings|Connect|Gateway).*'
+    text: '.*(OpenClaw|Agents|Settings|Connect|Gateway).*'
     optional: true

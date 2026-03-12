@@ -2,4 +2,7 @@ git_url(ENV["MATCH_GIT_URL"])
 storage_mode("git")
 type("appstore")
 app_identifier("com.openclaw.console")
-username(ENV["FASTLANE_USER"] || "igor.ganapolsky@icloud.com")
+git_branch("main")
+
+# Use App Store Connect API key instead of Apple ID
+# No username needed when using API key authentication

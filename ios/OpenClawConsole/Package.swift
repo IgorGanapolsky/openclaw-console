@@ -15,16 +15,23 @@ let package = Package(
         .executable(name: "OpenClawConsole", targets: ["OpenClawConsole"])
     ],
     dependencies: [
-        // No external dependencies – uses only Apple frameworks:
-        // Foundation, SwiftUI, Combine, Security, LocalAuthentication, UserNotifications
+        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "4.43.2")
     ],
     targets: [
         .executableTarget(
             name: "OpenClawConsole",
+            dependencies: [
+                .product(name: "RevenueCat", package: "purchases-ios")
+            ],
             path: "OpenClawConsole",
             resources: [
                 // Info.plist managed by Xcode-SPM integration
             ]
+        ),
+        .testTarget(
+            name: "OpenClawConsoleTests",
+            dependencies: ["OpenClawConsole"],
+            path: "Tests"
         )
     ]
 )

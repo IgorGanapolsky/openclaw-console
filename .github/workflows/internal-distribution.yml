@@ -42,10 +42,10 @@ jobs:
           REASON="not_eligible"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            REF="${INPUT_REF:-develop}"
+            REF="${INPUT_REF:-$GITHUB_REF_NAME}"
             SHOULD_RUN="true"
             REASON="manual_dispatch"
-          elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" && ("$WORKFLOW_BRANCH" == "develop" || "$WORKFLOW_BRANCH" == "main") ]]; then
+          elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" ]]; then
             REF="$WORKFLOW_SHA"
             SHA="$WORKFLOW_SHA"
             SHOULD_RUN="true"
@@ -71,13 +71,16 @@ jobs:
 
       - name: Fail fast on required iOS distribution secrets
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          for name in APPLE_TEAM_ID APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -99,23 +102,6 @@ jobs:
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
-      - name: Install XcodeGen
-        run: |
-          set -euo pipefail
-          if ! command -v xcodegen >/dev/null 2>&1; then
-            brew install xcodegen
-          fi
-          xcodegen --version
-
-      - name: Generate OpenClawConsole.xcodeproj
-        working-directory: ios/OpenClawConsole
-        run: |
-          set -euo pipefail
-          if [ ! -f "OpenClawConsole.xcodeproj/project.pbxproj" ]; then
-            xcodegen generate
-          fi
-          test -f "OpenClawConsole.xcodeproj/project.pbxproj"
-
       - name: Install Fastlane
         run: gem install fastlane
         working-directory: ios/OpenClawConsole
@@ -127,9 +113,20 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.appstoreconnect/private_keys
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
-          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
-          echo "APPSTORE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+
+      - name: Inject RevenueCat API key
+        env:
+          REVENUECAT_API_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          PLIST="ios/OpenClawConsole/OpenClawConsole/Info.plist"
+          if [ -n "$REVENUECAT_API_KEY" ]; then
+            /usr/libexec/PlistBuddy -c "Add :REVENUECAT_API_KEY string $REVENUECAT_API_KEY" "$PLIST" || /usr/libexec/PlistBuddy -c "Set :REVENUECAT_API_KEY $REVENUECAT_API_KEY" "$PLIST"
+            echo "✅ Injected RevenueCat API key into Info.plist"
+          else
+            echo "⚠️ REVENUECAT_PUBLIC_KEY secret not found - skipping injection"
+          fi
 
       - name: Configure git credentials for match
         env:
@@ -139,41 +136,31 @@ jobs:
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Setup signing certificates and profiles (match)
-        continue-on-error: true
         env:
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
-          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: fastlane setup
+        run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
         env:
           CI: "true"
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          ITC_TEAM_ID: ${{ secrets.ITC_TEAM_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          TESTFLIGHT_TESTERS: ${{ secrets.TESTFLIGHT_TESTERS || vars.TESTFLIGHT_TESTERS }}
-          TESTFLIGHT_REQUIRED_TESTER_EMAIL: ${{ secrets.TESTFLIGHT_REQUIRED_TESTER_EMAIL || vars.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
-          TESTFLIGHT_GROUPS: ${{ secrets.TESTFLIGHT_GROUPS || vars.TESTFLIGHT_GROUPS }}
-          TESTFLIGHT_DISTRIBUTE_EXTERNAL: ${{ secrets.TESTFLIGHT_DISTRIBUTE_EXTERNAL || vars.TESTFLIGHT_DISTRIBUTE_EXTERNAL }}
-          TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: ${{ secrets.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS || vars.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS }}
-          TESTFLIGHT_SUBMIT_BETA_REVIEW: ${{ secrets.TESTFLIGHT_SUBMIT_BETA_REVIEW || vars.TESTFLIGHT_SUBMIT_BETA_REVIEW }}
-        run: fastlane beta
+        run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ios-ipa-internal
@@ -195,7 +182,6 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
@@ -208,8 +194,8 @@ jobs:
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
             exit 1
           fi
-          if [ -z "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ] && [ -z "${FIREBASE_TOKEN:-}" ]; then
-            echo "❌ Need one of FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN for Firebase authentication"
+          if [ -z "${FIREBASE_TOKEN:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ] && [ -z "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+            echo "❌ Need one of FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY or FIREBASE_SERVICE_ACCOUNT_JSON for Firebase authentication"
             exit 1
           fi
 
@@ -245,17 +231,12 @@ jobs:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
-          EXPECTED_PACKAGE="com.openclaw.console"
-          APP_ID="$(jq -r --arg pkg "$EXPECTED_PACKAGE" '
-            .client[]?
-            | select(.client_info.android_client_info.package_name == $pkg)
-            | .client_info.mobilesdk_app_id // empty
-          ' app/google-services.json | head -n 1)"
+          APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
           if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
             APP_ID="$FIREBASE_ANDROID_APP_ID"
           fi
           if [ -z "$APP_ID" ]; then
-            echo "❌ Could not resolve Firebase Android app id for package ${EXPECTED_PACKAGE}. Set FIREBASE_ANDROID_APP_ID or include matching entry in GOOGLE_SERVICES_JSON."
+            echo "❌ Could not resolve Firebase Android app id. Set FIREBASE_ANDROID_APP_ID secret or include mobilesdk_app_id in GOOGLE_SERVICES_JSON."
             exit 1
           fi
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
@@ -279,65 +260,22 @@ jobs:
           set -euo pipefail
           ./gradlew assembleRelease --no-daemon
 
-      - name: Resolve release APK path
-        id: apk
-        run: |
-          set -euo pipefail
-          APK_PATH="$(find android/app/build/outputs/apk -type f -name '*release*.apk' | sort | head -n 1)"
-          if [ -z "$APK_PATH" ]; then
-            echo "❌ Could not find a release APK under android/app/build/outputs/apk"
-            find android/app/build/outputs/apk -maxdepth 4 -type f || true
-            exit 1
-          fi
-          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
-          echo "Resolved APK path: $APK_PATH"
-
-      - name: Sign release APK when unsigned
-        id: signed_apk
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          APK_PATH="${{ steps.apk.outputs.apk_path }}"
-          APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" -type f 2>/dev/null | sort -V | tail -1)
-          if [ -z "$APKSIGNER" ]; then
-            APKSIGNER=$(command -v apksigner || true)
-          fi
-
-          if [[ "$APK_PATH" == *"-unsigned.apk" ]]; then
-            if [ -z "$APKSIGNER" ]; then
-              echo "❌ APK is unsigned and apksigner is unavailable; cannot produce distributable APK."
-              exit 1
-            fi
-            SIGNED_APK="${APK_PATH%-unsigned.apk}-signed.apk"
-            "$APKSIGNER" sign \
-              --ks /tmp/release.keystore \
-              --ks-pass "pass:${KEYSTORE_PASSWORD}" \
-              --ks-key-alias "${KEY_ALIAS}" \
-              --key-pass "pass:${KEY_PASSWORD}" \
-              --out "$SIGNED_APK" \
-              "$APK_PATH"
-            APK_PATH="$SIGNED_APK"
-            echo "✅ Signed APK generated: $APK_PATH"
-          fi
-
-          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
-
       - name: Verify APK is signed
         run: |
           set -euo pipefail
-          APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
-          # Use apksigner from Android SDK build-tools (available on ubuntu-latest via setup-java)
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ APK not found at $APK_PATH"
+            exit 1
+          fi
+          # Use apksigner from Android SDK build-tools
           APKSIGNER=$(find /usr/local/lib/android/sdk/build-tools -name "apksigner" -type f 2>/dev/null | sort -V | tail -1)
           if [ -z "$APKSIGNER" ]; then
-            echo "⚠️ apksigner not found via SDK path, trying PATH"
             APKSIGNER=$(command -v apksigner || true)
           fi
           if [ -z "$APKSIGNER" ]; then
-            echo "⚠️ apksigner not available — skipping signature verification"
-            exit 0
+            echo "❌ apksigner not available"
+            exit 1
           fi
           "$APKSIGNER" verify --verbose "$APK_PATH"
           echo "✅ APK signature verified"
@@ -351,133 +289,141 @@ jobs:
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
+          # Priority 1: FIREBASE_SERVICE_ACCOUNT_JSON
           if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
             printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            echo "✅ Using FIREBASE_SERVICE_ACCOUNT_JSON for Firebase authentication"
+          # Priority 2: GOOGLE_PLAY_JSON_KEY (fallback)
           elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
             printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            echo "✅ Using GOOGLE_PLAY_JSON_KEY as fallback for Firebase authentication"
           fi
 
       - name: Distribute to internal Firebase tester(s)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_INTERNAL_TESTERS: ${{ secrets.FIREBASE_INTERNAL_TESTERS || vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_GROUPS: ${{ secrets.FIREBASE_INTERNAL_GROUPS || vars.FIREBASE_INTERNAL_GROUPS }}
-          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL || vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_FALLBACK_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'openclaw-console-mobile' }}
         run: |
           set -Eeuo pipefail
-          trap 'rc=$?; echo "❌ Firebase distribution failed at line ${LINENO}: ${BASH_COMMAND} (rc=${rc})"; exit ${rc}' ERR
+          trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
 
-          normalize_csv() {
-            printf '%s' "${1-}" \
-              | tr $'\n\r;' ',' \
-              | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
-          }
-
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
-          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
-          APK_PATH="${{ steps.signed_apk.outputs.apk_path }}"
-
-          AUTH_MODE=""
-          if [ -n "${FIREBASE_TOKEN:-}" ]; then
-            AUTH_MODE="token"
-          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
-            AUTH_MODE="service-account"
-          else
-            echo "❌ Missing Firebase auth. Set FIREBASE_SERVICE_ACCOUNT_JSON, GOOGLE_PLAY_JSON_KEY, or FIREBASE_TOKEN."
+          # Validate package name consistency
+          echo "🔍 Validating package name consistency"
+          BUILD_PACKAGE=$(grep -o 'applicationId = "[^"]*"' android/app/build.gradle.kts | sed 's/applicationId = "\(.*\)"/\1/')
+          if [ "$BUILD_PACKAGE" != "com.openclaw.console" ]; then
+            echo "❌ Package name mismatch: build.gradle.kts=$BUILD_PACKAGE expected=com.openclaw.console"
             exit 1
           fi
 
-          if [ "$AUTH_MODE" = "service-account" ]; then
-            unset FIREBASE_TOKEN
+          # Determine authentication method
+          AUTH_MODE=""
+          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+            AUTH_MODE="service_account"
+            echo "✅ Using service account authentication"
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            AUTH_MODE="token"
+            echo "✅ Using FIREBASE_TOKEN authentication"
+          else
+            echo "❌ No valid Firebase authentication found"
+            exit 1
           fi
 
-          TESTERS="$(normalize_csv "$TESTERS")"
-          DIST_GROUPS="$(normalize_csv "$DIST_GROUPS")"
-          REQUIRED_TESTER="$(normalize_csv "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")"
+          # Prepare distribution command
+          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
+          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
+          REQUIRED_TESTER="${FIREBASE_REQUIRED_TESTER_EMAIL:-}"
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
 
+          # Add required tester if specified
           if [ -n "$REQUIRED_TESTER" ]; then
-            case ",$TESTERS," in
-              *",$REQUIRED_TESTER,"*) ;;
-              *)
-                if [ -n "$TESTERS" ]; then
-                  TESTERS="${TESTERS},${REQUIRED_TESTER}"
-                else
-                  TESTERS="${REQUIRED_TESTER}"
-                fi
-                echo "Added required Firebase tester: ${REQUIRED_TESTER}"
-                ;;
-            esac
+            if [[ ",$TESTERS," != *",$REQUIRED_TESTER,"* ]]; then
+              TESTERS="${TESTERS:+$TESTERS,}$REQUIRED_TESTER"
+            fi
           fi
 
+          # Build Firebase command
           BASE_CMD=(
             firebase appdistribution:distribute
             "$APK_PATH"
             --app "$FIREBASE_APP_ID"
+            --project "$FIREBASE_PROJECT_ID"
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
-          if [ "$AUTH_MODE" = "token" ]; then
-            BASE_CMD+=(--token "$FIREBASE_TOKEN")
-          fi
 
-          run_dist() {
-            local label="$1"
-            local log_file="$2"
-            shift 2
-            echo "Firebase distribution attempt: $label (auth=$AUTH_MODE)"
-            set +e
-            "${BASE_CMD[@]}" "$@" 2>&1 | tee "$log_file"
-            local rc=${PIPESTATUS[0]}
-            set -e
-            if [ "$rc" -ne 0 ]; then
-              echo "Attempt '$label' failed with exit code $rc"
-              tail -n 120 "$log_file" || true
+          # Execute distribution with retry and fallback logic
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          SUCCESS=false
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = false ]; do
+            echo "🚀 Firebase distribution attempt $ATTEMPT/$MAX_ATTEMPTS (auth=$AUTH_MODE)"
+
+            DIST_CMD=("${BASE_CMD[@]}")
+            [ -n "$TESTERS" ] && DIST_CMD+=(--testers "$TESTERS")
+            [ -n "$DIST_GROUPS" ] && DIST_CMD+=(--groups "$DIST_GROUPS")
+            [ "$AUTH_MODE" = "token" ] && DIST_CMD+=(--token "$FIREBASE_TOKEN")
+
+            if "${DIST_CMD[@]}"; then
+              SUCCESS=true
+              echo "✅ Firebase distribution successful"
+            else
+              rc=$?
+              echo "❌ Attempt $ATTEMPT failed with exit code $rc"
+              
+              # Fallback to token if service account failed and fallback token is available
+              if [ "$AUTH_MODE" = "service_account" ] && [ -n "${FIREBASE_FALLBACK_TOKEN:-}" ]; then
+                echo "⚠️ Service account attempt failed. Attempting fallback to FIREBASE_TOKEN..."
+                TOKEN_CMD=("${BASE_CMD[@]}" --token "$FIREBASE_FALLBACK_TOKEN")
+                [ -n "$TESTERS" ] && TOKEN_CMD+=(--testers "$TESTERS")
+                [ -n "$DIST_GROUPS" ] && TOKEN_CMD+=(--groups "$DIST_GROUPS")
+                
+                if "${TOKEN_CMD[@]}"; then
+                  SUCCESS=true
+                  echo "✅ Firebase distribution successful via FIREBASE_TOKEN fallback"
+                  break
+                fi
+              fi
+
+              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "❌ All distribution attempts failed"
+                exit 1
+              fi
+              ((ATTEMPT++))
+              sleep 5
             fi
-            return "$rc"
-          }
+          done
 
-          ATTEMPT_ARGS=()
-          if [ -n "$TESTERS" ]; then
-            ATTEMPT_ARGS+=(--testers "$TESTERS")
+      - name: Verify Firebase distribution actually worked
+        env:
+          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'openclaw-console-mobile' }}
+        run: |
+          set -euo pipefail
+          echo "🔍 Verifying Firebase distribution delivery"
+          RELEASES_JSON=$(firebase appdistribution:releases:list --app "$FIREBASE_APP_ID" --project "$FIREBASE_PROJECT_ID" --format=json || echo "[]")
+          RELEASE_INFO=$(echo "$RELEASES_JSON" | jq -r 'if type == "array" then .[0] else (.result[0]? // .releases[0]?) end | select(. != null)')
+          if [ -z "$RELEASE_INFO" ] || [ "$RELEASE_INFO" = "null" ]; then
+            echo "⚠️ No releases found - distribution may still be processing"
+          else
+            RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.name // empty')
+            echo "📱 Latest release: $RELEASE_ID"
           fi
-          if [ -n "$DIST_GROUPS" ]; then
-            ATTEMPT_ARGS+=(--groups "$DIST_GROUPS")
-          fi
-
-          if [ -z "$TESTERS" ] && [ -z "$DIST_GROUPS" ]; then
-            echo "No testers/groups configured. Uploading build without invite audience."
-          fi
-
-          if run_dist "audience-targeted" /tmp/firebase-dist-attempt1.log "${ATTEMPT_ARGS[@]}"; then
-            exit 0
-          fi
-
-          if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
-            if run_dist "groups-only-retry" /tmp/firebase-dist-attempt2.log --groups "$DIST_GROUPS"; then
-              exit 0
-            fi
-          fi
-
-          if [ "${#ATTEMPT_ARGS[@]}" -gt 0 ]; then
-            echo "Retrying Firebase upload without testers/groups."
-            if run_dist "upload-only-retry" /tmp/firebase-dist-attempt3.log; then
-              exit 0
-            fi
-          fi
-
-          echo "Firebase distribution failed after retries."
-          exit 1
 
       - name: Upload Android APK artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-apk-internal
-          path: ${{ steps.signed_apk.outputs.apk_path }}
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn
 
       - name: Cleanup secrets

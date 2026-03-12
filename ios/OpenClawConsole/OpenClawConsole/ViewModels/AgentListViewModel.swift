@@ -21,8 +21,8 @@ final class AgentListViewModel {
         }
         return agents.filter {
             $0.name.localizedCaseInsensitiveContains(searchQuery) ||
-            $0.workspace.localizedCaseInsensitiveContains(searchQuery) ||
-            $0.tags.contains(where: { $0.localizedCaseInsensitiveContains(searchQuery) })
+                $0.workspace.localizedCaseInsensitiveContains(searchQuery) ||
+                $0.tags.contains(where: { $0.localizedCaseInsensitiveContains(searchQuery) })
         }
     }
 
@@ -91,7 +91,8 @@ final class AgentListViewModel {
             tags: old.tags,
             lastActive: update.lastActive,
             activeTasks: update.activeTasks,
-            pendingApprovals: update.pendingApprovals
+            pendingApprovals: update.pendingApprovals,
+            gitState: update.gitState
         )
     }
 }

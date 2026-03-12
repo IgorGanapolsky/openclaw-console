@@ -3,6 +3,7 @@ package com.openclaw.console.data.network
 import com.openclaw.console.data.model.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -121,6 +122,49 @@ class ApiService(
             .build()
         return executeRequest(request) { body ->
             json.decodeFromString<List<ApprovalRequest>>(body)
+        }
+    }
+
+    suspend fun getBridges(): Result<List<BridgeSession>> {
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/bridges")
+            .get()
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<List<BridgeSession>>(body)
+        }
+    }
+
+    suspend fun getLoops(): Result<List<RecurringTask>> {
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/loops")
+            .get()
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<List<RecurringTask>>(body)
+        }
+    }
+
+    @Serializable
+    private data class GenerateSkillRequest(val prompt: String, val agentId: String)
+
+    @Serializable
+    data class GenerateSkillResponse(
+        val success: Boolean,
+        val skillName: String? = null,
+        val message: String? = null,
+        val error: String? = null
+    )
+
+    suspend fun generateSkill(prompt: String, agentId: String): Result<GenerateSkillResponse> {
+        val payload = json.encodeToString(GenerateSkillRequest(prompt, agentId))
+        val requestBody = payload.toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/skills/generate")
+            .post(requestBody)
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<GenerateSkillResponse>(body)
         }
     }
 
