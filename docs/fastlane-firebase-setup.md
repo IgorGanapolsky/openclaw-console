@@ -34,6 +34,8 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `MATCH_PASSWORD` | Encryption password for match | Pick a strong password, save it somewhere safe |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | Base64-encoded `username:token` for git | `echo -n "username:github_pat_TOKEN" \| base64` |
 | `ADMIN_TOKEN` | GitHub PAT with repo access | GitHub → Settings → Developer settings → Personal access tokens |
+| `TESTFLIGHT_GROUPS` | Comma-separated internal App Store Connect beta group names that must receive each build | App Store Connect → TestFlight → Internal Testing |
+| `TESTFLIGHT_REQUIRED_TESTER_EMAIL` | Internal App Store Connect tester email that must already belong to one of the required beta groups | App Store Connect → Users and Access / TestFlight |
 
 ### Android Secrets
 
@@ -48,6 +50,8 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON with `roles/firebaseappdistro.admin` on the Firebase project (preferred auth) | Google Cloud Console → IAM → Service accounts |
 | `FIREBASE_TOKEN` | Firebase CLI token (deprecated compatibility fallback) | Run `firebase login:ci` locally |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (last-resort fallback, only if that service account also has Firebase App Distribution upload permission) | Google Cloud Console → IAM → Service accounts |
+| `FIREBASE_INTERNAL_GROUPS` | Comma-separated Firebase tester group aliases for Android internal distribution | Firebase Console → App Distribution → Testers & Groups |
+| `FIREBASE_REQUIRED_TESTER_EMAIL` | Single tester email that must already belong to one of the configured Firebase groups | Firebase Console → App Distribution → Testers & Groups |
 
 ### Optional
 
@@ -55,10 +59,10 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 |-----------------|-------------|
 | `FIREBASE_ANDROID_APP_ID` | Override Firebase app ID (normally auto-resolved from google-services.json) |
 | `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
-| `FIREBASE_INTERNAL_GROUPS` (secret only) | Comma-separated Firebase tester group aliases for Android internal distribution. CI fails if a repo variable with this name exists. |
-| `FIREBASE_REQUIRED_TESTER_EMAIL` (secret only) | Single tester email that must already belong to one of the configured Firebase groups. CI fails if a repo variable with this name exists. |
-| `TESTFLIGHT_GROUPS` (secret or variable) | Comma-separated App Store Connect beta groups that must receive each internal TestFlight build. If both exist, they must match. |
-| `TESTFLIGHT_REQUIRED_TESTER_EMAIL` (secret or variable) | Internal App Store Connect tester email that must already belong to one of the required TestFlight groups. If both exist, they must match. |
+
+`FIREBASE_INTERNAL_GROUPS` and `FIREBASE_REQUIRED_TESTER_EMAIL` are required for Android internal distribution and must be stored as secrets only. CI fails if repository or `production` environment variables with either name exist.
+
+`TESTFLIGHT_GROUPS` and `TESTFLIGHT_REQUIRED_TESTER_EMAIL` are required for iOS internal distribution. They may be stored as secrets or repo variables, but when both forms exist they must match.
 
 ## One-Time Setup Steps
 
@@ -91,7 +95,9 @@ firebase login:ci
 
 Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the deprecated compatibility fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
 
-The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist as repo variables.
+The Android workflow is secret-only and group-based. It refuses direct-email Firebase delivery, requires `FIREBASE_PROJECT_ID`, and fails if `FIREBASE_INTERNAL_GROUPS` or `FIREBASE_REQUIRED_TESTER_EMAIL` exist as repository or `production` environment variables.
+
+For Android proof, a successful `firebase appdistribution:distribute ... --groups` call is the release-level assignment step. CI follow-up checks confirm the returned release URLs and, when the current auth can read App Distribution groups/testers, the configured group/tester access prerequisites. They do not claim a second independent release-to-group readback that Firebase does not expose.
 
 ### 4. Create Android Keystore
 
