@@ -117,7 +117,12 @@ platform :ios do
       readonly_mode = ENV["CI"] == "true"
 
       begin
-        sync_match_with_bootstrap(api_key: api_key, readonly: readonly_mode)
+        match(
+          type: "appstore",
+          app_identifier: ["com.openclaw.console"],
+          readonly: readonly_mode,
+          api_key: api_key
+        )
       rescue => e
         cert_limit_hit = e.to_s.include?("maximum number of available Distribution certificates")
         raise e unless cert_limit_hit
