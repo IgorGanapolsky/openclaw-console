@@ -39,7 +39,7 @@ SECRETS_SET=0
 # ──────────────────────────────────
 # 1. iOS Signing Certificate (.p12)
 # ──────────────────────────────────
-echo -e "${YELLOW}Step 1/7: iOS Signing Certificate${NC}"
+echo -e "${YELLOW}Step 1/8: iOS Signing Certificate${NC}"
 echo "Export your Apple Distribution certificate from Keychain Access as a .p12 file."
 echo "  1. Open Keychain Access"
 echo "  2. Find 'Apple Distribution: <your name>'"
@@ -66,7 +66,7 @@ fi
 # 2. App Store Connect API Key
 # ──────────────────────────────────
 echo ""
-echo -e "${YELLOW}Step 2/7: App Store Connect API Key${NC}"
+echo -e "${YELLOW}Step 2/8: App Store Connect API Key${NC}"
 echo "If you haven't downloaded the .p8 key file yet, download it from:"
 echo "  https://appstoreconnect.apple.com/access/integrations/api"
 echo ""
@@ -97,7 +97,7 @@ fi
 # 3. Fastlane Match Password
 # ──────────────────────────────────
 echo ""
-echo -e "${YELLOW}Step 3/7: Fastlane Match Encryption Password${NC}"
+echo -e "${YELLOW}Step 3/8: Fastlane Match Encryption Password${NC}"
 echo "Choose a password for encrypting your match certificates repo."
 read -sp "Match password (or 'skip'): " MATCH_PASS
 echo ""
@@ -114,7 +114,7 @@ fi
 # 4. Firebase Token + App IDs + Audience
 # ──────────────────────────────────
 echo ""
-echo -e "${YELLOW}Step 4/7: Firebase Configuration${NC}"
+echo -e "${YELLOW}Step 4/8: Firebase Configuration${NC}"
 
 if command -v firebase >/dev/null 2>&1; then
     echo "Generating Firebase CI token (a browser window will open)..."
@@ -161,23 +161,56 @@ fi
 echo ""
 read -p "Firebase internal tester emails (comma-separated, or 'skip'): " FB_TESTERS
 if [ "${FB_TESTERS:-skip}" != "skip" ] && [ -n "$FB_TESTERS" ]; then
-    echo "$FB_TESTERS" | gh secret set FIREBASE_INTERNAL_TESTERS --repo="$REPO"
-    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_TESTERS set${NC}"
+    echo "$FB_TESTERS" | gh variable set FIREBASE_INTERNAL_TESTERS --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_TESTERS variable set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 read -p "Firebase internal groups (comma-separated, or 'skip'): " FB_GROUPS
 if [ "${FB_GROUPS:-skip}" != "skip" ] && [ -n "$FB_GROUPS" ]; then
-    echo "$FB_GROUPS" | gh secret set FIREBASE_INTERNAL_GROUPS --repo="$REPO"
-    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_GROUPS set${NC}"
+    echo "$FB_GROUPS" | gh variable set FIREBASE_INTERNAL_GROUPS --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_GROUPS variable set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+read -p "Required Firebase tester email (or 'skip'): " FB_REQUIRED_TESTER
+if [ "${FB_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$FB_REQUIRED_TESTER" ]; then
+    echo "$FB_REQUIRED_TESTER" | gh variable set FIREBASE_REQUIRED_TESTER_EMAIL --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_REQUIRED_TESTER_EMAIL variable set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 # ──────────────────────────────────
-# 5. Android Keystore
+# 5. TestFlight Internal Audience
 # ──────────────────────────────────
 echo ""
-echo -e "${YELLOW}Step 5/7: Android Signing Keystore${NC}"
+echo -e "${YELLOW}Step 5/8: TestFlight Internal Audience${NC}"
+read -p "TestFlight internal group names (comma-separated, or 'skip'): " TF_GROUPS
+if [ "${TF_GROUPS:-skip}" != "skip" ] && [ -n "$TF_GROUPS" ]; then
+    echo "$TF_GROUPS" | gh secret set TESTFLIGHT_GROUPS --repo="$REPO"
+    echo -e "${GREEN}  ✓ TESTFLIGHT_GROUPS set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+read -p "TestFlight internal tester emails (comma-separated, or 'skip'): " TF_TESTERS
+if [ "${TF_TESTERS:-skip}" != "skip" ] && [ -n "$TF_TESTERS" ]; then
+    echo "$TF_TESTERS" | gh secret set TESTFLIGHT_TESTERS --repo="$REPO"
+    echo -e "${GREEN}  ✓ TESTFLIGHT_TESTERS set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+read -p "Required TestFlight tester email (or 'skip'): " TF_REQUIRED_TESTER
+if [ "${TF_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$TF_REQUIRED_TESTER" ]; then
+    echo "$TF_REQUIRED_TESTER" | gh secret set TESTFLIGHT_REQUIRED_TESTER_EMAIL --repo="$REPO"
+    echo -e "${GREEN}  ✓ TESTFLIGHT_REQUIRED_TESTER_EMAIL set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+fi
+
+# ──────────────────────────────────
+# 6. Android Keystore
+# ──────────────────────────────────
+echo ""
+echo -e "${YELLOW}Step 6/8: Android Signing Keystore${NC}"
 read -p "Path to Android keystore .jks file (or 'create' to generate one, or 'skip'): " KS_PATH
 
 if [ "${KS_PATH:-skip}" = "create" ]; then
@@ -228,10 +261,10 @@ else
 fi
 
 # ──────────────────────────────────
-# 6. Google Play Service Account (optional)
+# 7. Google Play Service Account (optional)
 # ──────────────────────────────────
 echo ""
-echo -e "${YELLOW}Step 6/7: Google Play Service Account JSON (optional)${NC}"
+echo -e "${YELLOW}Step 7/8: Google Play Service Account JSON (optional)${NC}"
 echo "For automated Play Store uploads. Get from Google Cloud Console → Service Accounts."
 read -p "Path to service account JSON (or 'skip'): " GPLAY_PATH
 
@@ -245,13 +278,18 @@ else
 fi
 
 # ──────────────────────────────────
-# 7. Verification
+# 8. Verification
 # ──────────────────────────────────
 echo ""
-echo -e "${YELLOW}Step 7/7: Verification${NC}"
+echo -e "${YELLOW}Step 8/8: Verification${NC}"
 echo "Listing all secrets configured for $REPO:"
 echo ""
 gh secret list --repo="$REPO"
+
+echo ""
+echo "Listing all variables configured for $REPO:"
+echo ""
+gh variable list --repo="$REPO"
 
 echo ""
 echo "=============================================="

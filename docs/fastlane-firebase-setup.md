@@ -13,7 +13,8 @@ Push to develop → CI runs (ios.yml / android.yml)
     │                                  │
     ▼                                  ▼
 iOS: build → TestFlight        Android: build → Firebase
-     (fastlane beta)                App Distribution
+     (upload + wait +               App Distribution
+      distribute to groups)
 ```
 
 The `internal-distribution.yml` workflow triggers automatically when CI passes on `develop`, or can be triggered manually via `workflow_dispatch`.
@@ -33,6 +34,9 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `MATCH_PASSWORD` | Encryption password for match | Pick a strong password, save it somewhere safe |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | Base64-encoded `username:token` for git | `echo -n "username:github_pat_TOKEN" \| base64` |
 | `ADMIN_TOKEN` | GitHub PAT with repo access | GitHub → Settings → Developer settings → Personal access tokens |
+| `TESTFLIGHT_GROUPS` | Comma-separated internal TestFlight group names | App Store Connect → TestFlight → Internal Testing |
+| `TESTFLIGHT_TESTERS` | Comma-separated internal tester emails to keep attached to the app/groups | App Store Connect → Users and Access |
+| `TESTFLIGHT_REQUIRED_TESTER_EMAIL` | A must-have internal tester email used as a release gate | Your primary receiving inbox |
 
 ### Android Secrets
 
@@ -52,8 +56,9 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 |-----------------|-------------|
 | `FIREBASE_ANDROID_APP_ID` | Override Firebase app ID (normally auto-resolved from google-services.json) |
 | `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
-| `FIREBASE_INTERNAL_TESTERS` (secret or variable) | Comma-separated tester emails for Firebase App Distribution invites |
-| `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites |
+| `FIREBASE_INTERNAL_TESTERS` (variable preferred, secret fallback supported) | Comma-separated tester emails for Firebase App Distribution invites |
+| `FIREBASE_INTERNAL_GROUPS` (variable preferred, secret fallback supported) | Comma-separated Firebase tester groups for App Distribution invites |
+| `FIREBASE_REQUIRED_TESTER_EMAIL` (variable preferred, secret fallback supported) | A must-have Firebase tester email used as a release gate |
 
 ## One-Time Setup Steps
 
@@ -71,6 +76,14 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 1. Firebase Console → Release & Monitor → App Distribution
 2. Create tester group "qa-team" and add `iganapolsky@gmail.com`
 3. Create tester group "developers"
+
+### 2b. Set Up TestFlight Internal Distribution
+
+1. App Store Connect → TestFlight → Internal Testing
+2. Create at least one internal group
+3. Add the receiving tester account to that group
+4. Save the exact group name into `TESTFLIGHT_GROUPS`
+5. Save the receiving inbox into `TESTFLIGHT_REQUIRED_TESTER_EMAIL`
 
 ### 3. Generate Firebase Token
 
@@ -170,3 +183,4 @@ Trigger manually from GitHub Actions → "Native App Release" workflow:
 | `android/fastlane/Fastfile` | Android lanes: internal (Play), firebase_dev, promote_to_production |
 | `android/fastlane/Appfile` | Android package name and service account path |
 | `scripts/preflight-release.sh` | Pre-release metadata validation |
+| `scripts/testflight-internal-distribute.sh` | Post-upload internal TestFlight distribution + verification |

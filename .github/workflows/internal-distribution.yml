@@ -77,15 +77,22 @@ jobs:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_GROUPS_SECRET: ${{ secrets.TESTFLIGHT_GROUPS }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID APPLE_TEAM_ID ADMIN_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
             fi
           done
+          if [ -z "${TESTFLIGHT_GROUPS:-}" ] && [ -z "${TESTFLIGHT_GROUPS_SECRET:-}" ]; then
+            echo "❌ Missing TestFlight audience: set TESTFLIGHT_GROUPS as a variable or secret."
+            exit 1
+          fi
 
       - name: Preflight release checks (iOS)
         run: bash scripts/preflight-release.sh --platform ios --layer 1
@@ -110,10 +117,27 @@ jobs:
         env:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
           set -euo pipefail
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
+          echo "APPSTORE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+          API_KEY_JSON="${RUNNER_TEMP}/appstore_api_key.json"
+          python3 - <<'PY' > "$API_KEY_JSON"
+          import json
+          import os
+
+          print(json.dumps({
+              "key_id": os.environ["APPSTORE_KEY_ID"],
+              "issuer_id": os.environ["APPSTORE_ISSUER_ID"],
+              "key": os.environ["APPSTORE_PRIVATE_KEY"],
+              "in_house": False,
+          }))
+          PY
+          echo "APPSTORE_API_KEY_JSON=$API_KEY_JSON" >> "$GITHUB_ENV"
 
       - name: Configure git credentials for match
         env:
@@ -133,15 +157,33 @@ jobs:
         working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
+        id: testflight_upload
         env:
           CI: "true"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_CHANGELOG: Internal auto-distribution from ${{ github.sha }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
+
+      - name: Distribute to internal TestFlight audience
+        env:
+          APPSTORE_API_KEY_JSON: ${{ env.APPSTORE_API_KEY_JSON }}
+          IOS_MARKETING_VERSION: ${{ steps.testflight_upload.outputs.ios_marketing_version }}
+          IOS_BUILD_NUMBER: ${{ steps.testflight_upload.outputs.ios_build_number }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_GROUPS_SECRET: ${{ secrets.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_TESTERS: ${{ vars.TESTFLIGHT_TESTERS }}
+          TESTFLIGHT_TESTERS_SECRET: ${{ secrets.TESTFLIGHT_TESTERS }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL: ${{ vars.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
+          TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.TESTFLIGHT_REQUIRED_TESTER_EMAIL }}
+        run: bash scripts/testflight-internal-distribute.sh
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
@@ -169,6 +211,10 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
         run: |
           set -euo pipefail
           if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
@@ -191,6 +237,11 @@ jobs:
             echo "⚠️ WARNING: FIREBASE_TOKEN is deprecated. Use FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_PLAY_JSON_KEY for reliable 2026 authentication."
           else
             echo "❌ Firebase authentication required. Set FIREBASE_SERVICE_ACCOUNT_JSON (preferred) or GOOGLE_PLAY_JSON_KEY (fallback) or FIREBASE_TOKEN (deprecated)."
+            exit 1
+          fi
+
+          if [ -z "${FIREBASE_INTERNAL_TESTERS:-}${FIREBASE_INTERNAL_TESTERS_SECRET:-}${FIREBASE_INTERNAL_GROUPS:-}${FIREBASE_INTERNAL_GROUPS_SECRET:-}" ]; then
+            echo "❌ Firebase delivery audience is empty. Set FIREBASE_INTERNAL_TESTERS or FIREBASE_INTERNAL_GROUPS."
             exit 1
           fi
 
@@ -306,12 +357,30 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
           FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
         run: |
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
+
+          normalize_csv() {
+            printf '%s' "${1:-}" \
+              | tr '\n\r;' ',' \
+              | tr ',' '\n' \
+              | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
+              | awk 'NF && !seen[$0]++'
+          }
+
+          merge_csv() {
+            local value
+            for value in "$@"; do
+              normalize_csv "$value"
+            done | paste -sd, -
+          }
 
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
@@ -344,9 +413,9 @@ jobs:
           fi
 
           # Prepare distribution command
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
-          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
-          REQUIRED_TESTER="${FIREBASE_REQUIRED_TESTER_EMAIL:-}"
+          TESTERS="$(merge_csv "${FIREBASE_INTERNAL_TESTERS:-}" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}")"
+          DIST_GROUPS="$(merge_csv "${FIREBASE_INTERNAL_GROUPS:-}" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}")"
+          REQUIRED_TESTER="$(merge_csv "${FIREBASE_REQUIRED_TESTER_EMAIL:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}")"
           APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
 
           # Add required tester if specified
@@ -360,6 +429,11 @@ jobs:
             else
               TESTERS="$REQUIRED_TESTER"
             fi
+          fi
+
+          if [ -z "$TESTERS" ] && [ -z "$DIST_GROUPS" ]; then
+            echo "❌ Firebase distribution audience is empty. Configure FIREBASE_INTERNAL_TESTERS or FIREBASE_INTERNAL_GROUPS."
+            exit 1
           fi
 
           # Build Firebase command
@@ -409,8 +483,29 @@ jobs:
       - name: Verify Firebase distribution actually worked
         env:
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
         run: |
           set -euo pipefail
+
+          normalize_csv() {
+            printf '%s' "${1:-}" \
+              | tr '\n\r;' ',' \
+              | tr ',' '\n' \
+              | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' \
+              | awk 'NF && !seen[$0]++'
+          }
+
+          merge_csv() {
+            local value
+            for value in "$@"; do
+              normalize_csv "$value"
+            done | paste -sd, -
+          }
 
           echo "🔍 Verifying Firebase distribution delivery"
 
@@ -436,16 +531,29 @@ jobs:
           echo "📱 Latest release: $RELEASE_ID (build: $BUILD_VERSION)"
 
           # Verify tester configuration
-          TESTER_COUNT=$(firebase appdistribution:testers:list \
+          TESTER_JSON=$(firebase appdistribution:testers:list \
             --app "$FIREBASE_APP_ID" \
             --project openclaw-console-mobile \
-            --format=json | jq 'length // 0')
+            --format=json)
+          TESTER_COUNT=$(printf '%s\n' "$TESTER_JSON" | jq 'length // 0')
 
           if [ "$TESTER_COUNT" -eq 0 ]; then
-            echo "⚠️ WARNING: No testers configured - build uploaded but no email invitations sent"
-          else
-            echo "📧 Distribution verified: Release $RELEASE_ID sent to $TESTER_COUNT testers"
+            echo "❌ No Firebase testers are configured for this app"
+            exit 1
           fi
+
+          REQUIRED_TESTERS="$(merge_csv "${FIREBASE_REQUIRED_TESTER_EMAIL:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}")"
+          if [ -n "$REQUIRED_TESTERS" ]; then
+            IFS=',' read -r -a required_array <<< "$REQUIRED_TESTERS"
+            for email in "${required_array[@]}"; do
+              if ! printf '%s\n' "$TESTER_JSON" | jq -e --arg email "$email" 'any(.[]; (.email // "") == $email)' >/dev/null; then
+                echo "❌ Required Firebase tester missing from App Distribution: $email"
+                exit 1
+              fi
+            done
+          fi
+
+          echo "📧 Distribution verified: Release $RELEASE_ID sent to an app with $TESTER_COUNT configured testers"
 
           # Get Firebase console URL for manual verification
           CONSOLE_URL="https://console.firebase.google.com/project/openclaw-console-mobile/appdistribution/app/android:com.openclaw.console"
