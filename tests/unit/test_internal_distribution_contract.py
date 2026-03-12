@@ -168,6 +168,7 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("App Store Connect Users", verifier)
         self.assertIn("auto-access", verifier)
         self.assertIn("Build #{build_id} is missing beta group assignments", verifier)
+        self.assertIn("TESTFLIGHT_REQUIRED_TESTER_EMAIL is required for TestFlight delivery proof", verifier)
         self.assertIn("Direct tester-only proof is not accepted", (ROOT / "docs/fastlane-firebase-setup.md").read_text())
         self.assertIn("TESTFLIGHT_REQUIRED_TESTER_EMAIL", verifier)
         self.assertIn('"/v1/builds?#{query}"', verifier)

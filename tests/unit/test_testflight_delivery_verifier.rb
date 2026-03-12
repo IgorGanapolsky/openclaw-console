@@ -206,6 +206,22 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
     assert_includes error.message, "App Store Connect Users auto-access path"
   end
 
+  def test_fails_when_required_tester_is_missing
+    verifier = build_verifier(
+      group_names: ["Internal QA"],
+      required_tester: nil,
+      collection_map: {
+        "/v1/betaGroups?filter%5Bapp%5D=app-id&limit=200" => []
+      }
+    )
+
+    error = assert_raises(RuntimeError) do
+      verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
+    end
+
+    assert_includes error.message, "TESTFLIGHT_REQUIRED_TESTER_EMAIL is required"
+  end
+
   private
 
   def build_verifier(group_names:, required_tester:, collection_map:, response_map: {})

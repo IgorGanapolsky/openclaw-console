@@ -270,8 +270,9 @@ def verify_testflight_build_delivery(metadata:)
     marketing_version: marketing_version
   )
   required_tester = required_tester_email
+  fail_with("TESTFLIGHT_REQUIRED_TESTER_EMAIL is required for TestFlight delivery proof") if required_tester.nil? || required_tester.empty?
   groups_by_name = beta_groups_by_name(jwt: jwt, app_id: app_id)
-  tester_groups_by_name = required_tester ? tester_beta_groups_by_name(jwt: jwt, app_id: app_id, email: required_tester) : {}
+  tester_groups_by_name = tester_beta_groups_by_name(jwt: jwt, app_id: app_id, email: required_tester)
   available_group_names = (groups_by_name.keys + tester_groups_by_name.keys).uniq.sort
   missing_group_names = group_names.reject do |name|
     groups_by_name.key?(name) || tester_groups_by_name.key?(name)
