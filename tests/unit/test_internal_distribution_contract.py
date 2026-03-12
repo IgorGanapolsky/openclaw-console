@@ -159,6 +159,8 @@ class InternalDistributionContractTest(unittest.TestCase):
         self.assertIn("OpenSSL::ASN1.decode(signature)", verifier)
         self.assertIn('if $PROGRAM_NAME == __FILE__', verifier)
         self.assertIn('"/v1/betaGroups/#{group.fetch(\'id\')}/betaTesters?limit=200"', verifier)
+        self.assertIn('"/v1/builds/#{build_id}/individualTesters?limit=200"', verifier)
+        self.assertIn("App Store Connect returned no beta groups for this app", verifier)
         self.assertIn("TESTFLIGHT_REQUIRED_TESTER_EMAIL", verifier)
         self.assertIn('"/v1/builds?#{query}"', verifier)
         self.assertIn('strict_csv_env("TESTFLIGHT_GROUPS_SECRET", "TESTFLIGHT_GROUPS")', verifier)
