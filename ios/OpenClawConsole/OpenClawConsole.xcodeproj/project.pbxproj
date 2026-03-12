@@ -216,6 +216,7 @@
 				3EA8C87A1D1CB0630CC36EE2 /* GitApprovalDetailView.swift */,
 			);
 			name = Git;
+			path = Git;
 			sourceTree = "<group>";
 		};
 		8DA992D7EDDFC96A9CEF51A9 /* Bridges */ = {
@@ -224,6 +225,7 @@
 				754FAE9E54F091902F14B761 /* BridgeListView.swift */,
 			);
 			name = Bridges;
+			path = Bridges;
 			sourceTree = "<group>";
 		};
 		A6267BD60FFBC7F3FC6C08AE /* Components */ = {
@@ -252,6 +254,7 @@
 				7EE9D2C7CDAA7190A7BFC68E /* LoopListView.swift */,
 			);
 			name = Loops;
+			path = Loops;
 			sourceTree = "<group>";
 		};
 		E6769E232CBDC15EDA6FD49C /* Tasks */ = {
