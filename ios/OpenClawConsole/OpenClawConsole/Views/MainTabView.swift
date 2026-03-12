@@ -13,9 +13,11 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .agents
     @State private var agentListVM: AgentListViewModel?
     @State private var incidentListVM: IncidentListViewModel?
+    @State private var bridgeListVM: BridgeListViewModel?
+    @State private var loopListVM: LoopListViewModel?
 
     enum Tab: Int {
-        case agents, incidents, settings
+        case agents, incidents, loops, bridges, settings
     }
 
     var body: some View {
@@ -47,6 +49,32 @@ struct MainTabView: View {
                 }
                 .badge(incidentListVM?.openCount ?? 0)
                 .tag(Tab.incidents)
+
+                // MARK: Loops Tab
+                NavigationStack {
+                    if let vm = loopListVM {
+                        LoopListView(viewModel: vm)
+                    } else {
+                        ProgressView("Loops tab temporarily disabled")
+                    }
+                }
+                .tabItem {
+                    Label("Loops", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .tag(Tab.loops)
+
+                // MARK: Bridges Tab
+                NavigationStack {
+                    if let vm = bridgeListVM {
+                        BridgeListView(viewModel: vm)
+                    } else {
+                        ProgressView()
+                    }
+                }
+                .tabItem {
+                    Label("Bridges", systemImage: "app.connected.to.app.below.fill")
+                }
+                .tag(Tab.bridges)
 
                 // MARK: Settings Tab
                 NavigationStack {
@@ -83,9 +111,13 @@ struct MainTabView: View {
 
         let agentVM = AgentListViewModel(webSocket: webSocket)
         let incidentVM = IncidentListViewModel(webSocket: webSocket)
+        let bridgeVM = BridgeListViewModel(webSocket: webSocket)
+        let loopVM = LoopListViewModel(webSocket: webSocket)
 
         agentListVM = agentVM
         incidentListVM = incidentVM
+        bridgeListVM = bridgeVM
+        loopListVM = loopVM
 
         // Connect WebSocket
         webSocket.connect(baseURL: gateway.baseURL, token: token)
@@ -94,6 +126,8 @@ struct MainTabView: View {
         _Concurrency.Task {
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
+            await bridgeVM.fetchBridges()
+            await loopVM.fetchLoops()
             await approvalViewModel.fetchPendingApprovals()
         }
     }
