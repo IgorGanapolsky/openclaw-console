@@ -166,8 +166,9 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
@@ -178,10 +179,22 @@ jobs:
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
             exit 1
           fi
-          if [ -z "${FIREBASE_TOKEN:-}" ] && [ -z "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            echo "❌ Need one of FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY for Firebase authentication"
+
+          # Explicit authentication precedence (2026 best practices)
+          AUTH_METHOD=""
+          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+            AUTH_METHOD="service_account_primary"
+          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+            AUTH_METHOD="service_account_fallback"
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            AUTH_METHOD="deprecated_token"
+            echo "⚠️ WARNING: FIREBASE_TOKEN is deprecated. Use FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_PLAY_JSON_KEY for reliable 2026 authentication."
+          else
+            echo "❌ Firebase authentication required. Set FIREBASE_SERVICE_ACCOUNT_JSON (preferred) or GOOGLE_PLAY_JSON_KEY (fallback) or FIREBASE_TOKEN (deprecated)."
             exit 1
           fi
+
+          echo "✅ Firebase auth method: $AUTH_METHOD"
 
       - name: Preflight release checks (Android)
         run: bash scripts/preflight-release.sh --platform android --layer 1
@@ -268,42 +281,177 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
-      - name: Prepare Google auth fallback for Firebase
+      - name: Prepare Firebase auth credentials
         env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
-          if [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
-            echo "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
+
+          # Priority 1: FIREBASE_SERVICE_ACCOUNT_JSON (dedicated Firebase SA)
+          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
+            CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            echo "✅ Using FIREBASE_SERVICE_ACCOUNT_JSON for Firebase authentication"
+          # Priority 2: GOOGLE_PLAY_JSON_KEY (fallback)
+          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+            CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
+            printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
+            echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            echo "✅ Using GOOGLE_PLAY_JSON_KEY as fallback for Firebase authentication"
           fi
 
       - name: Distribute to internal Firebase tester(s)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
-          set -euo pipefail
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-ig5973700@gmail.com}"
-          CMD=(
-            firebase appdistribution:distribute
-            android/app/build/outputs/apk/release/app-release.apk
-            --app "$FIREBASE_APP_ID"
-            --project openclaw-console-mobile
-            --testers "$TESTERS"
-            --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
-          )
-          if [ -n "${FIREBASE_TOKEN:-}" ]; then
-            "${CMD[@]}" --token "$FIREBASE_TOKEN"
-          elif [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            "${CMD[@]}"
-          else
-            echo "❌ Missing Firebase auth. Set FIREBASE_TOKEN or GOOGLE_PLAY_JSON_KEY."
+          set -Eeuo pipefail
+          trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
+
+          # Validate Firebase project configuration
+          echo "🔍 Pre-flight Firebase project verification"
+          if ! firebase projects:list --json | jq -e '.[] | select(.projectId == "openclaw-console-mobile")' > /dev/null; then
+            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
             exit 1
           fi
+
+          # Validate package name matches Firebase app
+          echo "🔍 Validating package name consistency"
+          BUILD_PACKAGE=$(grep -o 'applicationId = "[^"]*"' android/app/build.gradle.kts | sed 's/applicationId = "\(.*\)"/\1/')
+          if [ "$BUILD_PACKAGE" != "com.openclaw.console" ]; then
+            echo "❌ Package name mismatch: build.gradle.kts=$BUILD_PACKAGE expected=com.openclaw.console"
+            exit 1
+          fi
+
+          # Determine authentication method with explicit precedence
+          AUTH_MODE=""
+          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+            AUTH_MODE="service_account"
+            # Clear deprecated token to prevent confusion
+            unset FIREBASE_TOKEN
+            echo "✅ Using service account authentication (2026 best practice)"
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            AUTH_MODE="deprecated_token"
+            echo "⚠️ WARNING: Using deprecated FIREBASE_TOKEN - may fail silently or not send emails"
+          else
+            echo "❌ No valid Firebase authentication found"
+            exit 1
+          fi
+
+          # Prepare distribution command
+          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
+          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
+          REQUIRED_TESTER="${FIREBASE_REQUIRED_TESTER_EMAIL:-}"
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+
+          # Add required tester if specified
+          if [ -n "$REQUIRED_TESTER" ]; then
+            if [ -n "$TESTERS" ]; then
+              # Check if already included
+              if [[ ",$TESTERS," != *",$REQUIRED_TESTER,"* ]]; then
+                TESTERS="$TESTERS,$REQUIRED_TESTER"
+                echo "Added required Firebase tester: $REQUIRED_TESTER"
+              fi
+            else
+              TESTERS="$REQUIRED_TESTER"
+            fi
+          fi
+
+          # Build Firebase command
+          BASE_CMD=(
+            firebase appdistribution:distribute
+            "$APK_PATH"
+            --app "$FIREBASE_APP_ID"
+            --project openclaw-console-mobile
+            --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
+          )
+
+          if [ "$AUTH_MODE" = "deprecated_token" ]; then
+            BASE_CMD+=(--token "$FIREBASE_TOKEN")
+          fi
+
+          # Execute distribution with retry logic
+          ATTEMPT=1
+          MAX_ATTEMPTS=3
+          SUCCESS=false
+
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = false ]; do
+            echo "🚀 Firebase distribution attempt $ATTEMPT/$MAX_ATTEMPTS (auth=$AUTH_MODE)"
+
+            DIST_CMD=("${BASE_CMD[@]}")
+            if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
+              DIST_CMD+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
+            elif [ -n "$TESTERS" ]; then
+              DIST_CMD+=(--testers "$TESTERS")
+            elif [ -n "$DIST_GROUPS" ]; then
+              DIST_CMD+=(--groups "$DIST_GROUPS")
+            fi
+
+            if "${DIST_CMD[@]}"; then
+              SUCCESS=true
+              echo "✅ Firebase distribution successful on attempt $ATTEMPT"
+            else
+              echo "❌ Attempt $ATTEMPT failed"
+              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "❌ All distribution attempts failed"
+                exit 1
+              fi
+              ((ATTEMPT++))
+              sleep 5
+            fi
+          done
+
+      - name: Verify Firebase distribution actually worked
+        env:
+          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+        run: |
+          set -euo pipefail
+
+          echo "🔍 Verifying Firebase distribution delivery"
+
+          # Get latest release info to verify upload worked
+          RELEASE_INFO=$(firebase appdistribution:releases:list \
+            --app "$FIREBASE_APP_ID" \
+            --project openclaw-console-mobile \
+            --format=json | jq -r '.[0] // empty')
+
+          if [ -z "$RELEASE_INFO" ] || [ "$RELEASE_INFO" = "null" ]; then
+            echo "❌ Silent failure detected - no releases found in Firebase console"
+            exit 1
+          fi
+
+          RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.name // empty')
+          BUILD_VERSION=$(echo "$RELEASE_INFO" | jq -r '.buildVersion // empty')
+
+          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
+            echo "❌ Silent failure detected - release ID not found"
+            exit 1
+          fi
+
+          echo "📱 Latest release: $RELEASE_ID (build: $BUILD_VERSION)"
+
+          # Verify tester configuration
+          TESTER_COUNT=$(firebase appdistribution:testers:list \
+            --app "$FIREBASE_APP_ID" \
+            --project openclaw-console-mobile \
+            --format=json | jq 'length // 0')
+
+          if [ "$TESTER_COUNT" -eq 0 ]; then
+            echo "⚠️ WARNING: No testers configured - build uploaded but no email invitations sent"
+          else
+            echo "📧 Distribution verified: Release $RELEASE_ID sent to $TESTER_COUNT testers"
+          fi
+
+          # Get Firebase console URL for manual verification
+          CONSOLE_URL="https://console.firebase.google.com/project/openclaw-console-mobile/appdistribution/app/android:com.openclaw.console"
+          echo "🔗 Firebase console: $CONSOLE_URL"
+
+          echo "✅ Firebase App Distribution verification complete"
 
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
