@@ -111,34 +111,43 @@ else
 fi
 
 # ──────────────────────────────────
-# 4. Firebase Token + App IDs + Audience
+# 4. Firebase Auth + App IDs + Audience
 # ──────────────────────────────────
 echo ""
 echo -e "${YELLOW}Step 4/8: Firebase Configuration${NC}"
 
-if command -v firebase >/dev/null 2>&1; then
-    echo "Generating Firebase CI token (a browser window will open)..."
-    FIREBASE_TOKEN=$(firebase login:ci 2>/dev/null | grep "1//" || true)
-    if [ -n "$FIREBASE_TOKEN" ]; then
-        echo "$FIREBASE_TOKEN" | gh secret set FIREBASE_TOKEN --repo="$REPO"
-        echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
-        SECRETS_SET=$((SECRETS_SET+1))
+read -p "Path to Firebase service account JSON (preferred, or 'skip'): " FIREBASE_SA_PATH
+if [ "${FIREBASE_SA_PATH:-skip}" != "skip" ] && [ -f "$FIREBASE_SA_PATH" ]; then
+    FIREBASE_SA_JSON=$(cat "$FIREBASE_SA_PATH")
+    echo "$FIREBASE_SA_JSON" | gh secret set FIREBASE_SERVICE_ACCOUNT_JSON --repo="$REPO"
+    echo -e "${GREEN}  ✓ FIREBASE_SERVICE_ACCOUNT_JSON set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+else
+    echo "  No Firebase service account provided. Falling back to FIREBASE_TOKEN setup."
+    if command -v firebase >/dev/null 2>&1; then
+        echo "Generating Firebase CI token (a browser window will open)..."
+        FIREBASE_TOKEN=$(firebase login:ci 2>/dev/null | grep "1//" || true)
+        if [ -n "$FIREBASE_TOKEN" ]; then
+            echo "$FIREBASE_TOKEN" | gh secret set FIREBASE_TOKEN --repo="$REPO"
+            echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
+            SECRETS_SET=$((SECRETS_SET+1))
+        else
+            echo "  Could not capture token. Run 'firebase login:ci' manually and paste below."
+            read -p "Firebase CI token (or 'skip'): " FIREBASE_TOKEN_MANUAL
+            if [ "${FIREBASE_TOKEN_MANUAL:-skip}" != "skip" ]; then
+                echo "$FIREBASE_TOKEN_MANUAL" | gh secret set FIREBASE_TOKEN --repo="$REPO"
+                echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
+                SECRETS_SET=$((SECRETS_SET+1))
+            fi
+        fi
     else
-        echo "  Could not capture token. Run 'firebase login:ci' manually and paste below."
+        echo "Firebase CLI not found. Install with: npm install -g firebase-tools"
         read -p "Firebase CI token (or 'skip'): " FIREBASE_TOKEN_MANUAL
         if [ "${FIREBASE_TOKEN_MANUAL:-skip}" != "skip" ]; then
             echo "$FIREBASE_TOKEN_MANUAL" | gh secret set FIREBASE_TOKEN --repo="$REPO"
             echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
             SECRETS_SET=$((SECRETS_SET+1))
         fi
-    fi
-else
-    echo "Firebase CLI not found. Install with: npm install -g firebase-tools"
-    read -p "Firebase CI token (or 'skip'): " FIREBASE_TOKEN_MANUAL
-    if [ "${FIREBASE_TOKEN_MANUAL:-skip}" != "skip" ]; then
-        echo "$FIREBASE_TOKEN_MANUAL" | gh secret set FIREBASE_TOKEN --repo="$REPO"
-        echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
-        SECRETS_SET=$((SECRETS_SET+1))
     fi
 fi
 

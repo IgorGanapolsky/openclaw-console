@@ -39,6 +39,7 @@ class InternalDistributionContractTests(unittest.TestCase):
 
     def test_setup_script_writes_audience_to_the_correct_github_storage(self):
         for token in (
+            'gh secret set FIREBASE_SERVICE_ACCOUNT_JSON',
             'gh variable set FIREBASE_INTERNAL_TESTERS',
             'gh variable set FIREBASE_INTERNAL_GROUPS',
             'gh variable set FIREBASE_REQUIRED_TESTER_EMAIL',

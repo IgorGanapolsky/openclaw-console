@@ -47,8 +47,9 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `KEYSTORE_PASSWORD` | Keystore password | From when you created the keystore |
 | `KEY_ALIAS` | Key alias in the keystore | From when you created the keystore |
 | `KEY_PASSWORD` | Key password | From when you created the keystore |
-| `FIREBASE_TOKEN` | Firebase CLI token | Run `firebase login:ci` locally |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON (preferred auth) | Google Cloud Console → IAM → Service accounts |
 | `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (fallback auth for Firebase) | Google Cloud Console → IAM → Service accounts |
+| `FIREBASE_TOKEN` | Firebase CLI token (last-resort fallback) | Run `firebase login:ci` locally |
 
 ### Optional
 
@@ -85,12 +86,19 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 4. Save the exact group name into `TESTFLIGHT_GROUPS`
 5. Save the receiving inbox into `TESTFLIGHT_REQUIRED_TESTER_EMAIL`
 
-### 3. Generate Firebase Token
+### 3. Create Firebase Service Account
+
+1. Google Cloud Console → IAM & Admin → Service Accounts
+2. Create a dedicated service account for App Distribution
+3. Grant the minimum Firebase/App Distribution permissions needed by your project
+4. Download the JSON key and save it as `FIREBASE_SERVICE_ACCOUNT_JSON`
+
+### 3b. Generate Firebase Token Fallback
 
 ```bash
 npm install -g firebase-tools
 firebase login:ci
-# Copy the printed token → save as FIREBASE_TOKEN secret
+# Copy the printed token -> save as FIREBASE_TOKEN secret only if you are not using FIREBASE_SERVICE_ACCOUNT_JSON
 ```
 
 ### 4. Create Android Keystore
