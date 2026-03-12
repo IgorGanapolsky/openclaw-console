@@ -9,6 +9,7 @@ require "time"
 require "uri"
 
 APP_STORE_CONNECT_BASE_URL = "https://api.appstoreconnect.apple.com".freeze
+APP_STORE_CONNECT_USERS_GROUP = "App Store Connect Users".freeze
 
 def fail_with(message)
   warn("❌ #{message}")
@@ -187,22 +188,24 @@ def beta_groups_by_name(jwt:, app_id:)
   end
 end
 
-def beta_groups_for_build(jwt:, build_id:)
-  assigned_group_ids(jwt: jwt, build_id: build_id).map do |group_id|
-    request_json(jwt: jwt, method: :get, path: "/v1/betaGroups/#{group_id}").fetch("data")
-  end
+def app_beta_tester_emails(jwt:, app_id:)
+  request_json_collection(jwt: jwt, path: "/v1/apps/#{app_id}/betaTesters?limit=200").map do |tester|
+    tester.dig("attributes", "email")
+  end.compact.uniq
 end
 
-def assigned_group_ids(jwt:, build_id:)
-  request_json_collection(jwt: jwt, path: "/v1/builds/#{build_id}/relationships/betaGroups?limit=200").map do |item|
-    item.fetch("id")
+def verify_group_assignment(jwt:, build_id:, groups:)
+  missing_groups = groups.reject do |group|
+    build_ids = request_json_collection(jwt: jwt, path: "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200").map do |item|
+      item.fetch("id")
+    end
+    build_ids.include?(build_id)
   end
-end
 
-def verify_group_assignment(jwt:, build_id:, expected_group_ids:)
-  assigned_group_ids = assigned_group_ids(jwt: jwt, build_id: build_id)
-  missing_group_ids = expected_group_ids - assigned_group_ids
-  fail_with("Build #{build_id} is missing beta group assignments: #{missing_group_ids.join(', ')}") unless missing_group_ids.empty?
+  return if missing_groups.empty?
+
+  missing_names = missing_groups.map { |group| group.dig("attributes", "name") }
+  fail_with("Build #{build_id} is missing beta group assignments: #{missing_names.join(', ')}")
 end
 
 def required_tester_email
@@ -246,9 +249,7 @@ def verify_testflight_build_delivery(metadata:)
 
   if missing_group_names.empty?
     groups = group_names.map { |name| groups_by_name.fetch(name) }
-    group_ids = groups.map { |group| group.fetch("id") }
-
-    verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), expected_group_ids: group_ids)
+    verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), groups: groups)
     verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
 
     group_summary = groups.map { |group| group.dig("attributes", "name") }.join(", ")
@@ -258,36 +259,25 @@ def verify_testflight_build_delivery(metadata:)
       puts("✅ Verified TestFlight build #{marketing_version} (#{build_number}) in beta groups: #{group_summary}")
     end
   elsif available_group_names.empty?
-    build_groups_by_name = beta_groups_for_build(jwt: jwt, build_id: build.fetch("id")).each_with_object({}) do |group, memo|
-      memo[group.dig("attributes", "name")] = group
-    end
-    available_build_group_names = build_groups_by_name.keys.sort
-    missing_build_group_names = group_names.reject { |name| build_groups_by_name.key?(name) }
-
-    if missing_build_group_names.empty?
-      groups = group_names.map { |name| build_groups_by_name.fetch(name) }
-      verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
-      build_group_summary = groups.map { |group| group.dig("attributes", "name") }.join(", ")
-
-      if required_tester
-        puts(
-          "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via build beta groups #{build_group_summary} " \
-          "with tester #{required_tester} because App Store Connect returned no app beta groups."
-        )
-      else
-        puts(
-          "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via build beta groups #{build_group_summary} " \
-          "because App Store Connect returned no app beta groups."
+    if group_names == [APP_STORE_CONNECT_USERS_GROUP]
+      tester_emails = app_beta_tester_emails(jwt: jwt, app_id: app_id)
+      unless required_tester && tester_emails.include?(required_tester)
+        fail_with(
+          "App Store Connect returned no app beta groups, and required TestFlight tester #{required_tester} " \
+          "is not visible in this app's beta tester list for the #{APP_STORE_CONNECT_USERS_GROUP} auto-access path."
         )
       end
+
+      puts(
+        "✅ Verified TestFlight build #{marketing_version} (#{build_number}) via #{APP_STORE_CONNECT_USERS_GROUP} " \
+        "auto-access with tester #{required_tester}"
+      )
       return
     end
 
-    available_summary = available_build_group_names.empty? ? "none" : available_build_group_names.join(", ")
-
     fail_with(
-      "Missing TestFlight beta groups: #{missing_build_group_names.join(', ')}. " \
-      "App Store Connect returned no app beta groups. Build #{build.fetch('id')} is assigned to: #{available_summary}."
+      "App Store Connect returned no app beta groups, so the verifier cannot prove configured TestFlight groups: #{group_names.join(', ')}. " \
+      "Only the #{APP_STORE_CONNECT_USERS_GROUP} auto-access path is supported when App Store Connect exposes no app beta groups."
     )
   else
     fail_with("Missing TestFlight beta groups: #{missing_group_names.join(', ')}. Available groups: #{available_group_names.join(', ')}")

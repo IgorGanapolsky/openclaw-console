@@ -9,26 +9,20 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
     "build_number" => "123"
   }.freeze
 
-  def test_succeeds_via_build_beta_groups_when_app_group_listing_is_empty
+  def test_succeeds_when_required_group_contains_build_and_tester
     verifier = build_verifier(
       group_names: ["Internal QA"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [
-          { "id" => "group-build" }
+        "/v1/apps/app-id/betaGroups?limit=200" => [
+          { "id" => "group-build", "attributes" => { "name" => "Internal QA" } }
+        ],
+        "/v1/betaGroups/group-build/relationships/builds?limit=200" => [
+          { "id" => "build-id" }
         ],
         "/v1/betaGroups/group-build/betaTesters?limit=200" => [
           { "attributes" => { "email" => "tester@example.com" } }
         ]
-      },
-      request_map: {
-        "/v1/betaGroups/group-build" => {
-          "data" => {
-            "id" => "group-build",
-            "attributes" => { "name" => "Internal QA" }
-          }
-        }
       }
     )
 
@@ -36,45 +30,42 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
     end
 
-    assert_includes stdout, "via build beta groups Internal QA"
+    assert_includes stdout, "in beta groups Internal QA"
     assert_includes stdout, "tester tester@example.com"
   end
 
-  def test_fails_when_build_beta_groups_do_not_match_configured_group_names
+  def test_succeeds_via_app_store_connect_users_auto_access_when_app_groups_are_not_visible
     verifier = build_verifier(
-      group_names: ["Internal QA"],
+      group_names: ["App Store Connect Users"],
       required_tester: "tester@example.com",
       collection_map: {
         "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [],
+        "/v1/apps/app-id/betaTesters?limit=200" => [
+          { "attributes" => { "email" => "tester@example.com" } }
+        ]
       }
     )
 
-    error = assert_raises(RuntimeError) do
+    stdout, = capture_io do
       verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
     end
 
-    assert_includes error.message, "Missing TestFlight beta groups: Internal QA"
-    assert_includes error.message, "Build build-id is assigned to: none"
+    assert_includes stdout, "via App Store Connect Users auto-access"
+    assert_includes stdout, "tester tester@example.com"
   end
 
-  def test_fails_when_build_relationship_uses_the_wrong_group_name
+  def test_fails_when_required_group_is_missing_build_assignment
     verifier = build_verifier(
       group_names: ["Internal QA"],
       required_tester: "tester@example.com",
       collection_map: {
-        "/v1/apps/app-id/betaGroups?limit=200" => [],
-        "/v1/builds/build-id/relationships/betaGroups?limit=200" => [
-          { "id" => "group-build" }
+        "/v1/apps/app-id/betaGroups?limit=200" => [
+          { "id" => "group-build", "attributes" => { "name" => "Internal QA" } }
+        ],
+        "/v1/betaGroups/group-build/relationships/builds?limit=200" => [],
+        "/v1/betaGroups/group-build/betaTesters?limit=200" => [
+          { "attributes" => { "email" => "tester@example.com" } }
         ]
-      },
-      request_map: {
-        "/v1/betaGroups/group-build" => {
-          "data" => {
-            "id" => "group-build",
-            "attributes" => { "name" => "App Store Connect Users" }
-          }
-        }
       }
     )
 
@@ -82,13 +73,51 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
       verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
     end
 
-    assert_includes error.message, "Missing TestFlight beta groups: Internal QA"
-    assert_includes error.message, "Build build-id is assigned to: App Store Connect Users"
+    assert_includes error.message, "Build build-id is missing beta group assignments: Internal QA"
+  end
+
+  def test_fails_when_app_groups_are_not_visible_for_custom_group_names
+    verifier = build_verifier(
+      group_names: ["Internal QA"],
+      required_tester: "tester@example.com",
+      collection_map: {
+        "/v1/apps/app-id/betaGroups?limit=200" => [],
+        "/v1/apps/app-id/betaTesters?limit=200" => [
+          { "attributes" => { "email" => "tester@example.com" } }
+        ]
+      }
+    )
+
+    error = assert_raises(RuntimeError) do
+      verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
+    end
+
+    assert_includes error.message, "App Store Connect returned no app beta groups"
+    assert_includes error.message, "Internal QA"
+    assert_includes error.message, "App Store Connect Users auto-access path"
+  end
+
+  def test_fails_when_app_store_connect_users_auto_access_missing_required_tester
+    verifier = build_verifier(
+      group_names: ["App Store Connect Users"],
+      required_tester: "tester@example.com",
+      collection_map: {
+        "/v1/apps/app-id/betaGroups?limit=200" => [],
+        "/v1/apps/app-id/betaTesters?limit=200" => []
+      }
+    )
+
+    error = assert_raises(RuntimeError) do
+      verifier.send(:verify_testflight_build_delivery, metadata: METADATA)
+    end
+
+    assert_includes error.message, "required TestFlight tester tester@example.com"
+    assert_includes error.message, "App Store Connect Users auto-access path"
   end
 
   private
 
-  def build_verifier(group_names:, required_tester:, collection_map:, request_map: {})
+  def build_verifier(group_names:, required_tester:, collection_map:)
     verifier = Object.new
 
     verifier.define_singleton_method(:strict_csv_env) do |primary_name, _secondary_name|
@@ -115,9 +144,7 @@ class TestFlightDeliveryVerifierTest < Minitest::Test
     end
 
     verifier.define_singleton_method(:request_json) do |jwt:, method:, path:, payload: nil|
-      request_map.fetch(path) do
-        raise "Unexpected request path: #{path}"
-      end
+      raise "Unexpected request path: #{path}"
     end
 
     verifier.define_singleton_method(:fail_with) do |message|
