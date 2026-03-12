@@ -154,7 +154,7 @@ For production, generate a proper token:
 ```bash
 # The dev token is printed on first start. Use it to generate more:
 curl -X POST http://localhost:18789/api/tokens/generate \
-  -H "Authorization: Bearer ocw_YOUR_DEV_TOKEN"
+  -H "Authorization: Bearer <DEV_TOKEN>"
 ```
 
 ## Step 7: Connect the Mobile App

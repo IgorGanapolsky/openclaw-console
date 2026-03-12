@@ -1,0 +1,37 @@
+{
+  "domains": {
+    "general": {
+      "count": 1,
+      "positive": 0,
+      "negative": 1,
+      "lastSeen": "2026-03-04T14:57:42.709Z"
+    },
+    "security": {
+      "count": 1,
+      "positive": 1,
+      "negative": 0,
+      "lastSeen": "2026-03-10T13:43:19.929Z"
+    },
+    "debugging": {
+      "count": 1,
+      "positive": 1,
+      "negative": 0,
+      "lastSeen": "2026-03-10T13:49:27.058Z"
+    },
+    "git-workflow": {
+      "count": 1,
+      "positive": 0,
+      "negative": 1,
+      "lastSeen": "2026-03-10T16:15:08.065Z"
+    },
+    "testing": {
+      "count": 2,
+      "positive": 0,
+      "negative": 2,
+      "lastSeen": "2026-03-12T18:04:00.463Z"
+    }
+  },
+  "lastUpdated": "2026-03-12T18:04:00.471Z",
+  "diversityScore": "92.8",
+  "recommendation": "Good diversity (92.8%)"
+}

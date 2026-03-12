@@ -155,6 +155,18 @@ class WebSocketClient(
                         val chatMsg = json.decodeFromJsonElement(ChatMessage.serializer(), msg.payload)
                         WebSocketEvent.ChatResponse(chatMsg)
                     }
+                    "bridge_session_new" -> {
+                        val session = json.decodeFromJsonElement(BridgeSession.serializer(), msg.payload)
+                        WebSocketEvent.BridgeSessionNew(session)
+                    }
+                    "bridge_session_update" -> {
+                        val session = json.decodeFromJsonElement(BridgeSession.serializer(), msg.payload)
+                        WebSocketEvent.BridgeSessionUpdate(session)
+                    }
+                    "recurring_task_updated" -> {
+                        val task = json.decodeFromJsonElement(RecurringTask.serializer(), msg.payload)
+                        WebSocketEvent.RecurringTaskUpdated(task)
+                    }
                     "error" -> {
                         val code = msg.payload["code"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
                         val message = msg.payload["message"]?.jsonPrimitive?.content ?: "Unknown error"

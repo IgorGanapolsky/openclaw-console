@@ -3,18 +3,18 @@ name: Android CI
 on:
   pull_request:
     paths:
-      - 'android/**'
+      - 'openclaw-skills/android/**'
   push:
     branches: [main, develop]
     paths:
-      - 'android/**'
+      - 'openclaw-skills/android/**'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: android
+        working-directory: openclaw-skills/android
 
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: android
+        working-directory: openclaw-skills/android
 
     steps:
       - uses: actions/checkout@v4

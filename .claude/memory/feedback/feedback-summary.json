@@ -1,0 +1,50 @@
+{
+  "totalFeedback": 1,
+  "thumbsUp": 0,
+  "thumbsDown": 1,
+  "lastUpdated": "2026-03-12T18:04:00.463Z",
+  "currentSessionId": null,
+  "sequenceCount": 1,
+  "topPatterns": {
+    "positive": {},
+    "negative": {
+      "distribution": 1,
+      "reliability": 1,
+      "assumption": 1,
+      "factual-error": 1
+    }
+  },
+  "actionOutcomes": {
+    "distribution": {
+      "positive": 0,
+      "negative": 1,
+      "ratio": 0
+    },
+    "reliability": {
+      "positive": 0,
+      "negative": 1,
+      "ratio": 0
+    },
+    "assumption": {
+      "positive": 0,
+      "negative": 1,
+      "ratio": 0
+    },
+    "factual-error": {
+      "positive": 0,
+      "negative": 1,
+      "ratio": 0
+    }
+  },
+  "currentStreak": {
+    "type": "negative",
+    "count": 1
+  },
+  "longestPositiveStreak": 0,
+  "longestNegativeStreak": 1,
+  "total": 5,
+  "positive": 2,
+  "rejected": null,
+  "accepted": 4,
+  "negative": 2
+}

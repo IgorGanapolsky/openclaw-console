@@ -7,8 +7,8 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import type { ApprovalRequest, ApprovalResponse, ActionType, RiskLevel } from '../types/protocol.js';
-import type { StateManager } from '../gateway/state.js';
+import type { ApprovalRequest, ApprovalResponse, ActionType, RiskLevel, GitOperation } from '../types/protocol.js';
+import type { IStateManager } from '../gateway/state-interface.js';
 import type { GatewayConfig } from '../config/default.js';
 
 export interface DangerousActionOptions {
@@ -24,6 +24,7 @@ export interface DangerousActionOptions {
     environment: string;
     repository: string;
     riskLevel: RiskLevel;
+    git_operation?: GitOperation;
   };
   /** Timeout override in milliseconds (falls back to config default) */
   timeoutMs?: number;
@@ -61,7 +62,7 @@ export class ApprovalGateSkill {
   private decisionLog: ApprovalLogEntry[] = [];
 
   constructor(
-    private readonly state: StateManager,
+    private readonly state: IStateManager,
     private readonly config: GatewayConfig,
   ) {}
 
@@ -193,7 +194,7 @@ export class ApprovalGateSkill {
         repository,
         riskLevel: environment === 'production' ? 'critical' : 'high',
       },
-    });
+    }); // Type cast due to small differences in options naming in protocol
     return result.approved;
   }
 
@@ -222,5 +223,208 @@ export class ApprovalGateSkill {
       },
     });
     return result.approved;
+  }
+
+  /**
+   * Guard a git commit operation with enhanced context.
+   */
+  public async guardGitCommit(
+    agentId: string,
+    agentName: string,
+    repository: string,
+    commitMessage: string,
+    fileChanges: string[],
+    diffSummary: string,
+  ): Promise<boolean> {
+    const environment = this.determineGitEnvironment(repository);
+    const riskLevel = this.assessGitRiskLevel(fileChanges, diffSummary);
+
+    const result = await this.requestApproval({
+      agentId,
+      agentName,
+      actionType: 'git_commit',
+      title: `Git commit in ${repository}`,
+      description: `Agent "${agentName}" wants to commit changes: "${commitMessage}"\n\nChanges: ${diffSummary}\nFiles: ${fileChanges.slice(0, 5).join(', ')}${fileChanges.length > 5 ? ` and ${fileChanges.length - 5} more...` : ''}`,
+      command: `git commit -m "${commitMessage}"`,
+      context: {
+        service: 'git',
+        environment,
+        repository,
+        riskLevel,
+        git_operation: {
+          operation_type: 'commit',
+          commit_message: commitMessage,
+          file_changes: fileChanges,
+          diff_summary: diffSummary,
+        },
+      },
+    });
+    return result.approved;
+  }
+
+  /**
+   * Guard a git merge operation.
+   */
+  public async guardGitMerge(
+    agentId: string,
+    agentName: string,
+    repository: string,
+    fromBranch: string,
+    toBranch: string,
+    fileChanges: string[],
+    diffSummary: string,
+  ): Promise<boolean> {
+    const environment = this.determineGitEnvironment(repository, toBranch);
+    const riskLevel = this.assessGitMergeRiskLevel(toBranch, fileChanges, diffSummary);
+
+    const result = await this.requestApproval({
+      agentId,
+      agentName,
+      actionType: 'git_merge',
+      title: `Git merge from ${fromBranch} to ${toBranch}`,
+      description: `Agent "${agentName}" wants to merge "${fromBranch}" into "${toBranch}"\n\nChanges: ${diffSummary}\nFiles: ${fileChanges.slice(0, 5).join(', ')}${fileChanges.length > 5 ? ` and ${fileChanges.length - 5} more...` : ''}`,
+      command: `git merge ${fromBranch}`,
+      context: {
+        service: 'git',
+        environment,
+        repository,
+        riskLevel,
+        git_operation: {
+          operation_type: 'merge',
+          branch_from: fromBranch,
+          branch_to: toBranch,
+          file_changes: fileChanges,
+          diff_summary: diffSummary,
+        },
+      },
+    });
+    return result.approved;
+  }
+
+  /**
+   * Guard a git push operation.
+   */
+  public async guardGitPush(
+    agentId: string,
+    agentName: string,
+    repository: string,
+    branch: string,
+    fileChanges: string[],
+    diffSummary: string,
+  ): Promise<boolean> {
+    const environment = this.determineGitEnvironment(repository, branch);
+    const riskLevel = this.assessGitPushRiskLevel(branch, fileChanges, diffSummary);
+
+    const result = await this.requestApproval({
+      agentId,
+      agentName,
+      actionType: 'git_push',
+      title: `Git push to ${branch}`,
+      description: `Agent "${agentName}" wants to push changes to "${branch}"\n\nChanges: ${diffSummary}\nFiles: ${fileChanges.slice(0, 5).join(', ')}${fileChanges.length > 5 ? ` and ${fileChanges.length - 5} more...` : ''}`,
+      command: `git push origin ${branch}`,
+      context: {
+        service: 'git',
+        environment,
+        repository,
+        riskLevel,
+        git_operation: {
+          operation_type: 'push',
+          branch_to: branch,
+          file_changes: fileChanges,
+          diff_summary: diffSummary,
+        },
+      },
+    });
+    return result.approved;
+  }
+
+  /**
+   * Determine environment based on git repository or branch patterns.
+   */
+  private determineGitEnvironment(repository: string, branch?: string): string {
+    const repoLower = repository.toLowerCase();
+    const branchLower = branch?.toLowerCase() || '';
+
+    // Check branch patterns first (more specific)
+    if (branch) {
+      if (['main', 'master', 'production', 'prod'].includes(branchLower)) {
+        return 'production';
+      }
+      if (['staging', 'stage'].includes(branchLower) || branchLower.includes('staging')) {
+        return 'staging';
+      }
+      if (['develop', 'development', 'dev'].includes(branchLower) || branchLower.includes('develop')) {
+        return 'development';
+      }
+    }
+
+    // Check repository patterns
+    if (repoLower.includes('prod') || repoLower.includes('main') || repoLower.includes('master')) {
+      return 'production';
+    }
+    if (repoLower.includes('staging') || repoLower.includes('stage')) {
+      return 'staging';
+    }
+    if (repoLower.includes('dev') || repoLower.includes('develop')) {
+      return 'development';
+    }
+
+    return 'feature';
+  }
+
+  /**
+   * Assess risk level for git operations based on changes.
+   */
+  private assessGitRiskLevel(fileChanges: string[], diffSummary: string): RiskLevel {
+    // Check for critical files
+    const criticalPatterns = [
+      /package\.json$/,
+      /\.env/,
+      /config\./,
+      /Dockerfile/,
+      /docker-compose/,
+      /\.github\/workflows/,
+      /\.gitlab-ci\./,
+      /Makefile$/,
+      /\.sql$/,
+      /migration/i,
+    ];
+
+    const hasCriticalFiles = fileChanges.some(file =>
+      criticalPatterns.some(pattern => pattern.test(file))
+    );
+
+    // Check for large changes
+    const hasLargeChanges = diffSummary.includes('+') && (
+      parseInt(diffSummary.match(/\+(\d+)/)?.[1] || '0') > 1000 ||
+      parseInt(diffSummary.match(/-(\d+)/)?.[1] || '0') > 1000
+    );
+
+    if (hasCriticalFiles || hasLargeChanges || fileChanges.length > 50) {
+      return 'critical';
+    }
+
+    return 'high';
+  }
+
+  /**
+   * Assess risk level specifically for merge operations.
+   */
+  private assessGitMergeRiskLevel(toBranch: string, fileChanges: string[], diffSummary: string): RiskLevel {
+    // Merging to main/master is always critical
+    const branchLower = toBranch.toLowerCase();
+    if (['main', 'master', 'production', 'prod'].includes(branchLower)) {
+      return 'critical';
+    }
+
+    return this.assessGitRiskLevel(fileChanges, diffSummary);
+  }
+
+  /**
+   * Assess risk level specifically for push operations.
+   */
+  private assessGitPushRiskLevel(branch: string, fileChanges: string[], diffSummary: string): RiskLevel {
+    // Same logic as merge for now
+    return this.assessGitMergeRiskLevel(branch, fileChanges, diffSummary);
   }
 }

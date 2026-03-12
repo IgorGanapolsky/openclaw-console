@@ -40,9 +40,13 @@ paths = [
   '''tests/.*\.test\.ts$''',
 ]
 regexes = [
-  '''Authorization:\s*Bearer\s*(YOUR_ADMIN_TOKEN|ocw_YOUR_DEV_TOKEN)''',
-]
-stopwords = [
   '''YOUR_ADMIN_TOKEN''',
   '''ocw_YOUR_DEV_TOKEN''',
+  '''Authorization:\s*Bearer\s*(YOUR_ADMIN_TOKEN|ocw_YOUR_DEV_TOKEN|<ADMIN_TOKEN>|<DEV_TOKEN>)''',
+  '''Bearer\s*(YOUR_ADMIN_TOKEN|ocw_YOUR_DEV_TOKEN|<ADMIN_TOKEN>|<DEV_TOKEN>)''',
+  '''<ADMIN_TOKEN>''',
+  '''<DEV_TOKEN>''',
+]
+commits = [
+  "24038db92ed5ae22d85f8fd8102482e55a0424c0",
 ]

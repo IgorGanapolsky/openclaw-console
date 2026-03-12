@@ -2,8 +2,10 @@ package com.openclaw.console.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +20,8 @@ import androidx.navigation.navArgument
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.screens.agents.AgentDetailScreen
 import com.openclaw.console.ui.screens.agents.AgentListScreen
+import com.openclaw.console.ui.screens.bridges.BridgeListScreen
+import com.openclaw.console.ui.screens.loops.LoopListScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
@@ -30,6 +34,8 @@ sealed class Screen(val route: String, val label: String) {
     // Bottom nav roots
     object Agents : Screen("agents", "Agents")
     object Incidents : Screen("incidents", "Incidents")
+    object Loops : Screen("loops", "Loops")
+    object Bridges : Screen("bridges", "Bridges")
     object Settings : Screen("settings", "Settings")
 
     // Detail screens
@@ -70,6 +76,8 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     val bottomItems = listOf(
         BottomNavItem(Screen.Agents, Icons.Default.Groups),
         BottomNavItem(Screen.Incidents, Icons.Default.BugReport, openIncidentCount),
+        BottomNavItem(Screen.Loops, Icons.Default.Autorenew),
+        BottomNavItem(Screen.Bridges, Icons.Default.Link),
         BottomNavItem(Screen.Settings, Icons.Default.Settings, pendingApprovalCount)
     )
 
@@ -162,6 +170,18 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                     onIncidentClick = { incidentId ->
                         navController.navigate(Screen.IncidentDetail.route(incidentId))
                     }
+                )
+            }
+
+            composable(Screen.Loops.route) {
+                LoopListScreen(
+                    appViewModel = appViewModel
+                )
+            }
+
+            composable(Screen.Bridges.route) {
+                BridgeListScreen(
+                    appViewModel = appViewModel
                 )
             }
 

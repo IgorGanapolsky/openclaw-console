@@ -57,18 +57,18 @@ describe('Protocol model serialisation', () => {
     }
   });
 
-  test('Task serialises steps and links', () => {
+  test('Task serialises steps and links', async () => {
     const state = new StateManager();
-    state.upsertAgent(makeAgent());
-    const task = state.createTask({
+    await state.upsertAgent(makeAgent());
+    const task = await state.createTask({
       agent_id: 'agent-test-001',
       title: 'Test task',
       description: 'desc',
       links: [{ label: 'PR', url: 'https://github.com/test/pr/1', type: 'github_pr' }],
     });
-    state.addTaskStep({ task_id: task.id, type: 'log', content: 'hello' });
+    await state.addTaskStep({ task_id: task.id, type: 'log', content: 'hello' });
 
-    const json = JSON.stringify(state.getTask(task.id));
+    const json = JSON.stringify(await state.getTask(task.id));
     const parsed = JSON.parse(json) as Task;
     expect(parsed.steps).toHaveLength(1);
     expect(parsed.steps[0]?.type).toBe('log');
@@ -76,10 +76,10 @@ describe('Protocol model serialisation', () => {
     expect(parsed.links[0]?.type).toBe('github_pr');
   });
 
-  test('Incident serialises all required fields', () => {
+  test('Incident serialises all required fields', async () => {
     const state = new StateManager();
-    state.upsertAgent(makeAgent({ id: AGENT_IDS.GITHUB_OPS, name: 'GitHub Ops' }));
-    const incident = state.createIncident({
+    await state.upsertAgent(makeAgent({ id: AGENT_IDS.GITHUB_OPS, name: 'GitHub Ops' }));
+    const incident = await state.createIncident({
       agent_id: AGENT_IDS.GITHUB_OPS,
       agent_name: 'GitHub Ops',
       severity: 'critical',
@@ -252,15 +252,15 @@ describe('Approval flow (request → response)', () => {
 // ── Incident lifecycle ────────────────────────────────────────────────────────
 
 describe('Incident lifecycle (create → acknowledge → resolve)', () => {
-  function createState(): StateManager {
+  async function createState(): Promise<StateManager> {
     const s = new StateManager();
-    s.upsertAgent(makeAgent({ id: 'agent-d', name: 'Ops Agent' }));
+    await s.upsertAgent(makeAgent({ id: 'agent-d', name: 'Ops Agent' }));
     return s;
   }
 
-  test('Incident created with status open', () => {
-    const state = createState();
-    const i = state.createIncident({
+  test('Incident created with status open', async () => {
+    const state = await createState();
+    const i = await state.createIncident({
       agent_id: 'agent-d',
       agent_name: 'Ops Agent',
       severity: 'warning',
@@ -271,41 +271,41 @@ describe('Incident lifecycle (create → acknowledge → resolve)', () => {
     expect(i.id).toBeTruthy();
   });
 
-  test('Acknowledge transitions to acknowledged', () => {
-    const state = createState();
-    const i = state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'info', title: 'T', description: 'd' });
-    const updated = state.updateIncidentStatus(i.id, 'acknowledged');
+  test('Acknowledge transitions to acknowledged', async () => {
+    const state = await createState();
+    const i = await state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'info', title: 'T', description: 'd' });
+    const updated = await state.updateIncidentStatus(i.id, 'acknowledged');
     expect(updated?.status).toBe('acknowledged');
   });
 
-  test('Resolve transitions to resolved', () => {
-    const state = createState();
-    const i = state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'critical', title: 'T', description: 'd' });
-    state.updateIncidentStatus(i.id, 'acknowledged');
-    const resolved = state.updateIncidentStatus(i.id, 'resolved');
+  test('Resolve transitions to resolved', async () => {
+    const state = await createState();
+    const i = await state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'critical', title: 'T', description: 'd' });
+    await state.updateIncidentStatus(i.id, 'acknowledged');
+    const resolved = await state.updateIncidentStatus(i.id, 'resolved');
     expect(resolved?.status).toBe('resolved');
     expect(resolved?.updated_at).toBeTruthy();
   });
 
-  test('Updating non-existent incident returns null', () => {
-    const state = createState();
-    expect(state.updateIncidentStatus('fake-id', 'resolved')).toBeNull();
+  test('Updating non-existent incident returns null', async () => {
+    const state = await createState();
+    expect(await state.updateIncidentStatus('fake-id', 'resolved')).toBeNull();
   });
 
-  test('incident_created event fires', () => {
-    const state = createState();
+  test('incident_created event fires', async () => {
+    const state = await createState();
     const handler = jest.fn();
     state.events.on('incident_created', handler);
-    state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'info', title: 'T', description: 'd' });
+    await state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'info', title: 'T', description: 'd' });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  test('incident_updated event fires on status change', () => {
-    const state = createState();
+  test('incident_updated event fires on status change', async () => {
+    const state = await createState();
     const handler = jest.fn();
-    const i = state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'info', title: 'T', description: 'd' });
+    const i = await state.createIncident({ agent_id: 'agent-d', agent_name: 'Ops Agent', severity: 'info', title: 'T', description: 'd' });
     state.events.on('incident_updated', handler);
-    state.updateIncidentStatus(i.id, 'acknowledged');
+    await state.updateIncidentStatus(i.id, 'acknowledged');
     expect(handler).toHaveBeenCalledTimes(1);
   });
 });
@@ -313,72 +313,109 @@ describe('Incident lifecycle (create → acknowledge → resolve)', () => {
 // ── Task lifecycle ────────────────────────────────────────────────────────────
 
 describe('Task lifecycle (create → steps → complete)', () => {
-  function createState(): StateManager {
+  async function createState(): Promise<StateManager> {
     const s = new StateManager();
-    s.upsertAgent(makeAgent({ id: 'agent-e', name: 'Task Agent' }));
+    await s.upsertAgent(makeAgent({ id: 'agent-e', name: 'Task Agent' }));
     return s;
   }
 
-  test('Task created with queued status', () => {
-    const state = createState();
-    const t = state.createTask({ agent_id: 'agent-e', title: 'Test task', description: 'desc' });
+  test('Task created with queued status', async () => {
+    const state = await createState();
+    const t = await state.createTask({ agent_id: 'agent-e', title: 'Test task', description: 'desc' });
     expect(t.status).toBe('queued');
     expect(t.steps).toHaveLength(0);
     expect(t.links).toHaveLength(0);
   });
 
-  test('Status transitions: queued → running → done', () => {
-    const state = createState();
-    const t = state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
-    state.updateTaskStatus(t.id, 'running');
-    state.updateTaskStatus(t.id, 'done');
-    expect(state.getTask(t.id)?.status).toBe('done');
+  test('Status transitions: queued → running → done', async () => {
+    const state = await createState();
+    const t = await state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
+    await state.updateTaskStatus(t.id, 'running');
+    await state.updateTaskStatus(t.id, 'done');
+    const task = await state.getTask(t.id);
+    expect(task?.status).toBe('done');
   });
 
-  test('Steps are appended in order', () => {
-    const state = createState();
-    const t = state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
-    state.addTaskStep({ task_id: t.id, type: 'log', content: 'step 1' });
-    state.addTaskStep({ task_id: t.id, type: 'tool_call', content: 'step 2' });
-    state.addTaskStep({ task_id: t.id, type: 'output', content: 'step 3' });
+  test('Steps are appended in order', async () => {
+    const state = await createState();
+    const t = await state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
+    await state.addTaskStep({ task_id: t.id, type: 'log', content: 'step 1' });
+    await state.addTaskStep({ task_id: t.id, type: 'tool_call', content: 'step 2' });
+    await state.addTaskStep({ task_id: t.id, type: 'output', content: 'step 3' });
 
-    const task = state.getTask(t.id);
+    const task = await state.getTask(t.id);
     expect(task?.steps).toHaveLength(3);
     expect(task?.steps[0]?.content).toBe('step 1');
     expect(task?.steps[2]?.content).toBe('step 3');
   });
 
-  test('Step metadata is stored', () => {
-    const state = createState();
-    const t = state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
-    const step = state.addTaskStep({ task_id: t.id, type: 'tool_call', content: 'tool', metadata: { tool: 'git', args: { ref: 'main' } } });
+  test('Step metadata is stored', async () => {
+    const state = await createState();
+    const t = await state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
+    const step = await state.addTaskStep({ task_id: t.id, type: 'tool_call', content: 'tool', metadata: { tool: 'git', args: { ref: 'main' } } });
     expect((step?.metadata as Record<string, unknown>)?.['tool']).toBe('git');
   });
 
-  test('task_created event fires', () => {
-    const state = createState();
+  test('task_created event fires', async () => {
+    const state = await createState();
     const handler = jest.fn();
     state.events.on('task_created', handler);
-    state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
+    await state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  test('task_step_added event fires', () => {
-    const state = createState();
-    const t = state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
+  test('task_step_added event fires', async () => {
+    const state = await createState();
+    const t = await state.createTask({ agent_id: 'agent-e', title: 'T', description: 'd' });
     const handler = jest.fn();
     state.events.on('task_step_added', handler);
-    state.addTaskStep({ task_id: t.id, type: 'log', content: 'hello' });
+    await state.addTaskStep({ task_id: t.id, type: 'log', content: 'hello' });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  test('agent active_tasks counter updates', () => {
-    const state = createState();
-    state.createTask({ agent_id: 'agent-e', title: 'T1', description: 'd' });
-    const t2 = state.createTask({ agent_id: 'agent-e', title: 'T2', description: 'd' });
+  test('agent active_tasks counter updates', async () => {
+    const state = await createState();
+    await state.createTask({ agent_id: 'agent-e', title: 'T1', description: 'd' });
+    const t2 = await state.createTask({ agent_id: 'agent-e', title: 'T2', description: 'd' });
     // Both queued — count should be 2
     expect(state.getAgent('agent-e')?.active_tasks).toBe(2);
-    state.updateTaskStatus(t2.id, 'done');
+    await state.updateTaskStatus(t2.id, 'done');
     expect(state.getAgent('agent-e')?.active_tasks).toBe(1);
+  });
+});
+
+// ── Bridge Session management ──────────────────────────────────────────────────
+
+describe('Bridge Session management', () => {
+  test('Bridge session creation and update', async () => {
+    const state = new StateManager();
+    const sessionId = 'bridge-001';
+    
+    const handlerNew = jest.fn();
+    const handlerUpdate = jest.fn();
+    state.events.on('bridge_session_new', handlerNew);
+    state.events.on('bridge_session_update', handlerUpdate);
+
+    const session = {
+      id: sessionId,
+      agent_id: 'agent-a',
+      type: 'codex' as const,
+      title: 'Codex Bridge',
+      cwd: '/path/to/project',
+      closed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      metadata: {},
+    };
+
+    await state.upsertBridgeSession(session);
+    expect(handlerNew).toHaveBeenCalledTimes(1);
+    expect(state.listBridgeSessions()).toHaveLength(1);
+
+    // Update
+    const updated = { ...session, title: 'Updated Title' };
+    await state.upsertBridgeSession(updated);
+    expect(handlerUpdate).toHaveBeenCalledTimes(1);
+    expect(state.listBridgeSessions()[0]?.title).toBe('Updated Title');
   });
 });

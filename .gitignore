@@ -65,5 +65,10 @@ Thumbs.db
 .build/
 .kotlin/
 dist-tests/
+# Temp files and secrets
+firebase-debug.log
+.env.*
+*.png
 
-ios/OpenClawConsole/OpenClawConsole.xcodeproj/
+# ralphex progress logs
+.ralphex/progress/
