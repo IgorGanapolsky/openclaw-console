@@ -194,6 +194,21 @@ final class WebSocketService: NSObject {
             if let obj = try? decoder.decode(ErrorPayload.self, from: payloadData) {
                 event = .error(code: obj.code, message: obj.message)
             }
+        case .incidentNew:
+            // Handle new incident event
+            break
+        case .bridgeSessionNew:
+            // Handle new bridge session event
+            break
+        case .bridgeSessionUpdate:
+            // Handle bridge session update event
+            break
+        case .recurringTaskUpdated:
+            // Handle recurring task update event
+            break
+        case .gitStateChanged:
+            // Handle git state change event
+            break
         }
 
         if let event {
