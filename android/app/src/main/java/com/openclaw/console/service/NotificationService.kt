@@ -96,7 +96,7 @@ class NotificationService private constructor(private val context: Context) {
                 .setSmallIcon(R.drawable.ic_security) // Assumes security icon exists
                 .setContentTitle("Approval Required")
                 .setContentText("${approval.agentName}: ${approval.title}")
-                .setSubText(approval.actionType.capitalize())
+                .setSubText(approval.actionType.replaceFirstChar { it.uppercase() })
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setAutoCancel(false) // Keep until user responds
