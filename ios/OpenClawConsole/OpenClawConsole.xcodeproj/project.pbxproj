@@ -308,6 +308,9 @@
 			dependencies = (
 			);
 			name = OpenClawConsole;
+			packageProductDependencies = (
+				C5F96B3338A60EA52400D55A /* RevenueCat */,
+			);
 			productName = OpenClawConsole;
 			productReference = DF1A595D54FA8D215174F303 /* OpenClawConsole.app */;
 			productType = "com.apple.product-type.application";
@@ -336,6 +339,9 @@
 			);
 			mainGroup = 386E84F76E8D76809ABB8DE2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6AFDE3881D42F1AA19B5636F /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 400013C51CE1D6B56A9B4C2E /* Products */;
 			projectDirPath = "";
@@ -601,6 +607,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6AFDE3881D42F1AA19B5636F /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C5F96B3338A60EA52400D55A /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AFDE3881D42F1AA19B5636F /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CCC4285A4910BCC03DF52580 /* Project object */;
 }
