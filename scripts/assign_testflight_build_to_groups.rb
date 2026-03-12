@@ -33,6 +33,17 @@ def csv_items(value)
   value.split(/[\n,;]/).map(&:strip).reject(&:empty?).uniq
 end
 
+def strict_csv_env(primary_name, secondary_name)
+  primary_values = csv_items(first_present_env(primary_name))
+  secondary_values = csv_items(first_present_env(secondary_name))
+
+  if primary_values.any? && secondary_values.any? && primary_values != secondary_values
+    fail_with("#{primary_name} and #{secondary_name} must match when both are set")
+  end
+
+  primary_values.any? ? primary_values : secondary_values
+end
+
 def base64url(value)
   Base64.urlsafe_encode64(value, padding: false)
 end
@@ -114,19 +125,30 @@ def build_for_metadata(jwt:, app_id:, build_number:, marketing_version:)
   query = URI.encode_www_form(
     "filter[app]" => app_id,
     include: "preReleaseVersion",
-    limit: 20,
+    limit: 200,
     sort: "-uploadedDate"
   )
-  response = request_json(jwt: jwt, method: :get, path: "/v1/builds?#{query}")
-  pre_release_versions = response.fetch("included", []).each_with_object({}) do |item, memo|
-    memo[item.fetch("id")] = item.dig("attributes", "version")
-  end
+  pre_release_versions = {}
+  build = nil
+  next_path = "/v1/builds?#{query}"
 
-  build = response.fetch("data", []).find do |item|
-    item_build_number = item.dig("attributes", "version").to_s
-    pre_release_id = item.dig("relationships", "preReleaseVersion", "data", "id")
-    item_marketing_version = pre_release_versions[pre_release_id].to_s
-    item_build_number == build_number.to_s && item_marketing_version == marketing_version.to_s
+  while next_path && build.nil?
+    response = request_json(jwt: jwt, method: :get, path: next_path)
+    response.fetch("included", []).each do |item|
+      next unless item.fetch("type") == "preReleaseVersions"
+
+      pre_release_versions[item.fetch("id")] = item.dig("attributes", "version")
+    end
+
+    build = response.fetch("data", []).find do |item|
+      item_build_number = item.dig("attributes", "version").to_s
+      pre_release_id = item.dig("relationships", "preReleaseVersion", "data", "id")
+      item_marketing_version = pre_release_versions[pre_release_id].to_s
+      item_build_number == build_number.to_s && item_marketing_version == marketing_version.to_s
+    end
+
+    next_url = response.dig("links", "next")
+    next_path = next_url ? URI(next_url).request_uri : nil
   end
 
   fail_with("No processed build found for #{marketing_version} (#{build_number}) in App Store Connect") unless build
@@ -159,22 +181,6 @@ def assigned_group_ids(jwt:, build_id:)
   end
 end
 
-def add_build_to_groups(jwt:, build_id:, group_ids:)
-  existing_group_ids = assigned_group_ids(jwt: jwt, build_id: build_id)
-  missing_group_ids = group_ids - existing_group_ids
-  return if missing_group_ids.empty?
-
-  payload = {
-    data: missing_group_ids.map { |group_id| { type: "betaGroups", id: group_id } }
-  }
-  request_json(
-    jwt: jwt,
-    method: :post,
-    path: "/v1/builds/#{build_id}/relationships/betaGroups",
-    payload: payload
-  )
-end
-
 def verify_group_assignment(jwt:, build_id:, expected_group_ids:)
   assigned_group_ids = assigned_group_ids(jwt: jwt, build_id: build_id)
   missing_group_ids = expected_group_ids - assigned_group_ids
@@ -182,7 +188,7 @@ def verify_group_assignment(jwt:, build_id:, expected_group_ids:)
 end
 
 def required_tester_email
-  first_present_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL", "TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET")
+  strict_csv_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET", "TESTFLIGHT_REQUIRED_TESTER_EMAIL").first
 end
 
 def verify_required_tester_membership(jwt:, groups:, email:)
@@ -207,7 +213,7 @@ metadata = read_metadata(metadata_path)
 bundle_id = metadata.fetch("bundle_id")
 marketing_version = metadata.fetch("marketing_version")
 build_number = metadata.fetch("build_number").to_s
-group_names = csv_items(first_present_env("TESTFLIGHT_GROUPS", "TESTFLIGHT_GROUPS_SECRET"))
+group_names = strict_csv_env("TESTFLIGHT_GROUPS_SECRET", "TESTFLIGHT_GROUPS")
 fail_with("No TESTFLIGHT_GROUPS configured. Refusing to claim TestFlight delivery without an explicit beta group.") if group_names.empty?
 
 jwt = build_jwt
@@ -222,7 +228,6 @@ groups = beta_groups_for_names(jwt: jwt, app_id: app_id, group_names: group_name
 group_ids = groups.map { |group| group.fetch("id") }
 required_tester = required_tester_email
 
-add_build_to_groups(jwt: jwt, build_id: build.fetch("id"), group_ids: group_ids)
 verify_group_assignment(jwt: jwt, build_id: build.fetch("id"), expected_group_ids: group_ids)
 verify_required_tester_membership(jwt: jwt, groups: groups, email: required_tester)
 

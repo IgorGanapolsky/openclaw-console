@@ -6,7 +6,7 @@ This document covers setting up the CI/CD pipeline that automatically distribute
 
 ```
 Push to develop → CI runs (ios.yml / android.yml)
-                     ↓ (on success)
+                     ↓ (both succeed for the same SHA)
               internal-distribution.yml
                      ↓
     ┌────────────────┴────────────────┐
@@ -16,7 +16,7 @@ iOS: build → TestFlight        Android: build → Firebase
      (fastlane beta)                App Distribution
 ```
 
-The `internal-distribution.yml` workflow triggers automatically when CI passes on `develop`, or can be triggered manually via `workflow_dispatch`.
+The `internal-distribution.yml` workflow triggers automatically only after both `iOS CI` and `Android CI` are green for the same `develop` commit, or can be triggered manually via `workflow_dispatch`.
 
 ## Required GitHub Secrets
 
@@ -29,6 +29,7 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `APPSTORE_PRIVATE_KEY` | App Store Connect API key (.p8 file contents) | App Store Connect → Users → Keys → Generate |
 | `APPSTORE_KEY_ID` | Key ID from the .p8 key | Shown next to the key in App Store Connect |
 | `APPSTORE_ISSUER_ID` | Issuer ID (UUID at top of Keys page) | App Store Connect → Users → Keys (top of page) |
+| `APPLE_TEAM_ID` | Apple Developer Team ID used for signing | Apple Developer Portal → Membership details |
 | `MATCH_GIT_URL` | Private repo URL for match certificates | Create a private repo, e.g. `https://github.com/YOU/ios-certificates.git` |
 | `MATCH_PASSWORD` | Encryption password for match | Pick a strong password, save it somewhere safe |
 | `MATCH_GIT_BASIC_AUTHORIZATION` | Base64-encoded `username:token` for git | `echo -n "username:github_pat_TOKEN" \| base64` |
@@ -43,9 +44,9 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 | `KEYSTORE_PASSWORD` | Keystore password | From when you created the keystore |
 | `KEY_ALIAS` | Key alias in the keystore | From when you created the keystore |
 | `KEY_PASSWORD` | Key password | From when you created the keystore |
-| `FIREBASE_TOKEN` | Firebase CLI token | Run `firebase login:ci` locally |
-| `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (fallback auth for Firebase) | Google Cloud Console → IAM → Service accounts |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Dedicated Firebase service account JSON (preferred auth) | Google Cloud Console → IAM → Service accounts |
+| `FIREBASE_TOKEN` | Firebase CLI token (verified fallback when no dedicated Firebase service account is configured) | Run `firebase login:ci` locally |
+| `GOOGLE_PLAY_JSON_KEY` | Google Play service account JSON (last-resort fallback, only if that service account also has Firebase App Distribution upload permission) | Google Cloud Console → IAM → Service accounts |
 
 ### Optional
 
@@ -53,11 +54,11 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 |-----------------|-------------|
 | `FIREBASE_ANDROID_APP_ID` | Override Firebase app ID (normally auto-resolved from google-services.json) |
 | `FIREBASE_IOS_APP_ID` | Firebase iOS app id for `firebase_dev` lane usage |
-| `FIREBASE_INTERNAL_TESTERS` (secret or variable) | Comma-separated tester emails for Firebase App Distribution invites |
-| `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites |
-| `FIREBASE_REQUIRED_TESTER_EMAIL` (secret or variable) | Single tester email that must be included on every Firebase internal distribution |
-| `TESTFLIGHT_GROUPS` (secret or variable) | Comma-separated App Store Connect beta groups that must receive each internal TestFlight build |
-| `TESTFLIGHT_REQUIRED_TESTER_EMAIL` (secret or variable) | Internal App Store Connect tester email that must already belong to one of the required TestFlight groups |
+| `FIREBASE_INTERNAL_TESTERS` (secret or variable) | Comma-separated tester emails for Firebase App Distribution invites. If both exist, they must match. |
+| `FIREBASE_INTERNAL_GROUPS` (secret or variable) | Comma-separated Firebase tester groups for App Distribution invites. If both exist, they must match. |
+| `FIREBASE_REQUIRED_TESTER_EMAIL` (secret or variable) | Single tester email that must be included on every Firebase internal distribution. If both exist, they must match. |
+| `TESTFLIGHT_GROUPS` (secret or variable) | Comma-separated App Store Connect beta groups that must receive each internal TestFlight build. If both exist, they must match. |
+| `TESTFLIGHT_REQUIRED_TESTER_EMAIL` (secret or variable) | Internal App Store Connect tester email that must already belong to one of the required TestFlight groups. If both exist, they must match. |
 
 ## One-Time Setup Steps
 
@@ -76,13 +77,21 @@ Set these at: `https://github.com/YOUR_USERNAME/openclaw-console/settings/secret
 2. Create tester group "qa-team" and add `iganapolsky@gmail.com`
 3. Create tester group "developers"
 
-### 3. Generate Firebase Token
+### 3. Create Firebase App Distribution Auth
 
 ```bash
+# Preferred: create a dedicated Firebase service account JSON
+# and grant it the Firebase App Distribution Admin role.
+
+# Optional deprecated fallback:
 npm install -g firebase-tools
 firebase login:ci
-# Copy the printed token → save as FIREBASE_TOKEN secret
+# Copy the printed token -> save as FIREBASE_TOKEN only as a fallback path.
 ```
+
+Use `FIREBASE_SERVICE_ACCOUNT_JSON` when possible. `FIREBASE_TOKEN` is the verified fallback for App Distribution when the dedicated service account is absent or missing upload permission. `GOOGLE_PLAY_JSON_KEY` alone is not enough unless that service account was also granted Firebase App Distribution upload permission.
+
+The workflow refuses ambiguous audience configuration. If the same Firebase/TestFlight audience key exists as both a GitHub Actions secret and variable with different values, the run fails instead of guessing.
 
 ### 4. Create Android Keystore
 

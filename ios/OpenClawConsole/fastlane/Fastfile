@@ -24,6 +24,17 @@ def csv_env(*names)
     .uniq
 end
 
+def strict_csv_env(primary_name, secondary_name)
+  primary_values = csv_env(primary_name)
+  secondary_values = csv_env(secondary_name)
+
+  if primary_values.any? && secondary_values.any? && primary_values != secondary_values
+    UI.user_error!("#{primary_name} and #{secondary_name} must match when both are set")
+  end
+
+  primary_values.any? ? primary_values : secondary_values
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -31,8 +42,8 @@ platform :ios do
 
     # Use App Store Connect API key if available
     api_key = app_store_api_key_from_env
-    testflight_groups = csv_env("TESTFLIGHT_GROUPS", "TESTFLIGHT_GROUPS_SECRET")
-    required_testflight_testers = csv_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL", "TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET")
+    testflight_groups = strict_csv_env("TESTFLIGHT_GROUPS_SECRET", "TESTFLIGHT_GROUPS")
+    required_testflight_testers = strict_csv_env("TESTFLIGHT_REQUIRED_TESTER_EMAIL_SECRET", "TESTFLIGHT_REQUIRED_TESTER_EMAIL")
 
     if ENV["CI"] == "true"
       UI.user_error!("APPSTORE_PRIVATE_KEY, APPSTORE_KEY_ID, and APPSTORE_ISSUER_ID are required in CI") if api_key.nil?

@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to distribute (optional, defaults to develop)"
+        description: "Git ref to distribute (optional, defaults to the branch or tag you dispatch from)"
         required: false
         type: string
 
 concurrency:
-  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_branch || inputs.ref || github.ref_name }}
+  group: internal-distribution-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || inputs.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -31,8 +31,11 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WORKFLOW_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_REF: ${{ inputs.ref }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -46,10 +49,26 @@ jobs:
             SHOULD_RUN="true"
             REASON="manual_dispatch"
           elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" && "$WORKFLOW_BRANCH" == "develop" ]]; then
-            REF="$WORKFLOW_SHA"
-            SHA="$WORKFLOW_SHA"
-            SHOULD_RUN="true"
-            REASON="ci_green_on_${WORKFLOW_BRANCH}"
+            RUNS_JSON="$(
+              curl -fsSL \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${REPOSITORY}/actions/runs?head_sha=${WORKFLOW_SHA}&event=push&status=completed&per_page=100"
+            )"
+            IOS_SUCCESS="$(printf '%s' "$RUNS_JSON" | jq -r '[.workflow_runs[] | select(.name == "iOS CI" and .conclusion == "success")] | length > 0')"
+            ANDROID_SUCCESS="$(printf '%s' "$RUNS_JSON" | jq -r '[.workflow_runs[] | select(.name == "Android CI" and .conclusion == "success")] | length > 0')"
+            LATEST_CI_RUN_ID="$(printf '%s' "$RUNS_JSON" | jq -r '[.workflow_runs[] | select((.name == "iOS CI" or .name == "Android CI") and .conclusion == "success")] | max_by(.updated_at) | .id // empty')"
+
+            if [[ "$IOS_SUCCESS" == "true" && "$ANDROID_SUCCESS" == "true" && "$WORKFLOW_RUN_ID" == "$LATEST_CI_RUN_ID" ]]; then
+              REF="$WORKFLOW_SHA"
+              SHA="$WORKFLOW_SHA"
+              SHOULD_RUN="true"
+              REASON="both_ci_green_on_${WORKFLOW_SHA}"
+            elif [[ "$IOS_SUCCESS" != "true" || "$ANDROID_SUCCESS" != "true" ]]; then
+              REASON="waiting_for_both_ci_on_${WORKFLOW_SHA}"
+            else
+              REASON="not_latest_ci_finisher_for_${WORKFLOW_SHA}"
+            fi
           fi
 
           {
@@ -105,11 +124,6 @@ jobs:
       - name: Preflight release checks (iOS)
         run: bash scripts/preflight-release.sh --platform ios --layer 1
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -117,9 +131,20 @@ jobs:
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
-      - name: Install Fastlane
-        run: gem install fastlane
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Generate OpenClawConsole.xcodeproj
         working-directory: ios/OpenClawConsole
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          test -f OpenClawConsole.xcodeproj/project.pbxproj
 
       - name: Configure git credentials for match
         env:
@@ -192,8 +217,8 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
@@ -209,13 +234,13 @@ jobs:
           AUTH_METHOD=""
           if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
             AUTH_METHOD="service_account_primary"
-          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            AUTH_METHOD="service_account_fallback"
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            AUTH_METHOD="deprecated_token"
-            echo "⚠️ WARNING: FIREBASE_TOKEN is deprecated. Use FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_PLAY_JSON_KEY for reliable 2026 authentication."
+            AUTH_METHOD="ci_token_fallback"
+          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
+            AUTH_METHOD="google_play_service_account_fallback"
+            echo "⚠️ WARNING: GOOGLE_PLAY_JSON_KEY is only a last-resort fallback for Firebase App Distribution. It must have Firebase App Distribution upload permission on project openclaw-console-mobile."
           else
-            echo "❌ Firebase authentication required. Set FIREBASE_SERVICE_ACCOUNT_JSON (preferred) or GOOGLE_PLAY_JSON_KEY (fallback) or FIREBASE_TOKEN (deprecated)."
+            echo "❌ Firebase authentication required. Set FIREBASE_SERVICE_ACCOUNT_JSON (preferred), FIREBASE_TOKEN (verified fallback), or GOOGLE_PLAY_JSON_KEY (last-resort fallback)."
             exit 1
           fi
 
@@ -311,25 +336,40 @@ jobs:
         run: npm install --global firebase-tools
 
       - name: Prepare Firebase auth credentials
+        id: firebase_auth
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
         run: |
           set -euo pipefail
+          AUTH_MODE=""
 
           # Priority 1: FIREBASE_SERVICE_ACCOUNT_JSON (dedicated Firebase SA)
           if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
             printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+            AUTH_MODE="firebase_service_account"
             echo "✅ Using FIREBASE_SERVICE_ACCOUNT_JSON for Firebase authentication"
-          # Priority 2: GOOGLE_PLAY_JSON_KEY (fallback)
+          # Priority 2: FIREBASE_TOKEN (explicit CI fallback)
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            AUTH_MODE="ci_token"
+            echo "✅ Using FIREBASE_TOKEN for Firebase App Distribution"
+          # Priority 3: GOOGLE_PLAY_JSON_KEY (last resort)
           elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
             CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
             printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
             echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
-            echo "✅ Using GOOGLE_PLAY_JSON_KEY as fallback for Firebase authentication"
+            AUTH_MODE="google_play_service_account"
+            echo "⚠️ Using GOOGLE_PLAY_JSON_KEY as last-resort Firebase fallback"
+          else
+            echo "❌ No usable Firebase authentication secret found"
+            exit 1
           fi
+
+          echo "mode=$AUTH_MODE" >> "$GITHUB_OUTPUT"
+          echo "FIREBASE_AUTH_MODE=$AUTH_MODE" >> "$GITHUB_ENV"
 
       - name: Distribute to internal Firebase tester(s)
         id: firebase_distribute
@@ -342,6 +382,7 @@ jobs:
           FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_AUTH_MODE: ${{ steps.firebase_auth.outputs.mode }}
         run: |
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
@@ -363,9 +404,34 @@ jobs:
               | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
           }
 
+          resolve_distribution_config() {
+            local label="$1"
+            local secret_value="${2:-}"
+            local variable_value="${3:-}"
+            local normalized_secret normalized_variable
+
+            normalized_secret="$(normalize_csv "$secret_value")"
+            normalized_variable="$(normalize_csv "$variable_value")"
+
+            if [ -n "$normalized_secret" ] && [ -n "$normalized_variable" ] && [ "$normalized_secret" != "$normalized_variable" ]; then
+              echo "❌ $label differs between the GitHub secret and variable. Refusing ambiguous Firebase audience configuration."
+              exit 1
+            fi
+
+            first_present "$normalized_secret" "$normalized_variable" || true
+          }
+
+          firebase_cli() {
+            if [ "${FIREBASE_AUTH_MODE:-}" = "ci_token" ]; then
+              firebase "$@" --token "$FIREBASE_TOKEN"
+            else
+              firebase "$@"
+            fi
+          }
+
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification"
-          if ! firebase projects:list --json | jq -e '.. | objects | .projectId? // empty | select(. == "openclaw-console-mobile")' > /dev/null; then
+          if ! firebase_cli projects:list --json | jq -e '.. | objects | .projectId? // empty | select(. == "openclaw-console-mobile")' > /dev/null; then
             echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
             exit 1
           fi
@@ -379,25 +445,41 @@ jobs:
           fi
 
           # Determine authentication method with explicit precedence
-          AUTH_MODE=""
-          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
-            AUTH_MODE="service_account"
-            # Clear deprecated token to prevent confusion
-            unset FIREBASE_TOKEN
-            echo "✅ Using service account authentication (2026 best practice)"
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            AUTH_MODE="deprecated_token"
-            echo "⚠️ WARNING: Using deprecated FIREBASE_TOKEN - may fail silently or not send emails"
+          AUTH_MODE="${FIREBASE_AUTH_MODE:-}"
+          if [ "$AUTH_MODE" = "firebase_service_account" ]; then
+            if [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || [ ! -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+              echo "❌ FIREBASE_AUTH_MODE=firebase_service_account but GOOGLE_APPLICATION_CREDENTIALS is missing"
+              exit 1
+            fi
+            echo "✅ Using dedicated Firebase service account authentication"
+          elif [ "$AUTH_MODE" = "ci_token" ]; then
+            if [ -z "${FIREBASE_TOKEN:-}" ]; then
+              echo "❌ FIREBASE_AUTH_MODE=ci_token but FIREBASE_TOKEN is missing"
+              exit 1
+            fi
+            echo "✅ Using FIREBASE_TOKEN authentication"
+          elif [ "$AUTH_MODE" = "google_play_service_account" ]; then
+            if [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] || [ ! -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+              echo "❌ FIREBASE_AUTH_MODE=google_play_service_account but GOOGLE_APPLICATION_CREDENTIALS is missing"
+              exit 1
+            fi
+            echo "⚠️ Using GOOGLE_PLAY_JSON_KEY for Firebase authentication"
           else
             echo "❌ No valid Firebase authentication found"
             exit 1
           fi
 
           # Prepare distribution command
-          TESTERS="$(normalize_csv "$(first_present "${FIREBASE_INTERNAL_TESTERS:-}" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}" || true)")"
-          DIST_GROUPS="$(normalize_csv "$(first_present "${FIREBASE_INTERNAL_GROUPS:-}" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}" || true)")"
-          REQUIRED_TESTER="$(normalize_csv "$(first_present "${FIREBASE_REQUIRED_TESTER_EMAIL:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}" || true)")"
+          TESTERS="$(resolve_distribution_config "FIREBASE_INTERNAL_TESTERS" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}" "${FIREBASE_INTERNAL_TESTERS:-}")"
+          DIST_GROUPS="$(resolve_distribution_config "FIREBASE_INTERNAL_GROUPS" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}" "${FIREBASE_INTERNAL_GROUPS:-}")"
+          REQUIRED_TESTER="$(resolve_distribution_config "FIREBASE_REQUIRED_TESTER_EMAIL" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL:-}")"
           APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          DISTRIBUTION_AUTH_MODE="$AUTH_MODE"
+          FALLBACK_TOKEN_AVAILABLE="false"
+
+          if [ -n "${FIREBASE_TOKEN:-}" ] && [ "$AUTH_MODE" != "ci_token" ]; then
+            FALLBACK_TOKEN_AVAILABLE="true"
+          fi
 
           # Add required tester if specified
           if [ -n "$REQUIRED_TESTER" ]; then
@@ -426,9 +508,24 @@ jobs:
             --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
           )
 
-          if [ "$AUTH_MODE" = "deprecated_token" ]; then
-            BASE_CMD+=(--token "$FIREBASE_TOKEN")
-          fi
+          run_distribution() {
+            local auth_mode="$1"
+            local -a dist_cmd=("${BASE_CMD[@]}")
+
+            if [ "$auth_mode" = "ci_token" ]; then
+              dist_cmd+=(--token "$FIREBASE_TOKEN")
+            fi
+
+            if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
+              dist_cmd+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
+            elif [ -n "$TESTERS" ]; then
+              dist_cmd+=(--testers "$TESTERS")
+            elif [ -n "$DIST_GROUPS" ]; then
+              dist_cmd+=(--groups "$DIST_GROUPS")
+            fi
+
+            "${dist_cmd[@]}" 2>&1
+          }
 
           # Execute distribution with retry logic
           ATTEMPT=1
@@ -436,18 +533,9 @@ jobs:
           SUCCESS=false
 
           while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = false ]; do
-            echo "🚀 Firebase distribution attempt $ATTEMPT/$MAX_ATTEMPTS (auth=$AUTH_MODE)"
+            echo "🚀 Firebase distribution attempt $ATTEMPT/$MAX_ATTEMPTS (auth=$DISTRIBUTION_AUTH_MODE)"
 
-            DIST_CMD=("${BASE_CMD[@]}")
-            if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
-              DIST_CMD+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
-            elif [ -n "$TESTERS" ]; then
-              DIST_CMD+=(--testers "$TESTERS")
-            elif [ -n "$DIST_GROUPS" ]; then
-              DIST_CMD+=(--groups "$DIST_GROUPS")
-            fi
-
-            if DIST_OUTPUT="$("${DIST_CMD[@]}" 2>&1)"; then
+            if DIST_OUTPUT="$(run_distribution "$DISTRIBUTION_AUTH_MODE")"; then
               printf '%s\n' "$DIST_OUTPUT"
               SUCCESS=true
               echo "✅ Firebase distribution successful on attempt $ATTEMPT"
@@ -467,9 +555,24 @@ jobs:
                 echo "binary_download_url=$BINARY_DOWNLOAD_URL"
                 echo "testers=$TESTERS"
                 echo "groups=$DIST_GROUPS"
+                echo "required_tester=$REQUIRED_TESTER"
+                echo "auth_mode=$DISTRIBUTION_AUTH_MODE"
               } >> "$GITHUB_OUTPUT"
             else
               printf '%s\n' "$DIST_OUTPUT"
+
+              if [ "$DISTRIBUTION_AUTH_MODE" = "firebase_service_account" ] && [ "$FALLBACK_TOKEN_AVAILABLE" = "true" ] && printf '%s' "$DIST_OUTPUT" | grep -q 'HTTP Error: 403'; then
+                echo "⚠️ FIREBASE_SERVICE_ACCOUNT_JSON can read the project but cannot upload releases (HTTP 403)."
+                echo "⚠️ Falling back to FIREBASE_TOKEN for this run."
+                echo "⚠️ Grant the service account Firebase App Distribution Admin to restore first-class CI auth."
+                DISTRIBUTION_AUTH_MODE="ci_token"
+                ATTEMPT=1
+                continue
+              fi
+
+              if [ "$DISTRIBUTION_AUTH_MODE" = "google_play_service_account" ] && printf '%s' "$DIST_OUTPUT" | grep -q 'HTTP Error: 403'; then
+                echo "❌ GOOGLE_PLAY_JSON_KEY does not have Firebase App Distribution upload permission. Set FIREBASE_SERVICE_ACCOUNT_JSON or use FIREBASE_TOKEN."
+              fi
               echo "❌ Attempt $ATTEMPT failed"
               if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
                 echo "❌ All distribution attempts failed"
@@ -482,30 +585,18 @@ jobs:
 
       - name: Verify Firebase distribution actually worked
         env:
-          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_TESTERS_SECRET: ${{ secrets.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
-          FIREBASE_INTERNAL_GROUPS_SECRET: ${{ secrets.FIREBASE_INTERNAL_GROUPS }}
-          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
-          FIREBASE_REQUIRED_TESTER_EMAIL_SECRET: ${{ secrets.FIREBASE_REQUIRED_TESTER_EMAIL }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           FIREBASE_CONSOLE_URL: ${{ steps.firebase_distribute.outputs.firebase_console_url }}
           TESTING_URL: ${{ steps.firebase_distribute.outputs.testing_url }}
           BINARY_DOWNLOAD_URL: ${{ steps.firebase_distribute.outputs.binary_download_url }}
+          ACTUAL_TESTERS: ${{ steps.firebase_distribute.outputs.testers }}
+          ACTUAL_GROUPS: ${{ steps.firebase_distribute.outputs.groups }}
+          REQUIRED_TESTER: ${{ steps.firebase_distribute.outputs.required_tester }}
+          FIREBASE_AUTH_MODE: ${{ steps.firebase_distribute.outputs.auth_mode }}
         run: |
           set -euo pipefail
 
           echo "🔍 Verifying Firebase distribution delivery"
-
-          first_present() {
-            local value
-            for value in "$@"; do
-              if [ -n "${value//[[:space:]]/}" ]; then
-                printf '%s' "$value"
-                return 0
-              fi
-            done
-            return 1
-          }
 
           normalize_csv() {
             printf '%s' "${1:-}" \
@@ -513,17 +604,25 @@ jobs:
               | sed -E 's/[[:space:]]*,[[:space:]]*/,/g; s/^[,[:space:]]+//; s/[,[:space:]]+$//; s/,+/,/g'
           }
 
+          firebase_json() {
+            if [ "${FIREBASE_AUTH_MODE:-}" = "ci_token" ]; then
+              firebase --json --non-interactive "$@" --token "$FIREBASE_TOKEN"
+            else
+              firebase --json --non-interactive "$@"
+            fi
+          }
+
           if [ -z "${FIREBASE_CONSOLE_URL:-}" ] || [ -z "${TESTING_URL:-}" ]; then
             echo "❌ Missing Firebase release proof URLs from distribution step"
             exit 1
           fi
 
-          TESTERS_JSON="$(firebase --json --non-interactive appdistribution:testers:list -P openclaw-console-mobile)"
-          GROUPS_JSON="$(firebase --json --non-interactive appdistribution:groups:list -P openclaw-console-mobile)"
+          TESTERS_JSON="$(firebase_json appdistribution:testers:list -P openclaw-console-mobile)"
+          GROUPS_JSON="$(firebase_json appdistribution:groups:list -P openclaw-console-mobile)"
           TESTER_COUNT="$(printf '%s' "$TESTERS_JSON" | jq '.result.testers | length // 0')"
-          TARGET_TESTERS="$(normalize_csv "$(first_present "${FIREBASE_INTERNAL_TESTERS:-}" "${FIREBASE_INTERNAL_TESTERS_SECRET:-}" || true)")"
-          TARGET_GROUPS="$(normalize_csv "$(first_present "${FIREBASE_INTERNAL_GROUPS:-}" "${FIREBASE_INTERNAL_GROUPS_SECRET:-}" || true)")"
-          REQUIRED_TESTER="$(normalize_csv "$(first_present "${FIREBASE_REQUIRED_TESTER_EMAIL:-}" "${FIREBASE_REQUIRED_TESTER_EMAIL_SECRET:-}" || true)")"
+          TARGET_TESTERS="$(normalize_csv "${ACTUAL_TESTERS:-}")"
+          TARGET_GROUPS="$(normalize_csv "${ACTUAL_GROUPS:-}")"
+          REQUIRED_TESTER="$(normalize_csv "${REQUIRED_TESTER:-}")"
 
           if [ -n "$REQUIRED_TESTER" ]; then
             case ",$TARGET_TESTERS," in
@@ -568,7 +667,7 @@ jobs:
             REQUIRED_IN_GROUP=false
             IFS=',' read -r -a TARGET_GROUP_ARRAY <<< "$TARGET_GROUPS"
             for group_alias in "${TARGET_GROUP_ARRAY[@]}"; do
-              GROUP_TESTERS_JSON="$(firebase --json --non-interactive appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
+              GROUP_TESTERS_JSON="$(firebase_json appdistribution:testers:list "$group_alias" -P openclaw-console-mobile)"
               if printf '%s' "$GROUP_TESTERS_JSON" | jq -e --arg email "$REQUIRED_TESTER" '.result.testers[]? | select((.name | split("/") | last) == $email)' > /dev/null; then
                 REQUIRED_IN_GROUP=true
                 break
@@ -586,6 +685,7 @@ jobs:
           if [ -n "${BINARY_DOWNLOAD_URL:-}" ]; then
             echo "🔗 Firebase binary URL: $BINARY_DOWNLOAD_URL"
           fi
+          echo "🔐 Firebase auth mode used for distribution: ${FIREBASE_AUTH_MODE:-unknown}"
 
           echo "✅ Firebase App Distribution verification complete"
 

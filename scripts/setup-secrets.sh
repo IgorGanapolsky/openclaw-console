@@ -36,6 +36,13 @@ gh auth status >/dev/null 2>&1 || { echo -e "${RED}Error: GitHub CLI not authent
 
 SECRETS_SET=0
 
+set_secret_authoritative() {
+    local name="$1"
+    local value="$2"
+    printf '%s' "$value" | gh secret set "$name" --repo="$REPO"
+    gh variable delete "$name" --repo="$REPO" >/dev/null 2>&1 || true
+}
+
 # ──────────────────────────────────
 # 1. iOS Signing Certificate (.p12)
 # ──────────────────────────────────
@@ -115,30 +122,52 @@ fi
 # ──────────────────────────────────
 echo ""
 echo -e "${YELLOW}Step 4/7: Firebase Configuration${NC}"
+echo "Preferred auth: FIREBASE_SERVICE_ACCOUNT_JSON with Firebase App Distribution Admin."
+read -p "Path to Firebase service account JSON (or 'skip'): " FIREBASE_SA_PATH
+if [ "${FIREBASE_SA_PATH:-skip}" != "skip" ] && [ -f "$FIREBASE_SA_PATH" ]; then
+    gh secret set FIREBASE_SERVICE_ACCOUNT_JSON --repo="$REPO" < "$FIREBASE_SA_PATH"
+    echo -e "${GREEN}  ✓ FIREBASE_SERVICE_ACCOUNT_JSON set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+else
+    echo "  Skipped Firebase service account JSON"
+fi
 
-if command -v firebase >/dev/null 2>&1; then
-    echo "Generating Firebase CI token (a browser window will open)..."
-    FIREBASE_TOKEN=$(firebase login:ci 2>/dev/null | grep "1//" || true)
-    if [ -n "$FIREBASE_TOKEN" ]; then
-        echo "$FIREBASE_TOKEN" | gh secret set FIREBASE_TOKEN --repo="$REPO"
-        echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
-        SECRETS_SET=$((SECRETS_SET+1))
+read -p "Path to Google Play service account JSON fallback (or 'skip'): " GOOGLE_PLAY_JSON_PATH
+if [ "${GOOGLE_PLAY_JSON_PATH:-skip}" != "skip" ] && [ -f "$GOOGLE_PLAY_JSON_PATH" ]; then
+    gh secret set GOOGLE_PLAY_JSON_KEY --repo="$REPO" < "$GOOGLE_PLAY_JSON_PATH"
+    echo -e "${GREEN}  ✓ GOOGLE_PLAY_JSON_KEY set${NC}"
+    SECRETS_SET=$((SECRETS_SET+1))
+else
+    echo "  Skipped Google Play service account fallback"
+fi
+
+echo "Optional fallback: FIREBASE_TOKEN (deprecated, but useful while service-account upload permissions are being fixed)."
+read -p "Generate/set Firebase CI token fallback too? (y/N): " SET_FIREBASE_TOKEN
+if [[ "${SET_FIREBASE_TOKEN:-N}" =~ ^[Yy]$ ]]; then
+    if command -v firebase >/dev/null 2>&1; then
+        echo "Generating Firebase CI token (a browser window may open)..."
+        FIREBASE_TOKEN=$(firebase login:ci 2>/dev/null | grep "1//" || true)
+        if [ -n "$FIREBASE_TOKEN" ]; then
+            set_secret_authoritative FIREBASE_TOKEN "$FIREBASE_TOKEN"
+            echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
+            SECRETS_SET=$((SECRETS_SET+1))
+        else
+            echo "  Could not capture token automatically. Paste it manually below."
+            read -p "Firebase CI token (or 'skip'): " FIREBASE_TOKEN_MANUAL
+            if [ "${FIREBASE_TOKEN_MANUAL:-skip}" != "skip" ]; then
+                set_secret_authoritative FIREBASE_TOKEN "$FIREBASE_TOKEN_MANUAL"
+                echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
+                SECRETS_SET=$((SECRETS_SET+1))
+            fi
+        fi
     else
-        echo "  Could not capture token. Run 'firebase login:ci' manually and paste below."
+        echo "Firebase CLI not found. Install with: npm install -g firebase-tools"
         read -p "Firebase CI token (or 'skip'): " FIREBASE_TOKEN_MANUAL
         if [ "${FIREBASE_TOKEN_MANUAL:-skip}" != "skip" ]; then
-            echo "$FIREBASE_TOKEN_MANUAL" | gh secret set FIREBASE_TOKEN --repo="$REPO"
+            set_secret_authoritative FIREBASE_TOKEN "$FIREBASE_TOKEN_MANUAL"
             echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
             SECRETS_SET=$((SECRETS_SET+1))
         fi
-    fi
-else
-    echo "Firebase CLI not found. Install with: npm install -g firebase-tools"
-    read -p "Firebase CI token (or 'skip'): " FIREBASE_TOKEN_MANUAL
-    if [ "${FIREBASE_TOKEN_MANUAL:-skip}" != "skip" ]; then
-        echo "$FIREBASE_TOKEN_MANUAL" | gh secret set FIREBASE_TOKEN --repo="$REPO"
-        echo -e "${GREEN}  ✓ FIREBASE_TOKEN set${NC}"
-        SECRETS_SET=$((SECRETS_SET+1))
     fi
 fi
 
@@ -146,14 +175,14 @@ echo ""
 echo "Find your Firebase App IDs at: https://console.firebase.google.com → Project Settings → Your Apps"
 read -p "Firebase iOS App ID (or 'skip'): " FB_IOS
 if [ "${FB_IOS:-skip}" != "skip" ] && [ -n "$FB_IOS" ]; then
-    echo "$FB_IOS" | gh secret set FIREBASE_IOS_APP_ID --repo="$REPO"
+    set_secret_authoritative FIREBASE_IOS_APP_ID "$FB_IOS"
     echo -e "${GREEN}  ✓ FIREBASE_IOS_APP_ID set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 read -p "Firebase Android App ID (or 'skip'): " FB_ANDROID
 if [ "${FB_ANDROID:-skip}" != "skip" ] && [ -n "$FB_ANDROID" ]; then
-    echo "$FB_ANDROID" | gh secret set FIREBASE_ANDROID_APP_ID --repo="$REPO"
+    set_secret_authoritative FIREBASE_ANDROID_APP_ID "$FB_ANDROID"
     echo -e "${GREEN}  ✓ FIREBASE_ANDROID_APP_ID set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
@@ -161,21 +190,21 @@ fi
 echo ""
 read -p "Firebase internal tester emails (comma-separated, or 'skip'): " FB_TESTERS
 if [ "${FB_TESTERS:-skip}" != "skip" ] && [ -n "$FB_TESTERS" ]; then
-    echo "$FB_TESTERS" | gh secret set FIREBASE_INTERNAL_TESTERS --repo="$REPO"
+    set_secret_authoritative FIREBASE_INTERNAL_TESTERS "$FB_TESTERS"
     echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_TESTERS set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 read -p "Firebase required tester email for proof (or 'skip'): " FB_REQUIRED_TESTER
 if [ "${FB_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$FB_REQUIRED_TESTER" ]; then
-    echo "$FB_REQUIRED_TESTER" | gh secret set FIREBASE_REQUIRED_TESTER_EMAIL --repo="$REPO"
+    set_secret_authoritative FIREBASE_REQUIRED_TESTER_EMAIL "$FB_REQUIRED_TESTER"
     echo -e "${GREEN}  ✓ FIREBASE_REQUIRED_TESTER_EMAIL set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 read -p "Firebase internal groups (comma-separated, or 'skip'): " FB_GROUPS
 if [ "${FB_GROUPS:-skip}" != "skip" ] && [ -n "$FB_GROUPS" ]; then
-    echo "$FB_GROUPS" | gh secret set FIREBASE_INTERNAL_GROUPS --repo="$REPO"
+    set_secret_authoritative FIREBASE_INTERNAL_GROUPS "$FB_GROUPS"
     echo -e "${GREEN}  ✓ FIREBASE_INTERNAL_GROUPS set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
@@ -183,14 +212,14 @@ fi
 echo ""
 read -p "TestFlight internal beta groups (comma-separated, or 'skip'): " TF_GROUPS
 if [ "${TF_GROUPS:-skip}" != "skip" ] && [ -n "$TF_GROUPS" ]; then
-    echo "$TF_GROUPS" | gh secret set TESTFLIGHT_GROUPS --repo="$REPO"
+    set_secret_authoritative TESTFLIGHT_GROUPS "$TF_GROUPS"
     echo -e "${GREEN}  ✓ TESTFLIGHT_GROUPS set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
 
 read -p "TestFlight required internal tester email for proof (or 'skip'): " TF_REQUIRED_TESTER
 if [ "${TF_REQUIRED_TESTER:-skip}" != "skip" ] && [ -n "$TF_REQUIRED_TESTER" ]; then
-    echo "$TF_REQUIRED_TESTER" | gh secret set TESTFLIGHT_REQUIRED_TESTER_EMAIL --repo="$REPO"
+    set_secret_authoritative TESTFLIGHT_REQUIRED_TESTER_EMAIL "$TF_REQUIRED_TESTER"
     echo -e "${GREEN}  ✓ TESTFLIGHT_REQUIRED_TESTER_EMAIL set${NC}"
     SECRETS_SET=$((SECRETS_SET+1))
 fi
