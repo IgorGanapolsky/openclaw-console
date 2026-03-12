@@ -26,7 +26,8 @@ targets:
       - path: OpenClawConsole
         excludes:
           - Info.plist
-          - Assets.xcassets
+    resources:
+      - path: OpenClawConsole/Assets.xcassets
     dependencies:
       - package: RevenueCat
     settings:
