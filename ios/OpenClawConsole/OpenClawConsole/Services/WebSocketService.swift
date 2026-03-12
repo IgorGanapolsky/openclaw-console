@@ -141,82 +141,67 @@ final class WebSocketService: NSObject {
     private func parseMessage(_ text: String) {
         guard let data = text.data(using: .utf8) else { return }
 
-        // Decode type field first
         guard let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let type = raw["type"] as? String else { return }
 
-        let payloadData: Data
-        if let payload = raw["payload"] {
-            payloadData = (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()
-        } else {
-            payloadData = Data()
-        }
-
         guard let eventType = InboundEventType(rawValue: type) else {
-            eventSubject.send(.unknown(type))
-            lastEvent = .unknown(type)
+            publish(event: .unknown(type))
             return
         }
 
-        var event: InboundEvent?
+        let payloadData = payloadData(from: raw["payload"])
+        guard let event = decodeInboundEvent(eventType, payloadData: payloadData) else { return }
+        publish(event: event)
+    }
 
+    private func payloadData(from payload: Any?) -> Data {
+        guard let payload else { return Data() }
+        return (try? JSONSerialization.data(withJSONObject: payload)) ?? Data()
+    }
+
+    private func publish(event: InboundEvent) {
+        eventSubject.send(event)
+        lastEvent = event
+    }
+
+    private func decodeInboundEvent(_ eventType: InboundEventType, payloadData: Data) -> InboundEvent? {
         switch eventType {
         case .agentUpdate:
-            if let obj = try? decoder.decode(AgentStatusUpdate.self, from: payloadData) {
-                event = .agentUpdate(obj)
-            }
+            decode(payloadData, as: AgentStatusUpdate.self, map: InboundEvent.agentUpdate)
         case .taskUpdate:
-            if let obj = try? decoder.decode(OCTaskUpdate.self, from: payloadData) {
-                event = .taskUpdate(obj)
-            }
+            decode(payloadData, as: OCTaskUpdate.self, map: InboundEvent.taskUpdate)
         case .taskStep:
-            if let obj = try? decoder.decode(TaskStep.self, from: payloadData) {
-                event = .taskStep(obj)
-            }
+            decode(payloadData, as: TaskStep.self, map: InboundEvent.taskStep)
         case .incidentNew:
-            if let obj = try? decoder.decode(Incident.self, from: payloadData) {
-                event = .incidentNew(obj)
-            }
+            decode(payloadData, as: Incident.self, map: InboundEvent.incidentNew)
         case .incidentUpdate:
-            if let obj = try? decoder.decode(IncidentUpdate.self, from: payloadData) {
-                event = .incidentUpdate(obj)
-            }
+            decode(payloadData, as: IncidentUpdate.self, map: InboundEvent.incidentUpdate)
         case .approvalRequest:
-            if let obj = try? decoder.decode(ApprovalRequest.self, from: payloadData) {
-                event = .approvalRequest(obj)
-            }
+            decode(payloadData, as: ApprovalRequest.self, map: InboundEvent.approvalRequest)
         case .chatResponse:
-            if let obj = try? decoder.decode(ChatMessage.self, from: payloadData) {
-                event = .chatResponse(obj)
-            }
+            decode(payloadData, as: ChatMessage.self, map: InboundEvent.chatResponse)
         case .bridgeSessionNew:
-            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
-                event = .bridgeSessionNew(obj)
-            }
+            decode(payloadData, as: BridgeSession.self, map: InboundEvent.bridgeSessionNew)
         case .bridgeSessionUpdate:
-            if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
-                event = .bridgeSessionUpdate(obj)
-            }
+            decode(payloadData, as: BridgeSession.self, map: InboundEvent.bridgeSessionUpdate)
         case .recurringTaskUpdated:
-            if let obj = try? decoder.decode(RecurringTask.self, from: payloadData) {
-                event = .recurringTaskUpdated(obj)
-            }
+            decode(payloadData, as: RecurringTask.self, map: InboundEvent.recurringTaskUpdated)
+        case .gitStateChanged:
+            decode(payloadData, as: GitStateUpdatePayload.self) { .gitStateChanged($0.agentId, $0.gitState) }
         case .connected:
-            if let obj = try? decoder.decode(ConnectedPayload.self, from: payloadData) {
-                event = .connected(sessionId: obj.sessionId, gatewayVersion: obj.gatewayVersion)
-                reconnectAttempt = 0
-                connectionState = .connected(sessionId: obj.sessionId)
+            return decode(payloadData, as: ConnectedPayload.self) { [weak self] payload in
+                self?.reconnectAttempt = 0
+                self?.connectionState = .connected(sessionId: payload.sessionId)
+                return .connected(sessionId: payload.sessionId, gatewayVersion: payload.gatewayVersion)
             }
         case .error:
-            if let obj = try? decoder.decode(ErrorPayload.self, from: payloadData) {
-                event = .error(code: obj.code, message: obj.message)
-            }
+            decode(payloadData, as: ErrorPayload.self) { .error(code: $0.code, message: $0.message) }
         }
+    }
 
-        if let event {
-            eventSubject.send(event)
-            lastEvent = event
-        }
+    private func decode<T: Decodable>(_ payloadData: Data, as type: T.Type, map: (T) -> InboundEvent) -> InboundEvent? {
+        guard let payload = try? decoder.decode(type, from: payloadData) else { return nil }
+        return map(payload)
     }
 
     // MARK: - Send

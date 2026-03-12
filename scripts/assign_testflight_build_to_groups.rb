@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require "base64"
-require "cgi"
 require "json"
 require "net/http"
 require "openssl"
@@ -42,6 +41,7 @@ def build_jwt
   key_id = first_present_env("APPSTORE_KEY_ID") || fail_with("APPSTORE_KEY_ID is required")
   issuer_id = first_present_env("APPSTORE_ISSUER_ID") || fail_with("APPSTORE_ISSUER_ID is required")
   private_key = first_present_env("APPSTORE_PRIVATE_KEY") || fail_with("APPSTORE_PRIVATE_KEY is required")
+  private_key = Base64.decode64(private_key) unless private_key.include?("-----BEGIN PRIVATE KEY-----")
 
   header = { alg: "ES256", kid: key_id, typ: "JWT" }
   now = Time.now.to_i

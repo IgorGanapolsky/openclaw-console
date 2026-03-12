@@ -114,7 +114,7 @@ enum InboundEventType: String {
     case bridgeSessionNew = "bridge_session_new"
     case bridgeSessionUpdate = "bridge_session_update"
     case recurringTaskUpdated = "recurring_task_updated"
-    case gitStateChanged = "git_state_changed"
+    case gitStateChanged = "git_state_update"
     case connected
     case error
 }
@@ -196,15 +196,17 @@ struct BridgeSession: Codable, Identifiable {
 
 // MARK: - Git State
 
-struct GitState: Codable {
-    let branch: String
-    let status: String
-    let hasChanges: Bool
+struct GitStateUpdatePayload: Codable {
+    let agentId: String
+    let gitState: GitState
+    let changes: [String]
+    let requiresAction: Bool
 
     enum CodingKeys: String, CodingKey {
-        case branch
-        case status
-        case hasChanges = "has_changes"
+        case agentId = "agent_id"
+        case gitState = "git_state"
+        case changes
+        case requiresAction = "requires_action"
     }
 }
 // MARK: - Connected Payload

@@ -14,11 +14,17 @@ settings:
     CODE_SIGN_STYLE: Automatic
     GENERATE_INFOPLIST_FILE: NO
     TARGETED_DEVICE_FAMILY: "1,2"
-packages: {}
+packages:
+  RevenueCat:
+    url: https://github.com/RevenueCat/purchases-ios.git
+    from: 4.43.2
 targets:
   OpenClawConsole:
     type: application
     platform: iOS
+    dependencies:
+      - package: RevenueCat
+        product: RevenueCat
     sources:
       - path: OpenClawConsole
         excludes:
