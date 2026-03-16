@@ -18,7 +18,7 @@ jobs:
       statuses: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Claude Code Review
         id: claude_review
