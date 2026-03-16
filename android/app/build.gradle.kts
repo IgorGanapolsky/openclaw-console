@@ -91,8 +91,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
 
     // OkHttp (WebSocket + HTTP)
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.3.2")
 
     // Kotlinx Serialization (1.8.1 is the latest version compatible with Kotlin 2.1.x)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
