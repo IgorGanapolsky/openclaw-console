@@ -17,7 +17,7 @@ jobs:
         working-directory: openclaw-skills
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v6

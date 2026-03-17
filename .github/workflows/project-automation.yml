@@ -20,7 +20,7 @@ jobs:
       PROJECTS_V2_OWNER: IgorGanapolsky
       PROJECTS_V2_NUMBER: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
