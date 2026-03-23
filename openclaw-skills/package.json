@@ -15,7 +15,7 @@
   "dependencies": {
     "express": "^5.2.1",
     "uuid": "^13.0.0",
-    "ws": "^8.16.0"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
