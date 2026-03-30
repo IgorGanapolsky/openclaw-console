@@ -228,7 +228,7 @@ jobs:
           node-version: "20"
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Create google-services.json
         working-directory: android
