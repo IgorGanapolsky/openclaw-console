@@ -23,7 +23,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
     "@types/ws": "^8.5.10",
-    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.57.0",
     "eslint": "^10.2.0",
     "jest": "^30.3.0",
