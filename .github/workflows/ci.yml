@@ -128,8 +128,7 @@ jobs:
         working-directory: ios/OpenClawConsole
         run: |
           xcodebuild -resolvePackageDependencies \
-            -scheme OpenClawConsole \
-            -clonedSourcePackagesDirPath .build/spm-cache
+            -scheme OpenClawConsole
 
       - name: Build for simulator
         working-directory: ios/OpenClawConsole
@@ -138,7 +137,7 @@ jobs:
             -scheme OpenClawConsole \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
             -configuration Debug \
-            -clonedSourcePackagesDirPath .build/spm-cache \
+            -skipPackagePluginValidation \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
