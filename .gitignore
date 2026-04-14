@@ -65,10 +65,21 @@ Thumbs.db
 .build/
 .kotlin/
 dist-tests/
+app-release.apk
+
 # Temp files and secrets
 firebase-debug.log
 .env.*
 *.png
 
+# Large binaries — never track
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+
 # ralphex progress logs
 .ralphex/progress/
+
+# Worktrees
+.claude/worktrees/

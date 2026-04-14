@@ -1,0 +1,45 @@
+name: Autonomous Release Automerge
+
+on:
+  pull_request_target:
+    types: [labeled]
+    branches: [develop, main]
+
+jobs:
+  enable-automerge:
+    name: enable-automerge
+    if: contains(github.event.label.name, 'pr-state:ci_green')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const branch = pr.head.ref;
+
+            // Only auto-merge release and hotfix branches
+            const isRelease = branch.startsWith("release/") || branch.startsWith("hotfix/");
+            if (!isRelease) {
+              core.info(`Skipping auto-merge for non-release branch: ${branch}`);
+              return;
+            }
+
+            try {
+              await github.graphql(`
+                mutation($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: SQUASH
+                  }) {
+                    pullRequest { number }
+                  }
+                }
+              `, { pullRequestId: pr.node_id });
+
+              core.info(`Auto-merge enabled for release PR #${pr.number}`);
+            } catch (error) {
+              core.warning(`Failed to enable auto-merge: ${error.message}`);
+            }

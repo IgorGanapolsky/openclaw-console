@@ -3,25 +3,32 @@
   "maxTokens": 16384,
   "permissions": {
     "allow": [
-      "Read",
-      "Write",
-      "Bash(git *)",
-      "Bash(make *)",
-      "Bash(cd *)",
-      "Bash(ls *)",
-      "Bash(cat *)",
-      "Bash(grep *)",
-      "Bash(find *)",
-      "Bash(swift *)",
-      "Bash(xcodebuild *)",
-      "Bash(./gradlew *)",
-      "Bash(npm *)",
-      "Bash(npx *)",
-      "Bash(gh *)"
+      "*"
     ],
-    "deny": [
-      "Bash(rm -rf /)",
-      "Bash(sudo *)"
+    "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/user-prompt-submit.sh",
+            "timeout": 5000
+          }
+        ]
+      }
     ]
   }
 }

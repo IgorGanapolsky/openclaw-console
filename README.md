@@ -1,5 +1,12 @@
 # OpenClaw Work Console
 
+[![CI](https://github.com/IgorGanapolsky/openclaw-console/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/IgorGanapolsky/openclaw-console/actions/workflows/ci.yml)
+[![Security](https://github.com/IgorGanapolsky/openclaw-console/actions/workflows/security.yml/badge.svg)](https://github.com/IgorGanapolsky/openclaw-console/actions/workflows/security.yml)
+[![Store Listing Parity](https://github.com/IgorGanapolsky/openclaw-console/actions/workflows/store-listing-parity.yml/badge.svg)](https://github.com/IgorGanapolsky/openclaw-console/actions/workflows/store-listing-parity.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform: iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)](ios/)
+[![Platform: Android 8+](https://img.shields.io/badge/Android-8%2B-green)](android/)
+
 A focused mobile cockpit for monitoring and controlling [OpenClaw](https://github.com/openclaw) agents. Native iOS and Android apps with zero social-app dependencies.
 
 > **Not a chat app.** This is a single-purpose work console for developers, DevOps engineers, indie hackers, and trading/infra builders who self-host OpenClaw and want to supervise agents from their phone.
@@ -16,11 +23,11 @@ Deliver the definitive native mobile console for [OpenClaw](https://github.com/o
 
 ## North Star Metric
 
-**Daily Active Approvers** — the number of unique users who approve at least one agent action per day via the console. This metric captures real operational trust: users are not just viewing dashboards, they are actively governing their infrastructure through the app. Every feature we build should move this number up.
+**Daily Active Approvers (DAA)** — unique users who approve at least one agent action per day. Every feature should move this number up.
 
 ---
 
-## What It Does
+## Features
 
 | Feature | Description |
 |---------|-------------|
@@ -69,74 +76,91 @@ See [docs/architecture.md](docs/architecture.md) for the full protocol spec and 
 
 ```
 openclaw-console/
-├── ios/                          # iOS app (Swift/SwiftUI)
+├── ios/                          # iOS app (Swift 6 / SwiftUI)
 │   └── OpenClawConsole/
-│       └── OpenClawConsole/
-│           ├── Models/           # Data models (Codable)
-│           ├── Services/         # Keychain, WebSocket, API, Biometric
-│           ├── ViewModels/       # @Observable view models
-│           └── Views/            # SwiftUI views
-├── android/                      # Android app (Kotlin/Compose)
+│       ├── Sources/
+│       │   ├── Models/           # Data models (Codable)
+│       │   ├── Services/         # Keychain, WebSocket, API, Biometric
+│       │   ├── ViewModels/       # @Observable view models
+│       │   └── Views/            # SwiftUI views
+│       └── fastlane/             # iOS store metadata & delivery
+├── android/                      # Android app (Kotlin / Compose)
 │   └── app/src/main/java/com/openclaw/console/
 │       ├── data/                 # Models, network, repositories
 │       ├── service/              # Secure storage, biometric
 │       └── ui/                   # Compose screens, theme, nav
-├── openclaw-skills/              # Server-side TypeScript skills
+│   └── fastlane/                 # Android store metadata & delivery
+├── openclaw-skills/              # Server-side TypeScript skills gateway
 │   ├── src/
 │   │   ├── gateway/              # Express + WebSocket server
 │   │   ├── skills/               # CI, incidents, approvals, trading
-│   │   ├── config/               # Default config, agents, seed data
 │   │   └── types/                # Shared TypeScript types
 │   └── tests/                    # Jest tests
-├── docs/                         # Documentation
-│   ├── architecture.md           # Full architecture and protocol
-│   ├── protocol.md               # WebSocket/HTTP message contracts
-│   └── openclaw-setup.md         # Installation guide
-└── .github/workflows/            # CI for iOS, Android, and skills
+├── marketing/                    # Store growth, keywords, campaigns
+├── scripts/                      # Build, release, and CI scripts
+├── docs/                         # Architecture, protocol, setup guides
+├── .github/workflows/            # CI/CD for iOS, Android, skills, store
+└── .claude/                      # Claude Code rules, skills, hooks
 ```
 
 ## Quickstart
 
-### 1. Set Up the OpenClaw Skills (Server Side)
+### Prerequisites
+
+- Xcode 15+ (iOS)
+- JDK 17 + Android Studio (Android)
+- Node.js 20+ (skills gateway)
+
+### 1. Skills Gateway (Server)
 
 ```bash
 cd openclaw-skills
 npm install
 npm run dev
+# Gateway starts on http://localhost:18789
 ```
 
-This starts the gateway on `http://localhost:18789` with seed data and a dev token. See [docs/openclaw-setup.md](docs/openclaw-setup.md) for production setup.
-
-### 2. Build the iOS App
+### 2. iOS App
 
 ```bash
 cd ios/OpenClawConsole
 open OpenClawConsole.xcodeproj
-# Or from command line:
-xcodebuild build -scheme OpenClawConsole -destination 'platform=iOS Simulator,name=iPhone 15'
+# Or CLI:
+xcodebuild build -scheme OpenClawConsole \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
-In the app, go to Settings → Add Gateway → enter your gateway URL and token.
-
-### 3. Build the Android App
+### 3. Android App
 
 ```bash
 cd android
 ./gradlew assembleDebug
-# Install on device/emulator:
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-In the app, go to Settings → Add Gateway → enter your gateway URL and token.
+### 4. Connect
+
+In either app: Settings -> Add Gateway -> enter your gateway URL and token.
+
+### Using Make
+
+```bash
+make setup-dev         # Install tools and dependencies
+make verify            # Run all tests + builds
+make run-ios-sim       # Launch on iOS Simulator
+make run-android-emulator  # Launch on Android emulator
+make maestro-ios       # Run Maestro E2E tests (iOS)
+make maestro-android   # Run Maestro E2E tests (Android)
+make clean-all         # Clean all build artifacts
+```
 
 ## Configuration
 
 ### Gateway Token
 
-On first run, the skills server generates a dev token printed to console. For production:
-
 ```bash
-# Generate a new token
+# Dev token printed to console on first run
+# Production: generate a new token
 curl -X POST http://localhost:18789/api/tokens/generate \
   -H "Authorization: Bearer <ADMIN_TOKEN>"
 ```
@@ -153,21 +177,32 @@ curl -X POST http://localhost:18789/api/tokens/generate \
 
 ## Security
 
-- All connections should use TLS (HTTPS/WSS) in production
+- All connections use TLS (HTTPS/WSS) in production
 - Tokens stored securely: iOS Keychain / Android EncryptedSharedPreferences
 - Approval flow requires biometric (Face ID / fingerprint) verification
 - HTTP connections show a warning and require explicit opt-in
 - Designed for VPN use — configure your gateway behind Tailscale/WireGuard
 
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| iOS | Swift 5.9, SwiftUI, iOS 17+, URLSessionWebSocketTask |
-| Android | Kotlin 1.9, Jetpack Compose, Material 3, OkHttp WebSocket |
-| Server | TypeScript, Node.js, Express, ws library |
-| CI | GitHub Actions (Xcode, Gradle, Node) |
+| iOS | Swift 6, SwiftUI, iOS 17+, URLSessionWebSocketTask |
+| Android | Kotlin 2.x, Jetpack Compose, Material 3, Hilt, OkHttp WebSocket |
+| Server | TypeScript, Node.js 20, Express, ws library |
+| CI/CD | GitHub Actions (Xcode, Gradle, Node), Fastlane |
+| E2E | Maestro |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Privacy
+
+See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
