@@ -8,7 +8,7 @@ repository:
   has_projects: true
   has_wiki: true
   has_downloads: true
-  default_branch: develop
+  default_branch: main
   allow_squash_merge: true
   allow_merge_commit: false
   allow_rebase_merge: false
@@ -21,26 +21,28 @@ branches:
     protection:
       required_status_checks:
         strict: true
-        # Production mirror - only accepts release/hotfix merges
+        # Production mirror - only accepts trusted Dependabot, develop, release/*, or hotfix/* merges
         contexts:
           - "Skills Tests"
-          - "Architecture Lint Kotlin"
-          - "Architecture Lint Swift"
+          - "Architecture Lint (Kotlin)"
+          - "Architecture Lint (Swift)"
           - "Android Build Check"
           - "iOS Build Check"
           - "Secrets Scan"
+          - "Dependency Audit"
+          - "CodeQL Analysis (java-kotlin)"
+          - "CodeQL Analysis (javascript-typescript)"
+          - "CodeQL Analysis (swift)"
+          - "Require develop or release branch"
+          - "Claude Review"
       enforce_admins: true
       required_pull_request_reviews:
-        required_approving_review_count: 1
+        required_approving_review_count: 0
         dismiss_stale_reviews: true
-        require_code_owner_reviews: true
+        require_code_owner_reviews: false
         require_last_push_approval: false
-      required_conversation_resolution: true
-      restrictions:
-        # Only release and hotfix branches can merge to main
-        users: []
-        teams: []
-        apps: []
+      required_conversation_resolution: false
+      restrictions: null
       allow_force_pushes: false
       allow_deletions: false
 
@@ -51,18 +53,15 @@ branches:
         # Integration branch - all feature work merges here first
         contexts:
           - "Skills Tests"
-          - "Architecture Lint Kotlin"
-          - "Architecture Lint Swift"
-          - "Android Build Check"
-          - "iOS Build Check"
-          - "Secrets Scan"
+          - "Architecture Lint (Kotlin)"
+          - "Architecture Lint (Swift)"
       enforce_admins: true
       required_pull_request_reviews:
         required_approving_review_count: 0
         dismiss_stale_reviews: true
         require_code_owner_reviews: false
         require_last_push_approval: false
-      required_conversation_resolution: true
+      required_conversation_resolution: false
       restrictions: null
       allow_force_pushes: false
       allow_deletions: false

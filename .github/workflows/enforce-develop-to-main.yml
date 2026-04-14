@@ -12,22 +12,43 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      pull-requests: read
     steps:
+      - name: Detect trusted Dependabot PR
+        id: dependabot
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ "$HEAD_REF" == dependabot/* ]] && \
+             { [[ "$PR_AUTHOR" == "dependabot[bot]" ]] || [[ "$PR_AUTHOR" == "app/dependabot" ]]; }; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Validate source branch
         env:
           HEAD_REF: ${{ github.head_ref }}
+          DEPENDABOT_ALLOWED: ${{ steps.dependabot.outputs.allowed }}
         run: |
           echo "PR source branch: $HEAD_REF"
 
-          # Only develop, release/*, or hotfix/* branches can merge to main
+          # Only trusted Dependabot branches or the normal release flow may merge to main.
+          if [[ "$DEPENDABOT_ALLOWED" == "true" ]]; then
+            echo "Trusted Dependabot branch '$HEAD_REF' is allowed to merge into main."
+            exit 0
+          fi
+
           if [[ "$HEAD_REF" == "develop" ]] || \
              [[ "$HEAD_REF" == release/* ]] || \
              [[ "$HEAD_REF" == hotfix/* ]]; then
             echo "Branch '$HEAD_REF' is allowed to merge into main."
           else
-            echo "ERROR: Only develop, release/*, or hotfix/* branches can merge into main."
+            echo "ERROR: Only trusted Dependabot branches, develop, release/*, or hotfix/* branches can merge into main."
             echo "Got: '$HEAD_REF'"
             echo ""
+            echo "Workflow: dependabot/* -> PR -> main (trusted bot only)"
             echo "Workflow: develop -> PR -> main"
             echo "          release/* -> PR -> main"
             echo "          hotfix/* -> PR -> main"

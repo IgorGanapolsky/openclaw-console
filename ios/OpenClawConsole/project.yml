@@ -1,31 +1,25 @@
 name: OpenClawConsole
 options:
-  bundleIdPrefix: com.openclaw
   deploymentTarget:
     iOS: "17.0"
+  createIntermediateGroups: true
 settings:
   base:
-    PRODUCT_NAME: OpenClawConsole
-    PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.console
-    INFOPLIST_FILE: OpenClawConsole/Info.plist
     SWIFT_VERSION: "5.9"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
-    CODE_SIGN_STYLE: Automatic
-    GENERATE_INFOPLIST_FILE: NO
-    TARGETED_DEVICE_FAMILY: "1,2"
-packages: {}
+    PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.console
 targets:
   OpenClawConsole:
     type: application
     platform: iOS
+    deploymentTarget: "17.0"
     sources:
       - path: OpenClawConsole
-        excludes:
-          - Info.plist
     settings:
       base:
-        PRODUCT_MODULE_NAME: OpenClawConsole
-    scheme:
-      gatherCoverageData: false
-      testTargets: []
+        PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.console
+        INFOPLIST_FILE: OpenClawConsole/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: "NO"
