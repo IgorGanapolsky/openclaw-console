@@ -23,7 +23,7 @@ jobs:
       issues: write
     steps:
       - name: Reconcile labels, commit status, and incidents
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           REQUIRED_CHECKS_FROM_VAR: ${{ vars.PR_REQUIRED_CHECKS || '' }}
         with:
