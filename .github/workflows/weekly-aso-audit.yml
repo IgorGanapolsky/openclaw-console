@@ -1,0 +1,91 @@
+name: Weekly ASO Audit
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Every Monday 9am UTC
+  workflow_dispatch:
+
+jobs:
+  aso-audit:
+    name: ASO Metadata Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: iOS keyword length check (100 char limit)
+        run: |
+          KEYWORDS=$(cat ios/OpenClawConsole/fastlane/metadata/en-US/keywords.txt)
+          LEN=${#KEYWORDS}
+          echo "iOS keywords: $LEN/100 characters"
+          if [ "$LEN" -gt 100 ]; then
+            echo "::error::iOS keywords exceed 100 character limit ($LEN chars)"
+            exit 1
+          fi
+          if [ "$LEN" -lt 80 ]; then
+            echo "::warning::iOS keywords only $LEN chars — room for more keywords (limit 100)"
+          fi
+
+      - name: iOS subtitle length check (30 char limit)
+        run: |
+          SUBTITLE=$(cat ios/OpenClawConsole/fastlane/metadata/en-US/subtitle.txt)
+          LEN=${#SUBTITLE}
+          echo "iOS subtitle: $LEN/30 characters"
+          if [ "$LEN" -gt 30 ]; then
+            echo "::error::iOS subtitle exceeds 30 character limit ($LEN chars)"
+            exit 1
+          fi
+
+      - name: Android short description check (80 char limit)
+        run: |
+          DESC=$(cat android/fastlane/metadata/android/en-US/short_description.txt)
+          LEN=${#DESC}
+          echo "Android short description: $LEN/80 characters"
+          if [ "$LEN" -gt 80 ]; then
+            echo "::error::Android short description exceeds 80 character limit ($LEN chars)"
+            exit 1
+          fi
+
+      - name: Cross-platform name parity
+        run: |
+          ANDROID_TITLE=$(cat android/fastlane/metadata/android/en-US/title.txt)
+          IOS_NAME=$(cat ios/OpenClawConsole/fastlane/metadata/en-US/name.txt)
+          if [ "$ANDROID_TITLE" != "$IOS_NAME" ]; then
+            echo "::warning::App name mismatch — Android: '$ANDROID_TITLE' vs iOS: '$IOS_NAME'"
+          else
+            echo "App name parity: OK ($IOS_NAME)"
+          fi
+
+      - name: Keyword freshness check
+        run: |
+          STRATEGY="marketing/keywords/keyword-strategy.md"
+          if [ ! -f "$STRATEGY" ]; then
+            echo "::warning::No keyword strategy document found at $STRATEGY"
+            exit 0
+          fi
+          LAST_UPDATED=$(grep "Last updated:" "$STRATEGY" | head -1 | sed 's/Last updated: //')
+          echo "Keyword strategy last updated: $LAST_UPDATED"
+          # Check if older than 60 days
+          if [ -n "$LAST_UPDATED" ]; then
+            DAYS_AGO=$(( ($(date +%s) - $(date -d "$LAST_UPDATED" +%s 2>/dev/null || echo $(date +%s))) / 86400 ))
+            if [ "$DAYS_AGO" -gt 60 ] 2>/dev/null; then
+              echo "::warning::Keyword strategy is $DAYS_AGO days old — review recommended"
+            fi
+          fi
+
+      - name: Generate audit summary
+        run: |
+          echo "## ASO Audit Summary — $(date -u +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+
+          IOS_KW=$(cat ios/OpenClawConsole/fastlane/metadata/en-US/keywords.txt)
+          IOS_SUB=$(cat ios/OpenClawConsole/fastlane/metadata/en-US/subtitle.txt)
+          AND_SD=$(cat android/fastlane/metadata/android/en-US/short_description.txt)
+
+          echo "| iOS keywords | ${#IOS_KW}/100 chars |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS subtitle | ${#IOS_SUB}/30 chars |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android short desc | ${#AND_SD}/80 chars |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS keywords content | \`$IOS_KW\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS subtitle content | \`$IOS_SUB\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android short desc content | \`$AND_SD\` |" >> $GITHUB_STEP_SUMMARY
