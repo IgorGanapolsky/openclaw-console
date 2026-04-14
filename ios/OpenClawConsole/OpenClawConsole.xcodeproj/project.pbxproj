@@ -215,7 +215,7 @@
 				916B313AA330D8AB9896DBD9 /* GitRepositoryView.swift */,
 				3EA8C87A1D1CB0630CC36EE2 /* GitApprovalDetailView.swift */,
 			);
-			name = Git;
+			path = Git;
 			sourceTree = "<group>";
 		};
 		8DA992D7EDDFC96A9CEF51A9 /* Bridges */ = {
@@ -223,7 +223,7 @@
 			children = (
 				754FAE9E54F091902F14B761 /* BridgeListView.swift */,
 			);
-			name = Bridges;
+			path = Bridges;
 			sourceTree = "<group>";
 		};
 		A6267BD60FFBC7F3FC6C08AE /* Components */ = {
@@ -251,7 +251,7 @@
 			children = (
 				7EE9D2C7CDAA7190A7BFC68E /* LoopListView.swift */,
 			);
-			name = Loops;
+			path = Loops;
 			sourceTree = "<group>";
 		};
 		E6769E232CBDC15EDA6FD49C /* Tasks */ = {
@@ -305,6 +305,9 @@
 			dependencies = (
 			);
 			name = OpenClawConsole;
+			packageProductDependencies = (
+				68580805BBBBCB9FAE99A2EC /* RevenueCat */,
+			);
 			productName = OpenClawConsole;
 			productReference = DF1A595D54FA8D215174F303 /* OpenClawConsole.app */;
 			productType = "com.apple.product-type.application";
@@ -333,6 +336,9 @@
 			);
 			mainGroup = 386E84F76E8D76809ABB8DE2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2E26F0F02A51817D55CFC18A /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 400013C51CE1D6B56A9B4C2E /* Products */;
 			projectDirPath = "";
@@ -598,6 +604,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2E26F0F02A51817D55CFC18A /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		68580805BBBBCB9FAE99A2EC /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2E26F0F02A51817D55CFC18A /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CCC4285A4910BCC03DF52580 /* Project object */;
 }
