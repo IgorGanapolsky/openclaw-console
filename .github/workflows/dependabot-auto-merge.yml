@@ -15,6 +15,7 @@ on:
         required: false
 
 permissions:
+  actions: write
   contents: write
   checks: read
   statuses: read
@@ -35,6 +36,9 @@ jobs:
         uses: actions/github-script@v8
         env:
           TARGET_PR_NUMBER: ${{ github.event.inputs.pr_number || '' }}
+          REQUIRED_CHECKS_DEVELOP: ${{ vars.PR_REQUIRED_CHECKS_DEVELOP || '' }}
+          REQUIRED_CHECKS_MAIN: ${{ vars.PR_REQUIRED_CHECKS_MAIN || '' }}
+          REQUIRED_CHECKS_FROM_VAR: ${{ vars.PR_REQUIRED_CHECKS || '' }}
         with:
           script: |
             const owner = context.repo.owner;
@@ -45,6 +49,23 @@ jobs:
             const FAILING_CONCLUSIONS = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure", "stale"]);
             const FAILING_STATES = new Set(["error", "failure"]);
             const PENDING_STATES = new Set(["pending"]);
+            const DEFAULT_REQUIRED_CHECKS = {
+              develop: ["Skills Tests", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"],
+              main: [
+                "Skills Tests",
+                "Architecture Lint (Kotlin)",
+                "Architecture Lint (Swift)",
+                "Android Build Check",
+                "iOS Build Check",
+                "Secrets Scan",
+                "Dependency Audit",
+                "CodeQL Analysis (java-kotlin)",
+                "CodeQL Analysis (javascript-typescript)",
+                "CodeQL Analysis (swift)",
+                "Require develop or release branch",
+                "Claude Review"
+              ]
+            };
 
             function labelNames(pr) {
               return (pr.labels || []).map((label) => label.name);
@@ -52,6 +73,34 @@ jobs:
 
             function isDependabotPr(pr) {
               return DEPENDABOT_LOGINS.has(pr.user?.login || "") && (pr.head?.ref || "").startsWith("dependabot/");
+            }
+
+            function parseRequiredChecks(raw) {
+              return raw
+                .split(",")
+                .map((value) => value.trim())
+                .filter((value) => value.length > 0);
+            }
+
+            function requiredContextsFromFallback(baseBranch) {
+              const normalized = baseBranch.toUpperCase().replace(/[^A-Z0-9]/g, "_");
+              const branchEnvName = `REQUIRED_CHECKS_${normalized}`;
+              const fromBranchVar = parseRequiredChecks(process.env[branchEnvName] || "");
+              if (fromBranchVar.length > 0) {
+                return { contexts: fromBranchVar, source: `vars.PR_REQUIRED_CHECKS_${normalized}` };
+              }
+
+              const fromWorkflowDefault = DEFAULT_REQUIRED_CHECKS[baseBranch] || [];
+              if (fromWorkflowDefault.length > 0) {
+                return { contexts: fromWorkflowDefault, source: `workflow_default:${baseBranch}` };
+              }
+
+              const fromGenericVar = parseRequiredChecks(process.env.REQUIRED_CHECKS_FROM_VAR || "");
+              if (fromGenericVar.length > 0) {
+                return { contexts: fromGenericVar, source: "vars.PR_REQUIRED_CHECKS" };
+              }
+
+              return { contexts: [], source: "none" };
             }
 
             async function listCandidatePrs() {
@@ -93,11 +142,12 @@ jobs:
                     contexts.add(check.context);
                   }
                 }
-                return [...contexts];
+                return { contexts: [...contexts], source: "branch_protection" };
               } catch (error) {
                 core.warning(`Could not read branch protection for ${baseBranch}: ${error.message}`);
-                return [];
               }
+
+              return requiredContextsFromFallback(baseBranch);
             }
 
             async function getCheckRunMap(headSha) {
@@ -164,13 +214,36 @@ jobs:
               return { outcome: "pending", detail: "missing" };
             }
 
+            async function triggerWorkflow(workflowId, ref) {
+              try {
+                await github.rest.actions.createWorkflowDispatch({
+                  owner,
+                  repo,
+                  workflow_id: workflowId,
+                  ref
+                });
+                core.info(`Triggered ${workflowId} for ${ref}.`);
+              } catch (error) {
+                core.warning(`Could not trigger ${workflowId} for ${ref}: ${error.message}`);
+              }
+            }
+
+            async function triggerMissingRequiredChecks(pr, missingRequiredCheckNames) {
+              const ciChecks = new Set(["Skills Tests", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"]);
+              if (missingRequiredCheckNames.some((name) => ciChecks.has(name))) {
+                await triggerWorkflow("ci.yml", pr.head.ref);
+              }
+            }
+
             async function requiredChecksAreGreen(pr) {
-              const contexts = await requiredContextsFor(pr.base.ref);
+              const required = await requiredContextsFor(pr.base.ref);
+              const contexts = required.contexts;
               if (contexts.length === 0) {
                 core.warning(`PR #${pr.number}: no required checks resolved for ${pr.base.ref}; refusing autonomous merge.`);
                 return false;
               }
 
+              core.info(`PR #${pr.number}: required checks source=${required.source}.`);
               const checkRunMap = await getCheckRunMap(pr.head.sha);
               const statusContextMap = await getStatusContextMap(pr.head.sha);
               const results = contexts.map((name) => ({
@@ -181,6 +254,10 @@ jobs:
               const pending = results.filter((result) => result.outcome === "pending");
 
               if (failed.length > 0 || pending.length > 0) {
+                const missing = pending.filter((result) => result.detail === "missing").map((result) => result.name);
+                if (missing.length > 0) {
+                  await triggerMissingRequiredChecks(pr, missing);
+                }
                 core.info(
                   `PR #${pr.number}: waiting. failed=${failed.map((r) => `${r.name}:${r.detail}`).join(",") || "none"} pending=${pending
                     .map((r) => `${r.name}:${r.detail}`)
@@ -248,6 +325,7 @@ jobs:
                     pull_number: pr.number,
                     expected_head_sha: pr.head.sha
                   });
+                  await triggerWorkflow("ci.yml", pr.head.ref);
                 } catch (error) {
                   core.warning(`PR #${pr.number}: branch update failed: ${error.message}`);
                 }
