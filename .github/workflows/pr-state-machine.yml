@@ -4,7 +4,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   check_suite:
-    types: [requested, rerequested, completed]
+    types: [completed]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -25,6 +25,8 @@ jobs:
       - name: Reconcile labels, commit status, and incidents
         uses: actions/github-script@v8
         env:
+          REQUIRED_CHECKS_DEVELOP: ${{ vars.PR_REQUIRED_CHECKS_DEVELOP || '' }}
+          REQUIRED_CHECKS_MAIN: ${{ vars.PR_REQUIRED_CHECKS_MAIN || '' }}
           REQUIRED_CHECKS_FROM_VAR: ${{ vars.PR_REQUIRED_CHECKS || '' }}
         with:
           script: |
@@ -46,6 +48,23 @@ jobs:
             const FAILING_CONCLUSIONS = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure", "stale"]);
             const FAILING_STATES = new Set(["error", "failure"]);
             const PENDING_STATES = new Set(["pending"]);
+            const DEFAULT_REQUIRED_CHECKS = {
+              develop: ["Skills Tests", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"],
+              main: [
+                "Skills Tests",
+                "Architecture Lint (Kotlin)",
+                "Architecture Lint (Swift)",
+                "Android Build Check",
+                "iOS Build Check",
+                "Secrets Scan",
+                "Dependency Audit",
+                "CodeQL Analysis (java-kotlin)",
+                "CodeQL Analysis (javascript-typescript)",
+                "CodeQL Analysis (swift)",
+                "Require develop or release branch",
+                "Claude Review"
+              ]
+            };
 
             function uniqueNumbers(values) {
               return [...new Set(values.filter((v) => Number.isInteger(v) && v > 0))];
@@ -56,6 +75,36 @@ jobs:
                 .split(",")
                 .map((v) => v.trim())
                 .filter((v) => v.length > 0);
+            }
+
+            function getRequiredContextsFallback(baseBranch) {
+              const normalized = baseBranch.toUpperCase().replace(/[^A-Z0-9]/g, "_");
+              const branchEnvName = `REQUIRED_CHECKS_${normalized}`;
+              const branchFallback = parseRequiredChecks(process.env[branchEnvName] || "");
+              if (branchFallback.length > 0) {
+                return {
+                  contexts: branchFallback,
+                  source: `vars.PR_REQUIRED_CHECKS_${normalized}`
+                };
+              }
+
+              const workflowDefault = DEFAULT_REQUIRED_CHECKS[baseBranch] || [];
+              if (workflowDefault.length > 0) {
+                return {
+                  contexts: workflowDefault,
+                  source: `workflow_default:${baseBranch}`
+                };
+              }
+
+              const fallbackFromVar = parseRequiredChecks(process.env.REQUIRED_CHECKS_FROM_VAR || "");
+              if (fallbackFromVar.length > 0) {
+                return {
+                  contexts: fallbackFromVar,
+                  source: "vars.PR_REQUIRED_CHECKS"
+                };
+              }
+
+              return { contexts: [], source: "none" };
             }
 
             async function ensureLabel(name) {
@@ -111,15 +160,7 @@ jobs:
                 core.warning(`Branch protection lookup failed for ${baseBranch}: ${error.message}`);
               }
 
-              const fallbackFromVar = parseRequiredChecks(process.env.REQUIRED_CHECKS_FROM_VAR || "");
-              if (fallbackFromVar.length > 0) {
-                return {
-                  contexts: fallbackFromVar,
-                  source: "vars.PR_REQUIRED_CHECKS"
-                };
-              }
-
-              return { contexts: [], source: "none" };
+              return getRequiredContextsFallback(baseBranch);
             }
 
             async function getCheckRunMap(headSha) {
