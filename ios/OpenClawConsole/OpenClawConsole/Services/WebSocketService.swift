@@ -205,19 +205,4 @@ final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate, Observa
     }
 }
 
-// MARK: - Payloads
-
-struct ConnectedPayload: Codable {
-    let sessionId: String
-    let gatewayVersion: String
-
-    enum CodingKeys: String, CodingKey {
-        case sessionId = "session_id"
-        case gatewayVersion = "gateway_version"
-    }
-}
-
-struct ErrorPayload: Codable {
-    let code: Int
-    let message: String
-}
+// ConnectedPayload and ErrorPayload are defined in WebSocketMessage.swift
