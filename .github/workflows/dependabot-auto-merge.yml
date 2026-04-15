@@ -1,36 +1,282 @@
 name: Dependabot Auto-Merge
 
-on: pull_request
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+  check_suite:
+    types: [completed]
+  status:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Optional PR number to reconcile"
+        required: false
 
 permissions:
   contents: write
+  checks: read
+  statuses: read
   pull-requests: write
+  issues: write
+
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: false
 
 jobs:
-  dependabot:
+  orchestrate:
+    name: update and merge green Dependabot PRs
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    timeout-minutes: 10
     steps:
-      - name: Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@v3
+      - name: Reconcile Dependabot PRs
+        uses: actions/github-script@v8
+        env:
+          TARGET_PR_NUMBER: ${{ github.event.inputs.pr_number || '' }}
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const DEPENDABOT_LOGINS = new Set(["dependabot[bot]", "app/dependabot"]);
+            const BLOCKING_LABELS = new Set(["pr-state:blocked", "do-not-merge", "manual-review"]);
+            const PASSING_CONCLUSIONS = new Set(["success", "neutral", "skipped"]);
+            const FAILING_CONCLUSIONS = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure", "stale"]);
+            const FAILING_STATES = new Set(["error", "failure"]);
+            const PENDING_STATES = new Set(["pending"]);
 
-      - name: Auto-approve minor and patch updates
-        if: >-
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
-        run: gh pr review --approve "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            function labelNames(pr) {
+              return (pr.labels || []).map((label) => label.name);
+            }
 
-      - name: Auto-merge minor and patch updates
-        if: >-
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
-        run: gh pr merge --auto --squash "$PR_URL"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            function isDependabotPr(pr) {
+              return DEPENDABOT_LOGINS.has(pr.user?.login || "") && (pr.head?.ref || "").startsWith("dependabot/");
+            }
+
+            async function listCandidatePrs() {
+              const explicit = Number.parseInt(process.env.TARGET_PR_NUMBER || "", 10);
+              if (Number.isInteger(explicit) && explicit > 0) {
+                return [(await github.rest.pulls.get({ owner, repo, pull_number: explicit })).data];
+              }
+
+              if (context.payload.pull_request?.number) {
+                return [
+                  (
+                    await github.rest.pulls.get({
+                      owner,
+                      repo,
+                      pull_number: context.payload.pull_request.number
+                    })
+                  ).data
+                ];
+              }
+
+              return await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: "open",
+                per_page: 100
+              });
+            }
+
+            async function requiredContextsFor(baseBranch) {
+              try {
+                const protection = await github.rest.repos.getBranchProtection({
+                  owner,
+                  repo,
+                  branch: baseBranch
+                });
+                const contexts = new Set(protection.data.required_status_checks?.contexts || []);
+                for (const check of protection.data.required_status_checks?.checks || []) {
+                  if (check?.context) {
+                    contexts.add(check.context);
+                  }
+                }
+                return [...contexts];
+              } catch (error) {
+                core.warning(`Could not read branch protection for ${baseBranch}: ${error.message}`);
+                return [];
+              }
+            }
+
+            async function getCheckRunMap(headSha) {
+              const runs = await github.paginate(github.rest.checks.listForRef, {
+                owner,
+                repo,
+                ref: headSha,
+                per_page: 100
+              });
+              const latest = new Map();
+              for (const run of runs) {
+                const current = latest.get(run.name);
+                const currentTime = current ? Date.parse(current.updated_at || current.started_at || "") : 0;
+                const nextTime = Date.parse(run.updated_at || run.started_at || "") || 0;
+                if (!current || nextTime >= currentTime) {
+                  latest.set(run.name, run);
+                }
+              }
+              return latest;
+            }
+
+            async function getStatusContextMap(headSha) {
+              const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
+                owner,
+                repo,
+                ref: headSha,
+                per_page: 100
+              });
+              const latest = new Map();
+              for (const status of statuses) {
+                if (!latest.has(status.context)) {
+                  latest.set(status.context, status);
+                }
+              }
+              return latest;
+            }
+
+            function evaluateContext(contextName, checkRunMap, statusContextMap) {
+              const checkRun = checkRunMap.get(contextName);
+              if (checkRun) {
+                if (checkRun.status !== "completed") {
+                  return { outcome: "pending", detail: checkRun.status };
+                }
+                if (FAILING_CONCLUSIONS.has(checkRun.conclusion)) {
+                  return { outcome: "failed", detail: checkRun.conclusion };
+                }
+                if (PASSING_CONCLUSIONS.has(checkRun.conclusion)) {
+                  return { outcome: "passed", detail: checkRun.conclusion };
+                }
+                return { outcome: "pending", detail: checkRun.conclusion || "unknown" };
+              }
+
+              const status = statusContextMap.get(contextName);
+              if (status) {
+                if (FAILING_STATES.has(status.state)) {
+                  return { outcome: "failed", detail: status.state };
+                }
+                if (PENDING_STATES.has(status.state)) {
+                  return { outcome: "pending", detail: status.state };
+                }
+                return { outcome: "passed", detail: status.state };
+              }
+
+              return { outcome: "pending", detail: "missing" };
+            }
+
+            async function requiredChecksAreGreen(pr) {
+              const contexts = await requiredContextsFor(pr.base.ref);
+              if (contexts.length === 0) {
+                core.warning(`PR #${pr.number}: no required checks resolved for ${pr.base.ref}; refusing autonomous merge.`);
+                return false;
+              }
+
+              const checkRunMap = await getCheckRunMap(pr.head.sha);
+              const statusContextMap = await getStatusContextMap(pr.head.sha);
+              const results = contexts.map((name) => ({
+                name,
+                ...evaluateContext(name, checkRunMap, statusContextMap)
+              }));
+              const failed = results.filter((result) => result.outcome === "failed");
+              const pending = results.filter((result) => result.outcome === "pending");
+
+              if (failed.length > 0 || pending.length > 0) {
+                core.info(
+                  `PR #${pr.number}: waiting. failed=${failed.map((r) => `${r.name}:${r.detail}`).join(",") || "none"} pending=${pending
+                    .map((r) => `${r.name}:${r.detail}`)
+                    .join(",") || "none"}`
+                );
+                return false;
+              }
+
+              core.info(`PR #${pr.number}: ${results.length}/${contexts.length} required checks are green.`);
+              return true;
+            }
+
+            async function refreshMergeability(prNumber) {
+              for (let attempt = 0; attempt < 5; attempt += 1) {
+                const pr = (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
+                if (pr.mergeable_state && pr.mergeable_state !== "unknown") {
+                  return pr;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
+              return (await github.rest.pulls.get({ owner, repo, pull_number: prNumber })).data;
+            }
+
+            async function approveIfPossible(pr) {
+              try {
+                await github.rest.pulls.createReview({
+                  owner,
+                  repo,
+                  pull_number: pr.number,
+                  event: "APPROVE",
+                  body: "Autonomous dependency orchestration: required checks are green."
+                });
+              } catch (error) {
+                core.info(`PR #${pr.number}: approval skipped: ${error.message}`);
+              }
+            }
+
+            async function processPr(rawPr) {
+              const pr = await refreshMergeability(rawPr.number);
+              const labels = labelNames(pr);
+
+              if (!isDependabotPr(pr)) {
+                core.info(`PR #${pr.number}: skipped; not a trusted Dependabot PR.`);
+                return;
+              }
+              if (pr.draft) {
+                core.info(`PR #${pr.number}: skipped; draft PR.`);
+                return;
+              }
+              const blockingLabel = labels.find((label) => BLOCKING_LABELS.has(label));
+              if (blockingLabel) {
+                core.info(`PR #${pr.number}: skipped; blocking label ${blockingLabel}.`);
+                return;
+              }
+              if (pr.mergeable_state === "dirty") {
+                core.warning(`PR #${pr.number}: merge conflict; manual intervention required.`);
+                return;
+              }
+              if (pr.mergeable_state === "behind") {
+                core.info(`PR #${pr.number}: branch is behind ${pr.base.ref}; updating branch.`);
+                try {
+                  await github.rest.pulls.updateBranch({
+                    owner,
+                    repo,
+                    pull_number: pr.number,
+                    expected_head_sha: pr.head.sha
+                  });
+                } catch (error) {
+                  core.warning(`PR #${pr.number}: branch update failed: ${error.message}`);
+                }
+                return;
+              }
+
+              const green = await requiredChecksAreGreen(pr);
+              if (!green) {
+                return;
+              }
+
+              await approveIfPossible(pr);
+              try {
+                const result = await github.rest.pulls.merge({
+                  owner,
+                  repo,
+                  pull_number: pr.number,
+                  merge_method: "squash",
+                  commit_title: pr.title,
+                  commit_message: `Autonomous Dependabot merge for PR #${pr.number}`
+                });
+                core.info(`PR #${pr.number}: merged. sha=${result.data.sha}`);
+              } catch (error) {
+                core.warning(`PR #${pr.number}: merge failed: ${error.message}`);
+              }
+            }
+
+            const candidates = await listCandidatePrs();
+            core.info(`Reconciling ${candidates.length} PR(s).`);
+            for (const pr of candidates) {
+              await processPr(pr);
+            }
