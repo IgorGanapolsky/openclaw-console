@@ -240,6 +240,7 @@ export type ServerEventType =
   | 'git_state_update'
   | 'git_conflict'
   | 'git_operation_complete'
+  | 'heartbeat'
   | 'connected'
   | 'error';
 
@@ -285,11 +286,20 @@ export interface WsChatMessage {
 export interface ConnectedPayload {
   session_id: string;
   gateway_version: string;
+  heartbeat_interval_ms: number;
 }
 
 export interface ErrorPayload {
   code: number;
   message: string;
+}
+
+export interface GatewayHeartbeatPayload {
+  gateway_version: string;
+  connected_clients: number;
+  last_inbound_at: string | null;
+  last_outbound_at: string | null;
+  uptime_seconds: number;
 }
 
 // ─── Git WebSocket Payloads ───────────────────────────────────────────────────
@@ -348,11 +358,22 @@ export interface ApprovalRespondRequest {
 export interface HealthResponse {
   status: 'ok' | 'degraded';
   version: string;
+  started_at: string;
+  checked_at: string;
   uptime_seconds: number;
   agent_count: number;
   active_tasks: number;
   open_incidents: number;
   pending_approvals: number;
+  websocket_clients: number;
+  last_inbound_ws_at: string | null;
+  last_outbound_ws_at: string | null;
+  approval_policy_preset: string;
+  local_model: {
+    enabled: boolean;
+    base_url: string | null;
+    model: string | null;
+  };
 }
 
 // ─── Error Codes ─────────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import type {
   WsApprovalResponse,
   WsChatMessage,
   ConnectedPayload,
+  GatewayHeartbeatPayload,
   ErrorPayload,
   Agent,
   Task,
@@ -41,6 +42,19 @@ interface ClientSession {
   pingTimer: ReturnType<typeof setInterval>;
   pongDeadline: ReturnType<typeof setTimeout> | null;
   connectedAt: string;
+  lastMessageAt: string | null;
+}
+
+export interface WebSocketRuntimeSnapshot {
+  connected_clients: number;
+  last_inbound_at: string | null;
+  last_outbound_at: string | null;
+  sessions: Array<{
+    id: string;
+    connected_at: string;
+    last_message_at: string | null;
+    subscribed_agents: string[];
+  }>;
 }
 
 // ── WebSocket Manager ─────────────────────────────────────────────────────────
@@ -51,12 +65,19 @@ export class WebSocketManager {
   private clients: Map<string, ClientSession> = new Map();
   private config: GatewayConfig;
   private state: StateManager;
+  private heartbeatTimer: ReturnType<typeof setInterval>;
+  private startedAt = Date.now();
+  private lastInboundAt: string | null = null;
+  private lastOutboundAt: string | null = null;
 
   constructor(wss: WebSocketServer, state: StateManager, config: GatewayConfig) {
     this.wss = wss;
     this.state = state;
     this.config = config;
     this.attachStateListeners();
+    this.heartbeatTimer = setInterval(() => {
+      this.broadcastHeartbeat();
+    }, this.config.heartbeatIntervalMs);
   }
 
   // ── State → Broadcast bridge ─────────────────────────────────────────────
@@ -151,6 +172,7 @@ export class WebSocketManager {
       pingTimer,
       pongDeadline: null,
       connectedAt: new Date().toISOString(),
+      lastMessageAt: null,
     };
     this.clients.set(sessionId, session);
 
@@ -162,6 +184,9 @@ export class WebSocketManager {
     });
 
     ws.on('message', (raw) => {
+      const now = new Date().toISOString();
+      this.lastInboundAt = now;
+      session.lastMessageAt = now;
       this.handleMessage(session, raw.toString());
     });
 
@@ -178,6 +203,7 @@ export class WebSocketManager {
     const connected: ConnectedPayload = {
       session_id: sessionId,
       gateway_version: this.config.version,
+      heartbeat_interval_ms: this.config.heartbeatIntervalMs,
     };
     this.send(session, 'connected', connected);
 
@@ -276,6 +302,7 @@ export class WebSocketManager {
       payload,
       timestamp: new Date().toISOString(),
     };
+    this.lastOutboundAt = envelope.timestamp;
     session.ws.send(JSON.stringify(envelope));
   }
 
@@ -311,9 +338,38 @@ export class WebSocketManager {
     return this.clients.size;
   }
 
+  public getRuntimeSnapshot(): WebSocketRuntimeSnapshot {
+    return {
+      connected_clients: this.clients.size,
+      last_inbound_at: this.lastInboundAt,
+      last_outbound_at: this.lastOutboundAt,
+      sessions: Array.from(this.clients.values()).map((session) => ({
+        id: session.id,
+        connected_at: session.connectedAt,
+        last_message_at: session.lastMessageAt,
+        subscribed_agents: Array.from(session.subscribedAgents),
+      })),
+    };
+  }
+
+  public stop(): void {
+    clearInterval(this.heartbeatTimer);
+  }
+
   /** WebSocketServer instance (for attaching to HTTP server). */
   public get server(): WebSocketServer {
     return this.wss;
+  }
+
+  private broadcastHeartbeat(): void {
+    const payload: GatewayHeartbeatPayload = {
+      gateway_version: this.config.version,
+      connected_clients: this.connectionCount,
+      last_inbound_at: this.lastInboundAt,
+      last_outbound_at: this.lastOutboundAt,
+      uptime_seconds: Math.floor((Date.now() - this.startedAt) / 1000),
+    };
+    this.broadcastToAll('heartbeat', payload);
   }
 }
 

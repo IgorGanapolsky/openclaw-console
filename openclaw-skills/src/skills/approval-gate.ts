@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { ApprovalRequest, ApprovalResponse, ActionType, RiskLevel, GitOperation } from '../types/protocol.js';
 import type { IStateManager } from '../gateway/state-interface.js';
 import type { GatewayConfig } from '../config/default.js';
+import { evaluateApprovalPolicy } from '../gateway/policy.js';
 
 export interface DangerousActionOptions {
   agentId: string;
@@ -46,6 +47,9 @@ export interface ApprovalLogEntry {
   biometricVerified: boolean;
   requestedAt: string;
   respondedAt: string | null;
+  autoApproved: boolean;
+  policyPreset: GatewayConfig['approvalPolicyPreset'];
+  policyReason: string | null;
 }
 
 /**
@@ -91,6 +95,7 @@ export class ApprovalGateSkill {
         environment: options.context.environment,
         repository: options.context.repository,
         risk_level: options.context.riskLevel,
+        git_operation: options.context.git_operation,
       },
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
@@ -105,7 +110,35 @@ export class ApprovalGateSkill {
       biometricVerified: false,
       requestedAt: request.created_at,
       respondedAt: null,
+      autoApproved: false,
+      policyPreset: this.config.approvalPolicyPreset,
+      policyReason: null,
     };
+
+    const policy = evaluateApprovalPolicy(this.config.approvalPolicyPreset, {
+      actionType: request.action_type,
+      command: request.command,
+      context: request.context,
+    });
+
+    if (policy.autoApproved) {
+      const response: ApprovalResponse = {
+        approval_id: request.id,
+        decision: 'approved',
+        biometric_verified: true,
+        responded_at: now.toISOString(),
+      };
+      this.decisionLog.push({
+        ...logEntry,
+        decision: 'approved',
+        biometricVerified: true,
+        respondedAt: response.responded_at,
+        autoApproved: true,
+        policyReason: policy.reason,
+      });
+      console.info(`[approval-gate] Auto-approved ${request.id} via ${policy.preset}: ${policy.reason}`);
+      return { approved: true, response, timedOut: false };
+    }
 
     console.info(`[approval-gate] Requesting approval: "${options.title}" (${request.id})`);
 

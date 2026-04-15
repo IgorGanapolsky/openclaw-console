@@ -133,7 +133,7 @@ describe('Protocol model serialisation', () => {
 
 describe('WebSocket message envelope', () => {
   test('Envelope wraps payload with type and timestamp', () => {
-    const payload: ConnectedPayload = { session_id: 'abc', gateway_version: '1.0.0' };
+    const payload: ConnectedPayload = { session_id: 'abc', gateway_version: '1.0.0', heartbeat_interval_ms: 10_000 };
     const msg: WebSocketMessage<ConnectedPayload> = {
       type: 'connected',
       payload,
@@ -142,6 +142,7 @@ describe('WebSocket message envelope', () => {
     const parsed = JSON.parse(JSON.stringify(msg)) as WebSocketMessage<ConnectedPayload>;
     expect(parsed.type).toBe('connected');
     expect(parsed.payload.session_id).toBe('abc');
+    expect(parsed.payload.heartbeat_interval_ms).toBe(10_000);
     expect(parsed.timestamp).toBeTruthy();
   });
 
