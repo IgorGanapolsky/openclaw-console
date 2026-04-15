@@ -292,12 +292,23 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		F1A2B3C4D5E6F78901234567 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		D73E99810B13C310036F9B93 /* OpenClawConsole */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3F26A693C9973452D55D440B /* Build configuration list for PBXNativeTarget "OpenClawConsole" */;
 			buildPhases = (
 				AC55413DEC7B34043F71182C /* Sources */,
+				F1A2B3C4D5E6F78901234567 /* Frameworks */,
 				D3B4FE988C1C4DC28FAAF903 /* Resources */,
 			);
 			buildRules = (
