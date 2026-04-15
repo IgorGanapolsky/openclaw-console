@@ -11,7 +11,7 @@ enum ConnectionState: Equatable {
     case error(String)
 }
 
-final class WebSocketService: NSObject, ObservableObject, URLSessionWebSocketTaskDelegate {
+final class WebSocketService: NSObject, ObservableObject {
 
     @Published var connectionState: ConnectionState = .disconnected
     @Published var lastEvent: InboundEvent?
@@ -59,8 +59,6 @@ final class WebSocketService: NSObject, ObservableObject, URLSessionWebSocketTas
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         webSocketTask = urlSession.webSocketTask(with: request)
-        webSocketTask?.delegate = self
-
         connectionState = .connecting
         webSocketTask?.resume()
 
@@ -218,16 +216,6 @@ final class WebSocketService: NSObject, ObservableObject, URLSessionWebSocketTas
         }
     }
 
-    // MARK: - URLSessionWebSocketTaskDelegate
-
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-        print("WebSocket opened")
-    }
-
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        print("WebSocket closed")
-        connectionState = .disconnected
-    }
 }
 
 // ConnectedPayload and ErrorPayload are defined in WebSocketMessage.swift
