@@ -72,7 +72,7 @@ class GatewayRepositoryTest {
         // Gateway metadata stored (without token in the value)
         val meta = secureStorage.getGatewayMeta("gateway_gw-1")
         assertNotNull(meta)
-        assertTrue(meta!!.contains("Production"))
+        assertTrue(requireNotNull(meta).contains("Production"))
         // Token field in serialized meta should be empty string, not the real token
         assertTrue("Real token should not be in meta", !meta.contains("my-secret-token"))
 
@@ -164,7 +164,7 @@ class GatewayRepositoryTest {
 
         val active = repo.activeGateway.value
         assertNotNull(active)
-        assertEquals("gw-1", active!!.id)
+        assertEquals("gw-1", requireNotNull(active).id)
     }
 
     @Test
@@ -193,12 +193,12 @@ class GatewayRepositoryTest {
 
         val updated = repo.gateways.value.find { it.id == "gw-1" }
         assertNotNull(updated)
-        assertEquals("2026-04-15T10:00:00Z", updated!!.lastConnectedAt)
+        assertEquals("2026-04-15T10:00:00Z", requireNotNull(updated).lastConnectedAt)
 
         // Also persisted to storage
         val meta = secureStorage.getGatewayMeta("gateway_gw-1")
         assertNotNull(meta)
-        assertTrue(meta!!.contains("2026-04-15T10:00:00Z"))
+        assertTrue(requireNotNull(meta).contains("2026-04-15T10:00:00Z"))
     }
 
     @Test
@@ -237,6 +237,6 @@ class GatewayRepositoryTest {
         val repo2 = GatewayRepository(secureStorage)
 
         assertNotNull(repo2.activeGateway.value)
-        assertEquals("gw-1", repo2.activeGateway.value!!.id)
+        assertEquals("gw-1", requireNotNull(repo2.activeGateway.value).id)
     }
 }
