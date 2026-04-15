@@ -31,6 +31,16 @@ export interface GatewayConfig {
   mcpServers: string[];
   /** CORS allowed origins ('*' for all) */
   corsOrigins: string;
+  /** Approval automation preset. manual keeps every gate human-driven. */
+  approvalPolicyPreset: 'manual' | 'safe-yolo' | 'repo-yolo' | 'ci-yolo' | 'danger-yolo';
+  /** How frequently WebSocket clients receive heartbeat/status events */
+  heartbeatIntervalMs: number;
+  /** Local OpenAI-compatible model endpoint, e.g. vLLM on Jetson */
+  localModelBaseUrl: string | null;
+  /** Local model identifier to display and use for local chat calls */
+  localModelName: string | null;
+  /** Local model status probe timeout in milliseconds */
+  localModelTimeoutMs: number;
 }
 
 const DEFAULT_CONFIG: GatewayConfig = {
@@ -48,6 +58,18 @@ const DEFAULT_CONFIG: GatewayConfig = {
   simulateBridges: process.env['SIMULATE_BRIDGES'] !== 'false',
   mcpServers: process.env['MCP_SERVERS']?.split(';') ?? [],
   corsOrigins: process.env['CORS_ORIGINS'] ?? '*',
+  approvalPolicyPreset: parseApprovalPolicyPreset(process.env['OPENCLAW_APPROVAL_POLICY'] ?? 'manual'),
+  heartbeatIntervalMs: parseInt(process.env['OPENCLAW_HEARTBEAT_INTERVAL_MS'] ?? '10000', 10),
+  localModelBaseUrl: process.env['OPENCLAW_LOCAL_MODEL_BASE_URL'] ?? process.env['OPENAI_BASE_URL'] ?? null,
+  localModelName: process.env['OPENCLAW_LOCAL_MODEL_NAME'] ?? null,
+  localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
 };
+
+function parseApprovalPolicyPreset(raw: string): GatewayConfig['approvalPolicyPreset'] {
+  if (raw === 'safe-yolo' || raw === 'repo-yolo' || raw === 'ci-yolo' || raw === 'danger-yolo') {
+    return raw;
+  }
+  return 'manual';
+}
 
 export default DEFAULT_CONFIG;
