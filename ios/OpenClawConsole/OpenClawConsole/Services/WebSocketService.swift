@@ -11,18 +11,19 @@ enum ConnectionState: Equatable {
     case error(String)
 }
 
-final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate, ObservableObject {
+@Observable
+final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate {
 
-    @Published var connectionState: ConnectionState = .disconnected
-    @Published var lastEvent: InboundEvent?
+    var connectionState: ConnectionState = .disconnected
+    var lastEvent: InboundEvent?
 
-    private var webSocketTask: URLSessionWebSocketTask?
-    private let urlSession: URLSession
-    private let decoder = JSONDecoder()
-    private var reconnectAttempt = 0
-    private let maxReconnectAttempts = 5
+    @ObservationIgnored private var webSocketTask: URLSessionWebSocketTask?
+    @ObservationIgnored private let urlSession: URLSession
+    @ObservationIgnored private let decoder = JSONDecoder()
+    @ObservationIgnored private var reconnectAttempt = 0
+    @ObservationIgnored private let maxReconnectAttempts = 5
 
-    private let eventSubject = PassthroughSubject<InboundEvent, Never>()
+    @ObservationIgnored private let eventSubject = PassthroughSubject<InboundEvent, Never>()
     var eventPublisher: AnyPublisher<InboundEvent, Never> {
         eventSubject.eraseToAnyPublisher()
     }
@@ -35,6 +36,22 @@ final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate, Observa
     }
 
     // MARK: - Actions
+
+    /// Convenience: connect using a base URL string (appends /ws path).
+    func connect(baseURL: String, token: String) {
+        // Build WebSocket URL from the base HTTP URL
+        var urlString = baseURL
+            .replacingOccurrences(of: "http://", with: "ws://")
+            .replacingOccurrences(of: "https://", with: "wss://")
+        if !urlString.hasSuffix("/ws") {
+            urlString += "/ws"
+        }
+        guard let url = URL(string: urlString) else {
+            connectionState = .error("Invalid gateway URL: \(baseURL)")
+            return
+        }
+        connect(url: url, token: token)
+    }
 
     func connect(url: URL, token: String) {
         guard connectionState == .disconnected else { return }
@@ -55,6 +72,15 @@ final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate, Observa
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         connectionState = .disconnected
+    }
+
+    /// Subscribe to updates for a list of agent IDs.
+    func subscribe(to agentIds: [String]) {
+        let event = OutboundEvent(
+            type: .subscribe,
+            payload: AnyCodable(["agents": agentIds])
+        )
+        send(event)
     }
 
     func send(_ event: OutboundEvent) {
