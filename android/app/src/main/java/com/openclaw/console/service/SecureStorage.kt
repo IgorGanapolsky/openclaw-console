@@ -5,26 +5,15 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-class SecureStorage(context: Context) {
+open class SecureStorage(
+    private val prefs: SharedPreferences,
+    private val gatewayPrefs: SharedPreferences
+) {
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "openclaw_secure_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-
-    private val gatewayPrefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "openclaw_gateway_prefs",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    /** Production constructor using EncryptedSharedPreferences. */
+    constructor(context: Context) : this(
+        prefs = createEncryptedPrefs(context, "openclaw_secure_prefs"),
+        gatewayPrefs = createEncryptedPrefs(context, "openclaw_gateway_prefs")
     )
 
     fun saveToken(gatewayId: String, token: String) {
@@ -61,5 +50,20 @@ class SecureStorage(context: Context) {
 
     fun getAllGatewayMetaKeys(): Set<String> {
         return gatewayPrefs.all.keys
+    }
+
+    companion object {
+        private fun createEncryptedPrefs(context: Context, name: String): SharedPreferences {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            return EncryptedSharedPreferences.create(
+                context,
+                name,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
     }
 }
