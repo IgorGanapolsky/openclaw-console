@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
 
-class ApprovalRepository(
+open class ApprovalRepository(
     private val apiService: ApiService,
     private val wsClient: WebSocketClient,
     private val notificationService: NotificationService
@@ -23,13 +23,13 @@ class ApprovalRepository(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _pendingApprovals = MutableStateFlow<List<ApprovalRequest>>(emptyList())
-    val pendingApprovals: StateFlow<List<ApprovalRequest>> = _pendingApprovals
+    open val pendingApprovals: StateFlow<List<ApprovalRequest>> = _pendingApprovals
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    open val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    open val error: StateFlow<String?> = _error
 
     init {
         observeWebSocket()
@@ -70,7 +70,7 @@ class ApprovalRepository(
         }
     }
 
-    suspend fun refreshPendingApprovals() {
+    open suspend fun refreshPendingApprovals() {
         _isLoading.value = true
         _error.value = null
         apiService.getPendingApprovals()
@@ -83,7 +83,7 @@ class ApprovalRepository(
         _isLoading.value = false
     }
 
-    suspend fun respondToApproval(
+    open suspend fun respondToApproval(
         approvalId: String,
         decision: ApprovalDecision,
         biometricVerified: Boolean
@@ -110,9 +110,9 @@ class ApprovalRepository(
         return result
     }
 
-    fun getApproval(approvalId: String): ApprovalRequest? {
+    open fun getApproval(approvalId: String): ApprovalRequest? {
         return _pendingApprovals.value.find { it.id == approvalId }
     }
 
-    fun clearError() { _error.value = null }
+    open fun clearError() { _error.value = null }
 }
