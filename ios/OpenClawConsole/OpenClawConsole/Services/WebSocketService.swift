@@ -41,7 +41,7 @@ final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate {
     func connect(baseURL: String, token: String) {
         // Build WebSocket URL from the base HTTP URL
         var urlString = baseURL
-            .replacingOccurrences(of: "http://", with: "ws://")
+            .replacingOccurrences(of: "http://", with: "ws://") // allow-http
             .replacingOccurrences(of: "https://", with: "wss://")
         if !urlString.hasSuffix("/ws") {
             urlString += "/ws"
