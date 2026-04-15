@@ -1,6 +1,9 @@
 package com.openclaw.console.data.network
 
 import com.openclaw.console.data.model.*
+import com.openclaw.console.data.model.ActionType
+import com.openclaw.console.data.model.ApprovalContext
+import com.openclaw.console.data.model.RiskLevel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
 import org.junit.*
@@ -94,8 +97,8 @@ class WebSocketClientTest {
         val approvalEvent = events.first() as WebSocketEvent.ApprovalRequest
         assertEquals("approval-123", approvalEvent.request.id)
         assertEquals("CI/CD Agent", approvalEvent.request.agentName)
-        assertEquals("deploy", approvalEvent.request.actionType)
-        assertEquals("high", approvalEvent.request.context.riskLevel)
+        assertEquals(ActionType.DEPLOY, approvalEvent.request.actionType)
+        assertEquals(RiskLevel.HIGH, approvalEvent.request.context.riskLevel)
 
         job.cancel()
     }
@@ -235,15 +238,15 @@ class MockWebSocketClient(
                         id = "approval-123",
                         agentId = "agent-456",
                         agentName = "CI/CD Agent",
-                        actionType = "deploy",
+                        actionType = ActionType.DEPLOY,
                         title = "Deploy to production",
                         description = "Deploy version 2.1.0",
                         command = "kubectl apply -f prod-deployment.yaml",
-                        context = ApprovalRequest.Context(
+                        context = ApprovalContext(
                             service = "api-server",
                             environment = "production",
                             repository = "company/api",
-                            riskLevel = "high"
+                            riskLevel = RiskLevel.HIGH
                         ),
                         createdAt = "2024-01-01T12:00:00Z",
                         expiresAt = "2024-01-01T13:00:00Z"

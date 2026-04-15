@@ -33,7 +33,7 @@ private val json = Json {
     coerceInputValues = true
 }
 
-class WebSocketClient(
+open class WebSocketClient(
     private val baseUrl: String,
     private val token: String
 ) {
@@ -57,7 +57,7 @@ class WebSocketClient(
         .pingInterval(30, TimeUnit.SECONDS)
         .build()
 
-    fun connect() {
+    open fun connect() {
         shouldReconnect = true
         reconnectAttempt = 0
         doConnect()

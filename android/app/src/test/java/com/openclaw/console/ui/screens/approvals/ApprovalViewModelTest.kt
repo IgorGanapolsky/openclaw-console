@@ -1,7 +1,6 @@
 package com.openclaw.console.ui.screens.approvals
 
-import com.openclaw.console.data.model.ApprovalDecision
-import com.openclaw.console.data.model.ApprovalRequest
+import com.openclaw.console.data.model.*
 import com.openclaw.console.data.repository.ApprovalRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -178,15 +177,15 @@ class ApprovalViewModelTest {
             id = id,
             agentId = "test-agent",
             agentName = "Test Agent",
-            actionType = "deploy",
+            actionType = ActionType.DEPLOY,
             title = "Deploy to production",
             description = "Deploy version 1.2.3 to production environment",
             command = "kubectl apply -f deployment.yaml",
-            context = ApprovalRequest.Context(
+            context = ApprovalContext(
                 service = "api-server",
                 environment = "production",
                 repository = "company/api",
-                riskLevel = "high"
+                riskLevel = RiskLevel.HIGH
             ),
             createdAt = "2024-01-01T12:00:00Z",
             expiresAt = "2024-01-01T13:00:00Z"

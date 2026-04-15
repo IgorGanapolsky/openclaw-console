@@ -16,9 +16,9 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 
 open class ApprovalRepository(
-    private val apiService: ApiService,
-    private val wsClient: WebSocketClient,
-    private val notificationService: NotificationService
+    private val apiService: ApiService? = null,
+    private val wsClient: WebSocketClient? = null,
+    private val notificationService: NotificationService? = null
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -37,15 +37,16 @@ open class ApprovalRepository(
     }
 
     private fun observeWebSocket() {
+        val client = wsClient ?: return
         scope.launch {
-            wsClient.events.collect { event ->
+            client.events.collect { event ->
                 when (event) {
                     is WebSocketEvent.ApprovalRequest -> {
                         val existing = _pendingApprovals.value
                         if (existing.none { it.id == event.request.id }) {
                             _pendingApprovals.value = listOf(event.request) + existing
                             // Trigger notification for new approval request (matches iOS behavior)
-                            notificationService.scheduleApprovalNotification(event.request)
+                            notificationService?.scheduleApprovalNotification(event.request)
                         }
                     }
                     else -> {}
@@ -73,11 +74,11 @@ open class ApprovalRepository(
     open suspend fun refreshPendingApprovals() {
         _isLoading.value = true
         _error.value = null
-        apiService.getPendingApprovals()
-            .onSuccess { approvals ->
+        apiService?.getPendingApprovals()
+            ?.onSuccess { approvals ->
                 _pendingApprovals.value = approvals
             }
-            .onFailure { e ->
+            ?.onFailure { e ->
                 _error.value = e.message ?: "Failed to load approvals"
             }
         _isLoading.value = false
@@ -96,16 +97,16 @@ open class ApprovalRepository(
         )
 
         // Send via WebSocket for real-time handling
-        wsClient.sendApprovalResponse(approvalId, decision, biometricVerified)
+        wsClient?.sendApprovalResponse(approvalId, decision, biometricVerified)
 
         // Also persist via HTTP
-        val result = apiService.respondToApproval(approvalId, response)
+        val result = apiService?.respondToApproval(approvalId, response) ?: Result.success(Unit)
 
         // Remove from pending list regardless of HTTP result (optimistic)
         _pendingApprovals.value = _pendingApprovals.value.filter { it.id != approvalId }
 
         // Remove delivered notification (matches iOS behavior)
-        notificationService.removeDeliveredApproval(approvalId)
+        notificationService?.removeDeliveredApproval(approvalId)
 
         return result
     }
