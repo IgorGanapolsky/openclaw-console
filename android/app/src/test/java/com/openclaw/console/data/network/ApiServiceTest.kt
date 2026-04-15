@@ -85,7 +85,7 @@ class ApiServiceTest {
         assertTrue(result.isFailure)
         val error = result.exceptionOrNull()
         assertNotNull(error)
-        assertTrue(error!!.message!!.contains("500"))
+        assertTrue(requireNotNull(requireNotNull(error).message).contains("500"))
     }
 
     // --- getAgents ---
@@ -112,7 +112,7 @@ class ApiServiceTest {
         val result = api.getAgents()
 
         assertTrue(result.isSuccess)
-        val agents = result.getOrNull()!!
+        val agents = requireNotNull(result.getOrNull())
         assertEquals(1, agents.size)
         assertEquals("agent-1", agents[0].id)
         assertEquals("Deploy Bot", agents[0].name)
@@ -139,7 +139,7 @@ class ApiServiceTest {
         val result = api.getAgents()
 
         assertTrue(result.isSuccess)
-        assertEquals(0, result.getOrNull()!!.size)
+        assertEquals(0, requireNotNull(result.getOrNull()).size)
     }
 
     @Test
@@ -149,7 +149,7 @@ class ApiServiceTest {
         val result = api.getAgents()
 
         assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull()!!.message!!.contains("401"))
+        assertTrue(requireNotNull(requireNotNull(result.exceptionOrNull()).message).contains("401"))
     }
 
     // --- getAgent ---
@@ -196,7 +196,7 @@ class ApiServiceTest {
         val result = api.getAgentTasks("agent-1")
 
         assertTrue(result.isSuccess)
-        val tasks = result.getOrNull()!!
+        val tasks = requireNotNull(result.getOrNull())
         assertEquals(1, tasks.size)
         assertEquals("task-1", tasks[0].id)
         assertEquals("Deploy v2", tasks[0].title)
@@ -262,7 +262,7 @@ class ApiServiceTest {
         val result = api.getIncidents()
 
         assertTrue(result.isSuccess)
-        val incidents = result.getOrNull()!!
+        val incidents = requireNotNull(result.getOrNull())
         assertEquals(1, incidents.size)
         assertEquals("OOM Killed", incidents[0].title)
     }
@@ -307,7 +307,7 @@ class ApiServiceTest {
         val result = api.getPendingApprovals()
 
         assertTrue(result.isSuccess)
-        val approvals = result.getOrNull()!!
+        val approvals = requireNotNull(result.getOrNull())
         assertEquals(1, approvals.size)
         assertEquals("appr-1", approvals[0].id)
         assertEquals("Deploy to prod", approvals[0].title)
@@ -363,7 +363,7 @@ class ApiServiceTest {
         val result = api.sendChatMessage("agent-1", "Hello agent")
 
         assertTrue(result.isSuccess)
-        val msg = result.getOrNull()!!
+        val msg = requireNotNull(result.getOrNull())
         assertEquals("msg-1", msg.id)
         assertEquals("Hello agent", msg.content)
 
@@ -408,7 +408,7 @@ class ApiServiceTest {
 
         val request = server.takeRequest()
         // Should not have double slashes
-        assertTrue(!request.path!!.contains("//api"))
+        assertTrue(!requireNotNull(request.path).contains("//api"))
         assertEquals("/api/health", request.path)
     }
 
