@@ -55,10 +55,11 @@ class WebSocketClientTest {
         val client = MockWebSocketClient("wss://test.example.com", "test-token")
         val events = mutableListOf<WebSocketEvent>()
 
-        // Collect events
+        // Collect events — advance to start the collector before emitting
         val job = launch {
             client.events.collect { events.add(it) }
         }
+        advanceUntilIdle()
 
         // Simulate approval request event
         val mockApproval = ApprovalRequest(
@@ -99,10 +100,11 @@ class WebSocketClientTest {
         val client = MockWebSocketClient("wss://test.example.com", "test-token")
         val states = mutableListOf<ConnectionState>()
 
-        // Collect connection states
+        // Collect connection states — advance to start the collector
         val job = launch {
             client.connectionState.collect { states.add(it) }
         }
+        advanceUntilIdle()
 
         // Start with disconnected
         assertEquals(ConnectionState.DISCONNECTED, client.connectionState.value)
@@ -133,6 +135,7 @@ class WebSocketClientTest {
         val job = launch {
             client.events.collect { events.add(it) }
         }
+        advanceUntilIdle()
 
         client.connect()
         client.setConnectionState(ConnectionState.CONNECTED)
