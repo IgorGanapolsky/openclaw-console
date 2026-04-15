@@ -105,6 +105,12 @@ jobs:
           echo "Selected simulator for testing:"
           xcrun simctl list devices available | grep "iPhone 16" | head -1
 
+      - name: Resolve SPM dependencies
+        working-directory: ios/OpenClawConsole
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -scheme OpenClawConsole
+
       - name: Build and test iOS app
         working-directory: ios/OpenClawConsole
         run: |
@@ -113,6 +119,7 @@ jobs:
             -scheme OpenClawConsole \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -configuration Debug \
+            -skipPackagePluginValidation \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
@@ -123,6 +130,7 @@ jobs:
             -scheme OpenClawConsole \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -configuration Debug \
+            -skipPackagePluginValidation \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
