@@ -29,6 +29,7 @@ import { ERROR_CODES } from '../types/protocol.js';
 import { createBillingRouter } from '../billing/revenuecat.js';
 import { createAnalyticsRouter } from '../analytics/events.js';
 import { createIntegrationsRouter } from '../integrations/devops-hub.js';
+import { getConfiguredLocalModel, probeLocalModelProvider } from './model-provider.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -72,19 +73,50 @@ export function createGatewayServer(
   // ── Health ───────────────────────────────────────────────────────────────
 
   const startedAt = Date.now();
+  const startedAtIso = new Date(startedAt).toISOString();
 
   app.get('/api/health', (_req: Request, res: Response) => {
     const tasks = state.listAllTasks();
+    const wsSnapshot = wsManager.getRuntimeSnapshot();
     const body: HealthResponse = {
       status: 'ok',
       version: config.version,
+      started_at: startedAtIso,
+      checked_at: new Date().toISOString(),
       uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
       agent_count: state.listAgents().length,
       active_tasks: tasks.filter((t) => t.status === 'running' || t.status === 'queued').length,
       open_incidents: state.listIncidents().filter((i) => i.status === 'open').length,
       pending_approvals: state.listPendingApprovals().length,
+      websocket_clients: wsSnapshot.connected_clients,
+      last_inbound_ws_at: wsSnapshot.last_inbound_at,
+      last_outbound_ws_at: wsSnapshot.last_outbound_at,
+      approval_policy_preset: config.approvalPolicyPreset,
+      local_model: getConfiguredLocalModel(config),
     };
     res.json(body);
+  });
+
+  app.get('/api/runtime/status', auth, (_req: Request, res: Response) => {
+    res.json({
+      checked_at: new Date().toISOString(),
+      gateway: {
+        status: 'ok',
+        version: config.version,
+        started_at: startedAtIso,
+        uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
+      },
+      websocket: wsManager.getRuntimeSnapshot(),
+      approval_policy: {
+        preset: config.approvalPolicyPreset,
+        require_biometric: config.requireBiometric,
+      },
+      local_model: getConfiguredLocalModel(config),
+    });
+  });
+
+  app.get('/api/model/status', auth, async (_req: Request, res: Response) => {
+    res.json(await probeLocalModelProvider(config));
   });
 
   // ── Agents ───────────────────────────────────────────────────────────────
@@ -308,6 +340,7 @@ export function createGatewayServer(
     },
     stop(): Promise<void> {
       return new Promise((resolve, reject) => {
+        wsManager.stop();
         wss.close();
         httpServer.close((err) => {
           if (err) reject(err);
