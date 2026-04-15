@@ -124,12 +124,6 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_15.2.app
 
-      - name: Resolve SPM dependencies
-        working-directory: ios/OpenClawConsole
-        run: |
-          xcodebuild -resolvePackageDependencies \
-            -scheme OpenClawConsole
-
       - name: Build for simulator
         working-directory: ios/OpenClawConsole
         run: |
@@ -137,6 +131,7 @@ jobs:
             -scheme OpenClawConsole \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
             -configuration Debug \
+            -derivedDataPath .build/DerivedData \
             -skipPackagePluginValidation \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
