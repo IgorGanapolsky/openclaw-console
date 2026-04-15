@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [develop, main]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -24,7 +25,7 @@ jobs:
       - name: Architecture ban checks
         run: |
           ERRORS=0
-          for f in $(find android -name '*.kt' -not -path '*/build/*'); do
+          while IFS= read -r f; do
             if grep -n 'AndroidViewModel' "$f" | grep -v '// allow-android-viewmodel' > /dev/null 2>&1; then
               echo ":: $f: Uses AndroidViewModel (use ViewModel instead)"
               ERRORS=$((ERRORS + 1))
@@ -37,7 +38,7 @@ jobs:
               echo ":: $f: Uses !! non-null assertion without justification"
               ERRORS=$((ERRORS + 1))
             fi
-          done
+          done < <(find android -name '*.kt' -not -path '*/build/*')
           if [ "$ERRORS" -gt 0 ]; then
             echo "Found $ERRORS architecture violation(s)"
             exit 1
@@ -53,7 +54,7 @@ jobs:
       - name: Architecture ban checks
         run: |
           ERRORS=0
-          for f in $(find ios -name '*.swift'); do
+          while IFS= read -r f; do
             if grep -n 'force_cast\|as!' "$f" | grep -v '// allow-force-cast' > /dev/null 2>&1; then
               echo ":: $f: Uses force cast (as!) without justification"
               ERRORS=$((ERRORS + 1))
@@ -62,7 +63,7 @@ jobs:
               echo ":: $f: Uses plain HTTP URL (use HTTPS)"
               ERRORS=$((ERRORS + 1))
             fi
-          done
+          done < <(find ios -name '*.swift')
           if [ "$ERRORS" -gt 0 ]; then
             echo "Found $ERRORS architecture violation(s)"
             exit 1
