@@ -113,3 +113,4 @@ Every release MUST include complete store listing metadata before publishing:
 - **No Manual Handoffs**: Perform every possible step autonomously.
 - **Honesty**: Report failures immediately. Lying is not allowed.
 - **Say "I believe this is done, verifying now..."** instead of "Done!"
+
