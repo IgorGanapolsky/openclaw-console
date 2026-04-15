@@ -12,3 +12,13 @@ openclaw-skills/ @IgorGanapolsky
 
 # CI/CD
 .github/ @IgorGanapolsky
+
+# Store metadata
+android/fastlane/ @IgorGanapolsky
+ios/OpenClawConsole/fastlane/ @IgorGanapolsky
+
+# Marketing
+marketing/ @IgorGanapolsky
+
+# Claude Code config
+.claude/ @IgorGanapolsky

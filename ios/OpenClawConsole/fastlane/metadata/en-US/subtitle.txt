@@ -1,1 +1,1 @@
-Mobile Cockpit for Agents
+AI Agent Console with Biometric Safety

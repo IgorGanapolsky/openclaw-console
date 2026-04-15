@@ -84,6 +84,22 @@ enum OutboundEventType: String {
     case chatMessage = "chat_message"
 }
 
+/// Client → Server message envelope
+struct OutboundEvent: Encodable {
+    let type: OutboundEventType
+    let payload: AnyCodable
+
+    enum CodingKeys: String, CodingKey {
+        case type, payload
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(type.rawValue, forKey: .type)
+        try container.encode(payload, forKey: .payload)
+    }
+}
+
 struct SubscribePayload: Codable {
     let agents: [String]
 }
@@ -194,6 +210,7 @@ struct BridgeSession: Codable, Identifiable {
     }
 }
 
+// Note: GitState is defined in Agent.swift
 // MARK: - Connected Payload
 
 struct ConnectedPayload: Codable {

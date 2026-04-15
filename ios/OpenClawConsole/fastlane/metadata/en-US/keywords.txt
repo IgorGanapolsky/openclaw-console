@@ -1,1 +1,1 @@
-openclaw,agents,devops,monitoring,mobile,cockpit,automation,CI/CD,incidents,approvals
+openclaw,ai agents,devops,agent orchestration,biometric,mobile console,CI/CD,self-hosted,approvals,automation

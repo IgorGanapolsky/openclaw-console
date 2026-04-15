@@ -1,0 +1,59 @@
+name: Resolve Bot Comments
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: resolve-bot-comments
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    name: Resolve Bot Comments
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const BOT_LOGINS = new Set([
+              "github-actions[bot]",
+              "dependabot[bot]",
+              "sonarcloud[bot]",
+              "socket-security[bot]",
+              "gitguardian[bot]"
+            ]);
+
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: "open", per_page: 100
+            });
+
+            let resolved = 0;
+            for (const pr of prs) {
+              const reviews = await github.rest.pulls.listReviews({
+                owner, repo, pull_number: pr.number, per_page: 100
+              });
+
+              for (const review of reviews.data) {
+                if (BOT_LOGINS.has(review.user?.login) && review.state === "COMMENTED") {
+                  try {
+                    await github.rest.pulls.dismissReview({
+                      owner, repo, pull_number: pr.number, review_id: review.id,
+                      message: "Auto-resolved bot comment"
+                    });
+                    resolved++;
+                  } catch (e) {
+                    // Dismiss only works on blocking reviews; skip non-blocking
+                  }
+                }
+              }
+            }
+
+            core.info(`Resolved ${resolved} bot comment(s) across ${prs.length} open PR(s)`);

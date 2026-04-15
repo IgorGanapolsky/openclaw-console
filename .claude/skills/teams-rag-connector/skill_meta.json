@@ -1,0 +1,44 @@
+{
+  "name": "teams-rag-connector",
+  "version": "1.0.0",
+  "description": "Full MS Teams integration with RAG pipeline — ingests every message, chat, meeting transcript into LanceDB for Claude-powered semantic search and daily briefings",
+  "triggers": [
+    "teams rag",
+    "sync teams",
+    "teams briefing",
+    "what's happening on teams",
+    "teams search",
+    "daily briefing"
+  ],
+  "category": "integration",
+  "dependencies": [
+    "@azure/msal-node",
+    "@lancedb/lancedb",
+    "@anthropic-ai/sdk",
+    "@modelcontextprotocol/sdk"
+  ],
+  "scripts": {
+    "backfill": "scripts/ingest-messages.js --mode backfill",
+    "sync": "scripts/ingest-messages.js --mode incremental",
+    "briefing": "scripts/daily-briefing.js",
+    "query": "scripts/query-rag.js",
+    "webhook": "scripts/webhook-handler.js",
+    "mcp": "scripts/mcp-server.js",
+    "subscribe": "scripts/subscribe-webhooks.js --create"
+  },
+  "requiredEnvVars": [
+    "AZURE_TENANT_ID",
+    "AZURE_CLIENT_ID",
+    "AZURE_CLIENT_SECRET",
+    "ANTHROPIC_API_KEY"
+  ],
+  "optionalEnvVars": [
+    "OPENAI_API_KEY",
+    "WEBHOOK_URL"
+  ],
+  "mcpTools": [
+    "teams_search",
+    "teams_briefing",
+    "teams_status"
+  ]
+}

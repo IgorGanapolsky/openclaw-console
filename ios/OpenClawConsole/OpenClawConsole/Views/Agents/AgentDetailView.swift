@@ -6,7 +6,7 @@ import SwiftUI
 
 struct AgentDetailView: View {
     let agent: Agent
-    @Environment(WebSocketService.self) private var webSocket
+    @EnvironmentObject private var webSocket: WebSocketService
 
     @State private var selectedSegment: Segment = .tasks
     @State private var taskListVM: TaskListViewModel?

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "teams-rag": {
+      "command": "node",
+      "args": [
+        ".claude/skills/teams-rag-connector/scripts/mcp-server.js"
+      ]
+    }
+  }
+}

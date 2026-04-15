@@ -3,6 +3,7 @@
 // @Observable class managing Git operations and state for agents.
 
 import Foundation
+import Observation
 import Combine
 
 @Observable

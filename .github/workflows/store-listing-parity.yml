@@ -1,0 +1,78 @@
+name: Store Listing Parity
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "android/fastlane/metadata/**"
+      - "ios/OpenClawConsole/fastlane/metadata/**"
+      - "PRIVACY_POLICY.md"
+  push:
+    branches: [develop]
+    paths:
+      - "android/fastlane/metadata/**"
+      - "ios/OpenClawConsole/fastlane/metadata/**"
+      - "PRIVACY_POLICY.md"
+
+jobs:
+  check-metadata:
+    name: Store Listing Parity Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Android metadata
+        run: |
+          ERRORS=0
+          BASE="android/fastlane/metadata/android/en-US"
+          for file in title.txt short_description.txt full_description.txt; do
+            if [ ! -f "$BASE/$file" ]; then
+              echo "::error::Missing Android metadata: $BASE/$file"
+              ERRORS=$((ERRORS + 1))
+            elif [ ! -s "$BASE/$file" ]; then
+              echo "::error::Empty Android metadata: $BASE/$file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          if [ ! -d "$BASE/changelogs" ]; then
+            echo "::warning::No changelogs directory: $BASE/changelogs/"
+          fi
+          if [ "$ERRORS" -gt 0 ]; then
+            exit 1
+          fi
+          echo "Android store metadata: OK"
+
+      - name: Verify iOS metadata
+        run: |
+          ERRORS=0
+          BASE="ios/OpenClawConsole/fastlane/metadata/en-US"
+          for file in name.txt subtitle.txt description.txt keywords.txt release_notes.txt; do
+            if [ ! -f "$BASE/$file" ]; then
+              echo "::error::Missing iOS metadata: $BASE/$file"
+              ERRORS=$((ERRORS + 1))
+            elif [ ! -s "$BASE/$file" ]; then
+              echo "::error::Empty iOS metadata: $BASE/$file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          if [ "$ERRORS" -gt 0 ]; then
+            exit 1
+          fi
+          echo "iOS store metadata: OK"
+
+      - name: Verify privacy policy exists
+        run: |
+          if [ ! -f "PRIVACY_POLICY.md" ]; then
+            echo "::error::PRIVACY_POLICY.md is missing"
+            exit 1
+          fi
+          echo "Privacy policy: OK"
+
+      - name: Cross-platform parity check
+        run: |
+          ANDROID_TITLE=$(cat android/fastlane/metadata/android/en-US/title.txt 2>/dev/null || echo "")
+          IOS_NAME=$(cat ios/OpenClawConsole/fastlane/metadata/en-US/name.txt 2>/dev/null || echo "")
+          if [ -n "$ANDROID_TITLE" ] && [ -n "$IOS_NAME" ] && [ "$ANDROID_TITLE" != "$IOS_NAME" ]; then
+            echo "::warning::App name mismatch — Android: '$ANDROID_TITLE' vs iOS: '$IOS_NAME'"
+          fi
+          echo "Parity check complete"

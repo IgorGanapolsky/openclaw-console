@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 1
 
       - name: Publish wiki pages
-        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        uses: Andrew-Chen-Wang/github-wiki-action@v5
         with:
           strategy: init
           path: wiki/

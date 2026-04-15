@@ -3,6 +3,7 @@
 // @Observable class managing the task list for a specific agent.
 
 import Foundation
+import Observation
 import Combine
 
 @Observable

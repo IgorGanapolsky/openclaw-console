@@ -1,0 +1,37 @@
+{
+  "name": "teams-rag-connector",
+  "version": "1.0.0",
+  "description": "MS Teams RAG pipeline — real-time message ingestion + Claude-powered briefings",
+  "scripts": {
+    "backfill": "node ingest-messages.js --mode backfill",
+    "sync": "node ingest-messages.js --mode incremental",
+    "subscribe": "node subscribe-webhooks.js --create",
+    "renew": "node subscribe-webhooks.js --renew",
+    "briefing": "node daily-briefing.js",
+    "briefing:4h": "node daily-briefing.js --hours 4",
+    "query": "node query-rag.js",
+    "status": "node query-rag.js --status",
+    "webhook:dev": "node webhook-handler.js",
+    "mcp": "node mcp-server.js",
+    "mcp:http": "node mcp-server-http.js",
+    "bot": "node teams-bot.js",
+    "bot:dev": "node mcp-server-http.js & node teams-bot.js",
+    "health": "node pipeline-health.js",
+    "test:all": "node pipeline-health.js --test && node mcp-server-http.js --test && node teams-bot.js --test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@azure/msal-node": "^2.16.0",
+    "@lancedb/lancedb": "^0.14.0",
+    "@microsoft/teams.ai": "^2.0.0",
+    "@microsoft/teams.apps": "^2.0.0",
+    "@microsoft/teams.common": "^2.0.0",
+    "@microsoft/teams.mcpclient": "^2.0.0",
+    "@microsoft/teams.openai": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.6.0",
+    "express": "^4.21.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

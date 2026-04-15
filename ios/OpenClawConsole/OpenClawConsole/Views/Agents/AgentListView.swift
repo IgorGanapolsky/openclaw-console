@@ -6,7 +6,7 @@ import SwiftUI
 
 struct AgentListView: View {
     @Bindable var viewModel: AgentListViewModel
-    @Environment(WebSocketService.self) private var webSocket
+    @EnvironmentObject private var webSocket: WebSocketService
 
     var body: some View {
         Group {

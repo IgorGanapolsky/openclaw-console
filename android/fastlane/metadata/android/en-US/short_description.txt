@@ -1,1 +1,1 @@
-Mobile cockpit for monitoring OpenClaw agents, tasks, and incidents.
+AI agent console: biometric approvals, CI/CD monitoring, self-hosted DevOps.

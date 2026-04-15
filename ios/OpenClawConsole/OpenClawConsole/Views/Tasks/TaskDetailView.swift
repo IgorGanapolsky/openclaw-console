@@ -7,7 +7,7 @@ import SwiftUI
 struct TaskDetailView: View {
     let agentId: String
     let taskId: String
-    @Environment(WebSocketService.self) private var webSocket
+    @EnvironmentObject private var webSocket: WebSocketService
 
     @State private var viewModel: TaskDetailViewModel?
     @State private var chatInput: String = ""

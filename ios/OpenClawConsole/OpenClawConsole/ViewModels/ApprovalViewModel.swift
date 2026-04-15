@@ -3,6 +3,7 @@
 // @Observable class managing pending approvals with biometric verification.
 
 import Foundation
+import Observation
 import Combine
 
 @Observable

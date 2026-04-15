@@ -33,7 +33,7 @@ private val json = Json {
     coerceInputValues = true
 }
 
-class WebSocketClient(
+open class WebSocketClient(
     private val baseUrl: String,
     private val token: String
 ) {
@@ -45,10 +45,10 @@ class WebSocketClient(
     private var reconnectAttempt = 0
     private var shouldReconnect = true
 
-    private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
+    protected val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState
 
-    private val _events = MutableSharedFlow<WebSocketEvent>(extraBufferCapacity = 64)
+    protected val _events = MutableSharedFlow<WebSocketEvent>(extraBufferCapacity = 64)
     val events: SharedFlow<WebSocketEvent> = _events
 
     private val client = OkHttpClient.Builder()
@@ -57,7 +57,7 @@ class WebSocketClient(
         .pingInterval(30, TimeUnit.SECONDS)
         .build()
 
-    fun connect() {
+    open fun connect() {
         shouldReconnect = true
         reconnectAttempt = 0
         doConnect()
@@ -195,7 +195,7 @@ class WebSocketClient(
         sendRaw("unsubscribe", payload)
     }
 
-    fun sendApprovalResponse(approvalId: String, decision: ApprovalDecision, biometricVerified: Boolean) {
+    open fun sendApprovalResponse(approvalId: String, decision: ApprovalDecision, biometricVerified: Boolean) {
         val payload = buildJsonObject {
             put("approval_id", approvalId)
             put("decision", decision.name.lowercase())
