@@ -23,7 +23,7 @@ struct OpenClawConsoleApp: App {
         WindowGroup {
             ContentView()
                 .environment(gatewayManager)
-                .environment(services.webSocket)
+                .environmentObject(services.webSocket)
                 .environment(services.approvalViewModel)
                 .environment(services.subscriptionService)
         }

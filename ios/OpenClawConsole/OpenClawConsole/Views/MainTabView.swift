@@ -7,7 +7,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(GatewayManager.self) private var gatewayManager
-    @Environment(WebSocketService.self) private var webSocket
+    @EnvironmentObject private var webSocket: WebSocketService
     @Environment(ApprovalViewModel.self) private var approvalViewModel
 
     @State private var selectedTab: Tab = .agents

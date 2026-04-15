@@ -3,7 +3,6 @@
 
 import Foundation
 import Combine
-import Observation
 
 enum ConnectionState: Equatable {
     case disconnected
@@ -12,19 +11,18 @@ enum ConnectionState: Equatable {
     case error(String)
 }
 
-@Observable
-final class WebSocketService: NSObject, URLSessionWebSocketTaskDelegate {
+final class WebSocketService: NSObject, ObservableObject, URLSessionWebSocketTaskDelegate {
 
-    var connectionState: ConnectionState = .disconnected
-    var lastEvent: InboundEvent?
+    @Published var connectionState: ConnectionState = .disconnected
+    @Published var lastEvent: InboundEvent?
 
-    @ObservationIgnored private var webSocketTask: URLSessionWebSocketTask?
-    @ObservationIgnored private let urlSession: URLSession
-    @ObservationIgnored private let decoder = JSONDecoder()
-    @ObservationIgnored private var reconnectAttempt = 0
-    @ObservationIgnored private let maxReconnectAttempts = 5
+    private var webSocketTask: URLSessionWebSocketTask?
+    private let urlSession: URLSession
+    private let decoder = JSONDecoder()
+    private var reconnectAttempt = 0
+    private let maxReconnectAttempts = 5
 
-    @ObservationIgnored private let eventSubject = PassthroughSubject<InboundEvent, Never>()
+    private let eventSubject = PassthroughSubject<InboundEvent, Never>()
     var eventPublisher: AnyPublisher<InboundEvent, Never> {
         eventSubject.eraseToAnyPublisher()
     }

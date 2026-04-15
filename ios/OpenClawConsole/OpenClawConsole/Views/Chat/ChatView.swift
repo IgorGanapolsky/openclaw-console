@@ -9,7 +9,7 @@ struct ChatView: View {
     let agentId: String
     let taskId: String?
 
-    @Environment(WebSocketService.self) private var webSocket
+    @EnvironmentObject private var webSocket: WebSocketService
     @State private var viewModel: ChatViewModel?
     @State private var inputText: String = ""
     @State private var scrollProxy: ScrollViewProxy?
