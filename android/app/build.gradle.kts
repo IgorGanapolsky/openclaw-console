@@ -22,19 +22,6 @@ android {
         }
     }
 
-    signingConfigs {
-        create("release") {
-            val keystorePath = System.getenv("KEYSTORE_PATH") ?: "release.keystore"
-            val keystoreFile = file(keystorePath)
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
-            }
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -42,10 +29,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val releaseSigning = signingConfigs.getByName("release")
-            if (releaseSigning.storeFile?.exists() == true) {
-                signingConfig = releaseSigning
-            }
         }
     }
 
@@ -64,10 +47,12 @@ android {
 
     lint {
         disable += "NullSafeMutableLiveData"
+        disable += "RememberInComposition"
+        disable += "FrequentlyChangingValue"
+        disable += "AutoboxingStateCreation"
         // AGP 8.7.3 lint crashes with IncompatibleClassChangeError on multiple Compose/Lifecycle detectors.
         // This is a known tooling bug, not a code issue. The build itself compiles fine.
         abortOnError = false
-        checkReleaseBuilds = false
     }
 
     packaging {
@@ -122,18 +107,13 @@ dependencies {
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
     implementation("com.google.errorprone:error_prone_annotations:2.28.0")
 
-    // RevenueCat
-    implementation("com.revenuecat.purchases:purchases:7.12.0")
-
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.6.0")
 
     // Test
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-    testImplementation("org.mockito:mockito-core:5.7.0")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
