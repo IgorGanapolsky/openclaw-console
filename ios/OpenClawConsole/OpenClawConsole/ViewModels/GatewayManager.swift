@@ -4,6 +4,7 @@
 // Non-sensitive fields persisted to UserDefaults; tokens in Keychain.
 
 import Foundation
+import Observation
 import Combine
 
 // MARK: - GatewayManager

@@ -3,6 +3,7 @@
 // @Observable class managing global incidents across all agents.
 
 import Foundation
+import Observation
 import Combine
 
 @Observable

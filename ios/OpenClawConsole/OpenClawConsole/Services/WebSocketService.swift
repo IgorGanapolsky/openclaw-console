@@ -3,6 +3,7 @@
 
 import Foundation
 import Combine
+import Observation
 
 enum ConnectionState: Equatable {
     case disconnected

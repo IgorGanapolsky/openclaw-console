@@ -3,6 +3,7 @@
 // @Observable class managing the agent list with real-time WebSocket updates.
 
 import Foundation
+import Observation
 import Combine
 
 @Observable

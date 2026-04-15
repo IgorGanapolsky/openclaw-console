@@ -6,6 +6,7 @@
 // The user will be prompted for permission on first use.
 
 import Foundation
+import Observation
 import UserNotifications
 
 // MARK: - Notification Category Identifiers
