@@ -53,6 +53,7 @@ class ApprovalViewModelTest {
         // Given: Repository has an approval
         val approval = createMockApproval("test-123")
         mockRepository.approvals["test-123"] = approval
+        mockRepository.syncPending()
 
         // When: ViewModel is initialized
         viewModel.init("test-123", mockRepository)
@@ -67,6 +68,7 @@ class ApprovalViewModelTest {
         // Given: ViewModel with an approval
         val approval = createMockApproval("test-456")
         mockRepository.approvals["test-456"] = approval
+        mockRepository.syncPending()
         viewModel.init("test-456", mockRepository)
 
         // When: User decides to approve
@@ -84,6 +86,7 @@ class ApprovalViewModelTest {
         val approval = createMockApproval("test-789")
         mockRepository.approvals["test-789"] = approval
         mockRepository.shouldSucceed = true
+        mockRepository.syncPending()
         viewModel.init("test-789", mockRepository)
         viewModel.onDecide(ApprovalDecision.APPROVED)
 
@@ -109,6 +112,7 @@ class ApprovalViewModelTest {
         mockRepository.approvals["test-fail"] = approval
         mockRepository.shouldSucceed = false
         mockRepository.errorMessage = "Network error"
+        mockRepository.syncPending()
         viewModel.init("test-fail", mockRepository)
         viewModel.onDecide(ApprovalDecision.APPROVED)
 
@@ -158,6 +162,7 @@ class ApprovalViewModelTest {
         val approval = createMockApproval("test-deny")
         mockRepository.approvals["test-deny"] = approval
         mockRepository.shouldSucceed = true
+        mockRepository.syncPending()
         viewModel.init("test-deny", mockRepository)
 
         // When: User decides to deny and completes biometric
@@ -250,5 +255,10 @@ class MockApprovalRepository : ApprovalRepository() {
 
     override fun clearError() {
         _error.value = null
+    }
+
+    /** Sync the pending approvals flow with the approvals map. Call after modifying approvals. */
+    fun syncPending() {
+        _pendingApprovals.value = approvals.values.toList()
     }
 }
