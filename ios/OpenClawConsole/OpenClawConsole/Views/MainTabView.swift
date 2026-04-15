@@ -85,11 +85,27 @@ struct MainTabView: View {
                 .tag(Tab.settings)
             }
 
-            // Approval banner overlays all tabs
-            if approvalViewModel.hasPendingApprovals {
-                ApprovalBannerView()
+            // ThumbGate status bar at top
+            VStack {
+                ThumbGateStatusBar()
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
+
+                Spacer()
+            }
+
+            // Approval banner overlays all tabs
+            if approvalViewModel.hasPendingApprovals {
+                VStack {
+                    Spacer()
+                        .frame(height: 40) // Space for ThumbGate status bar
+
+                    ApprovalBannerView()
+
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
         }
         .onAppear {

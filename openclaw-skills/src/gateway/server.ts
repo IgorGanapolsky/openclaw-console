@@ -29,6 +29,7 @@ import { ERROR_CODES } from '../types/protocol.js';
 import { createBillingRouter } from '../billing/revenuecat.js';
 import { createAnalyticsRouter } from '../analytics/events.js';
 import { createIntegrationsRouter } from '../integrations/devops-hub.js';
+import { incrementThumbsUp, incrementThumbsDown, readThumbGateData } from '../utils/thumbgate.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -189,7 +190,7 @@ export function createGatewayServer(
 
   // ── Chat ──────────────────────────────────────────────────────────────────
 
-  app.post('/api/agents/:id/chat', auth, (req: Request, res: Response) => {
+  app.post('/api/agents/:id/chat', auth, async (req: Request, res: Response) => {
     const agentId = String(req.params['id'] ?? '');
     const agent = state.getAgent(agentId);
     if (!agent) {
@@ -200,6 +201,45 @@ export function createGatewayServer(
     if (!body.message || typeof body.message !== 'string') {
       res.status(400).json({ error: { code: 4000, message: 'message is required' } });
       return;
+    }
+
+    const message = body.message.trim();
+
+    // Handle ThumbGate commands
+    if (message === '/thumbs-up') {
+      try {
+        const data = await incrementThumbsUp();
+        res.json({
+          id: crypto.randomUUID(),
+          agent_id: agentId,
+          task_id: body.task_id ?? null,
+          role: 'agent',
+          content: `👍 Thumbs up! Total: 👍 ${data.thumbs_up} | 👎 ${data.thumbs_down}`,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (error) {
+        res.status(500).json({ error: { code: 5000, message: 'Failed to update thumbs' } });
+        return;
+      }
+    }
+
+    if (message === '/thumbs-down') {
+      try {
+        const data = await incrementThumbsDown();
+        res.json({
+          id: crypto.randomUUID(),
+          agent_id: agentId,
+          task_id: body.task_id ?? null,
+          role: 'agent',
+          content: `👎 Thumbs down! Total: 👍 ${data.thumbs_up} | 👎 ${data.thumbs_down}`,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      } catch (error) {
+        res.status(500).json({ error: { code: 5000, message: 'Failed to update thumbs' } });
+        return;
+      }
     }
 
     // Return a stub response; skills hook into state events for richer replies
@@ -255,6 +295,69 @@ export function createGatewayServer(
     }
   });
 
+  // ── ThumbGate Dashboard Server (localhost:8080) ───────────────────────────
+
+  const dashboardApp = express();
+  dashboardApp.use(express.json());
+
+  // CORS for dashboard
+  dashboardApp.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    next();
+  });
+
+  // /thumbs endpoint - JSON visualization
+  dashboardApp.get('/thumbs', async (_req: Request, res: Response) => {
+    try {
+      const data = await readThumbGateData();
+      res.json({
+        version: '1.0',
+        thumbs_up: data.thumbs_up,
+        thumbs_down: data.thumbs_down,
+        total: data.thumbs_up + data.thumbs_down,
+        ratio: data.thumbs_up + data.thumbs_down === 0 ? 0 : data.thumbs_up / (data.thumbs_up + data.thumbs_down),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to read thumbs data' });
+    }
+  });
+
+  // /lessons endpoint - tips and insights
+  dashboardApp.get('/lessons', (_req: Request, res: Response) => {
+    res.json({
+      version: '1.0',
+      tips: [
+        'Use /thumbs-up to signal positive feedback on agent actions',
+        'Use /thumbs-down to signal when an agent needs improvement',
+        'Monitor thumbs ratio to track overall satisfaction trends',
+        'ThumbGate data persists in ~/.openclaw/thumbgate.json',
+        'Check the mobile console status bar for live thumb counts'
+      ],
+      commands: [
+        {
+          command: '/thumbs-up',
+          description: 'Increment the positive feedback counter'
+        },
+        {
+          command: '/thumbs-down',
+          description: 'Increment the negative feedback counter'
+        }
+      ],
+      dashboard_info: {
+        endpoints: {
+          '/thumbs': 'Get current thumbs data and statistics',
+          '/lessons': 'Get ThumbGate usage tips and command help'
+        },
+        file_location: '~/.openclaw/thumbgate.json'
+      }
+    });
+  });
+
+  const dashboardServer = http.createServer(dashboardApp);
+
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
   const httpServer = http.createServer(app);
@@ -293,6 +396,13 @@ export function createGatewayServer(
     mcpManager,
     start(): Promise<void> {
       return new Promise((resolve) => {
+        let started = 0;
+        const checkBothStarted = () => {
+          started++;
+          if (started === 2) resolve();
+        };
+
+        // Start main gateway server
         httpServer.listen(config.port, config.host, () => {
           console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
           // Dev hint: connect via WebSocket using your dev auth bearer credential
@@ -302,16 +412,42 @@ export function createGatewayServer(
           if (devToken) {
             console.info(`[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`);
           }
-          resolve();
+          checkBothStarted();
+        });
+
+        // Start ThumbGate dashboard server
+        dashboardServer.listen(8080, 'localhost', () => {
+          console.info(`[thumbgate] ThumbGate dashboard listening on http://localhost:8080`);
+          console.info(`[thumbgate] Endpoints: /thumbs (data) | /lessons (tips)`);
+          checkBothStarted();
         });
       });
     },
     stop(): Promise<void> {
       return new Promise((resolve, reject) => {
+        let stopped = 0;
+        let errors: Error[] = [];
+
+        const checkBothStopped = () => {
+          stopped++;
+          if (stopped === 2) {
+            if (errors.length > 0) reject(errors[0]);
+            else resolve();
+          }
+        };
+
         wss.close();
+
+        // Stop main server
         httpServer.close((err) => {
-          if (err) reject(err);
-          else resolve();
+          if (err) errors.push(err);
+          checkBothStopped();
+        });
+
+        // Stop dashboard server
+        dashboardServer.close((err) => {
+          if (err) errors.push(err);
+          checkBothStopped();
         });
       });
     },

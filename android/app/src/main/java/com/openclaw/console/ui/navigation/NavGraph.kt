@@ -29,6 +29,7 @@ import com.openclaw.console.ui.screens.settings.AddGatewayScreen
 import com.openclaw.console.ui.screens.settings.SettingsScreen
 import com.openclaw.console.ui.screens.tasks.TaskDetailScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.openclaw.console.ui.components.ThumbGateStatusBar
 
 sealed class Screen(val route: String, val label: String) {
     // Bottom nav roots
@@ -82,6 +83,11 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     )
 
     Scaffold(
+        topBar = {
+            ThumbGateStatusBar(
+                modifier = Modifier.padding(16.dp)
+            )
+        },
         bottomBar = {
             NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
