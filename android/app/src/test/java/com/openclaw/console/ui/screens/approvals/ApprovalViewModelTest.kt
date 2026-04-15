@@ -196,7 +196,7 @@ class ApprovalViewModelTest {
 /**
  * Mock ApprovalRepository for testing
  */
-class MockApprovalRepository : ApprovalRepository {
+class MockApprovalRepository : ApprovalRepository() {
     var approvals = mutableMapOf<String, ApprovalRequest>()
     var shouldSucceed = true
     var errorMessage = "Mock error"
