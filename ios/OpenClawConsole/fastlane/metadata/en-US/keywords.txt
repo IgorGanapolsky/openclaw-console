@@ -1,1 +1,1 @@
-openclaw,ai agents,devops,agent orchestration,biometric,mobile console,CI/CD,self-hosted,approvals,automation
+openclaw,ai agents,devops,orchestration,biometric,mobile console,CI/CD,self-hosted

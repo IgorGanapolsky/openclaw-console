@@ -24,12 +24,16 @@ import type {
   ApprovalRespondRequest,
   HealthResponse,
   ApprovalResponse,
+  RuntimeConfigResponse,
+  RuntimeConfigUpdateRequest,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
 import { createBillingRouter } from '../billing/revenuecat.js';
 import { createAnalyticsRouter } from '../analytics/events.js';
 import { createIntegrationsRouter } from '../integrations/devops-hub.js';
 import { getConfiguredLocalModel, probeLocalModelProvider } from './model-provider.js';
+import { isApprovalPolicyPreset } from '../config/default.js';
+import { normalizeProjectBridgeSession } from './project-session.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -119,6 +123,41 @@ export function createGatewayServer(
     res.json(await probeLocalModelProvider(config));
   });
 
+  function runtimeConfigResponse(): RuntimeConfigResponse {
+    return {
+      approval_policy_preset: config.approvalPolicyPreset,
+      heartbeat_interval_ms: config.heartbeatIntervalMs,
+      require_biometric: config.requireBiometric,
+      local_model: getConfiguredLocalModel(config),
+    };
+  }
+
+  app.get('/api/config/runtime', auth, (_req: Request, res: Response) => {
+    res.json(runtimeConfigResponse());
+  });
+
+  app.patch('/api/config/runtime', auth, (req: Request, res: Response) => {
+    const body = req.body as RuntimeConfigUpdateRequest;
+
+    if (body.approval_policy_preset !== undefined) {
+      if (!isApprovalPolicyPreset(body.approval_policy_preset)) {
+        res.status(400).json({ error: { code: 4000, message: 'Invalid approval_policy_preset' } });
+        return;
+      }
+      config.approvalPolicyPreset = body.approval_policy_preset;
+    }
+
+    if (body.heartbeat_interval_ms !== undefined) {
+      if (!Number.isInteger(body.heartbeat_interval_ms) || body.heartbeat_interval_ms < 1_000 || body.heartbeat_interval_ms > 60_000) {
+        res.status(400).json({ error: { code: 4000, message: 'heartbeat_interval_ms must be an integer from 1000 to 60000' } });
+        return;
+      }
+      wsManager.updateHeartbeatInterval(body.heartbeat_interval_ms);
+    }
+
+    res.json(runtimeConfigResponse());
+  });
+
   // ── Agents ───────────────────────────────────────────────────────────────
 
   app.get('/api/agents', auth, (_req: Request, res: Response) => {
@@ -179,7 +218,7 @@ export function createGatewayServer(
   });
 
   app.post('/api/bridges/upsert', auth, async (req: Request, res: Response) => {
-    const session = await state.upsertBridgeSession(req.body);
+    const session = await state.upsertBridgeSession(normalizeProjectBridgeSession(req.body));
     res.json(session);
   });
 

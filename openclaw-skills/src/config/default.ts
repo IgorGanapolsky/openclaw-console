@@ -2,6 +2,8 @@
  * Default configuration for the OpenClaw gateway.
  */
 
+export type ApprovalPolicyPreset = 'manual' | 'safe-yolo' | 'repo-yolo' | 'ci-yolo' | 'danger-yolo';
+
 export interface GatewayConfig {
   /** HTTP/WS listen port */
   port: number;
@@ -32,7 +34,7 @@ export interface GatewayConfig {
   /** CORS allowed origins ('*' for all) */
   corsOrigins: string;
   /** Approval automation preset. manual keeps every gate human-driven. */
-  approvalPolicyPreset: 'manual' | 'safe-yolo' | 'repo-yolo' | 'ci-yolo' | 'danger-yolo';
+  approvalPolicyPreset: ApprovalPolicyPreset;
   /** How frequently WebSocket clients receive heartbeat/status events */
   heartbeatIntervalMs: number;
   /** Local OpenAI-compatible model endpoint, e.g. vLLM on Jetson */
@@ -65,8 +67,12 @@ const DEFAULT_CONFIG: GatewayConfig = {
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
 };
 
-function parseApprovalPolicyPreset(raw: string): GatewayConfig['approvalPolicyPreset'] {
-  if (raw === 'safe-yolo' || raw === 'repo-yolo' || raw === 'ci-yolo' || raw === 'danger-yolo') {
+export function isApprovalPolicyPreset(raw: string): raw is ApprovalPolicyPreset {
+  return raw === 'manual' || raw === 'safe-yolo' || raw === 'repo-yolo' || raw === 'ci-yolo' || raw === 'danger-yolo';
+}
+
+export function parseApprovalPolicyPreset(raw: string): ApprovalPolicyPreset {
+  if (isApprovalPolicyPreset(raw)) {
     return raw;
   }
   return 'manual';

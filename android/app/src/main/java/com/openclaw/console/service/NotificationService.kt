@@ -34,8 +34,12 @@ class NotificationService private constructor(private val context: Context) {
     companion object {
         private const val CHANNEL_APPROVALS = "approval_requests"
         private const val CHANNEL_INCIDENTS = "critical_incidents"
+        private const val CHANNEL_AGENT_STATUS = "agent_status"
+        private const val CHANNEL_CONFIRMATIONS = "action_confirmations"
         private const val APPROVAL_NOTIFICATION_ID_BASE = 1000
         private const val INCIDENT_NOTIFICATION_ID_BASE = 2000
+        private const val AGENT_STATUS_NOTIFICATION_ID_BASE = 3000
+        private const val CONFIRMATION_NOTIFICATION_ID_BASE = 4000
 
         @Volatile
         private var INSTANCE: NotificationService? = null
@@ -77,7 +81,27 @@ class NotificationService private constructor(private val context: Context) {
             setShowBadge(true)
         }
 
-        notificationManager.createNotificationChannels(listOf(approvalChannel, incidentChannel))
+        // Agent status channel - default priority for informational updates
+        val agentStatusChannel = NotificationChannel(
+            CHANNEL_AGENT_STATUS,
+            "Agent Status Changes",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Notifications when agents come online, go offline, or become busy"
+            setShowBadge(false)
+        }
+
+        // Confirmation channel - low priority for action confirmations
+        val confirmationChannel = NotificationChannel(
+            CHANNEL_CONFIRMATIONS,
+            "Action Confirmations",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Confirmations for approval actions taken from notifications"
+            setShowBadge(false)
+        }
+
+        notificationManager.createNotificationChannels(listOf(approvalChannel, incidentChannel, agentStatusChannel, confirmationChannel))
     }
 
     /**
@@ -206,6 +230,89 @@ class NotificationService private constructor(private val context: Context) {
      */
     fun clearAllNotifications() {
         notificationManager.cancelAll()
+    }
+
+    /**
+     * Show confirmation notification after an approval action from notification.
+     */
+    fun showConfirmationNotification(approvalId: String, decision: String, agentName: String?) {
+        val body = agentName?.let { "Action for $it was $decision." }
+            ?: "Approval $approvalId was $decision."
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_CONFIRMATIONS)
+            .setSmallIcon(R.drawable.ic_check)
+            .setContentTitle(decision.capitalizeCompat())
+            .setContentText(body)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setAutoCancel(true)
+            .setTimeoutAfter(5000) // Auto-dismiss after 5 seconds
+            .build()
+
+        try {
+            notificationManager.notify(
+                CONFIRMATION_NOTIFICATION_ID_BASE + approvalId.hashCode(),
+                notification
+            )
+        } catch (_: SecurityException) { }
+    }
+
+    /**
+     * Show error notification when an approval action fails.
+     */
+    fun showErrorNotification(approvalId: String, decision: String) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_APPROVALS)
+            .setSmallIcon(R.drawable.ic_warning)
+            .setContentTitle("Action Failed")
+            .setContentText("Could not $decision approval. Open app to retry.")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        try {
+            notificationManager.notify(
+                CONFIRMATION_NOTIFICATION_ID_BASE + "$approvalId-error".hashCode(),
+                notification
+            )
+        } catch (_: SecurityException) { }
+    }
+
+    /**
+     * Cancel a specific approval notification.
+     */
+    fun cancelApprovalNotification(approvalId: String) {
+        removeDeliveredApproval(approvalId)
+    }
+
+    /**
+     * Schedule agent status change notification.
+     * Matches iOS scheduleAgentStatusChangeNotification.
+     */
+    fun scheduleAgentStatusChangeNotification(
+        agentId: String,
+        agentName: String,
+        previousStatus: String,
+        newStatus: String
+    ) {
+        scope.launch {
+            val notification = NotificationCompat.Builder(context, CHANNEL_AGENT_STATUS)
+                .setSmallIcon(R.drawable.ic_visibility)
+                .setContentTitle("Agent Status Changed")
+                .setContentText("$agentName is now $newStatus (was $previousStatus)")
+                .setSubText(agentName)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .setGroup("agent_status")
+                .build()
+
+            withContext(Dispatchers.Main) {
+                try {
+                    notificationManager.notify(
+                        AGENT_STATUS_NOTIFICATION_ID_BASE + agentId.hashCode(),
+                        notification
+                    )
+                } catch (_: SecurityException) { }
+            }
+        }
     }
 
     private fun createApprovalActionIntent(approvalId: String, action: String): PendingIntent {
