@@ -1,15 +1,15 @@
 {
   "version": 1,
   "algorithm": "adaboost-stumps",
-  "trainedAt": "2026-04-16T22:09:33.417Z",
-  "exampleCount": 10,
-  "highRiskExamples": 8,
-  "baseRate": 0.8,
+  "trainedAt": "2026-04-16T22:11:45.536Z",
+  "exampleCount": 11,
+  "highRiskExamples": 9,
+  "baseRate": 0.8181818181818182,
   "featureRegistry": {
     "topTags": [
-      "truthfulness",
       "auto-capture-fallback",
       "claude-history-sync",
+      "truthfulness",
       "firebase",
       "release-verification",
       "testflight",
@@ -64,9 +64,9 @@
     "domain:debugging",
     "domain:architecture",
     "domain:data-modeling",
-    "tag:truthfulness",
     "tag:auto-capture-fallback",
     "tag:claude-history-sync",
+    "tag:truthfulness",
     "tag:firebase",
     "tag:release-verification",
     "tag:testflight",
@@ -127,21 +127,21 @@
   "patterns": {
     "tags": [
       {
-        "key": "truthfulness",
+        "key": "auto-capture-fallback",
         "total": 3,
         "highRisk": 3,
         "riskRate": 1
       },
       {
-        "key": "auto-capture-fallback",
-        "total": 2,
-        "highRisk": 2,
+        "key": "claude-history-sync",
+        "total": 3,
+        "highRisk": 3,
         "riskRate": 1
       },
       {
-        "key": "claude-history-sync",
-        "total": 2,
-        "highRisk": 2,
+        "key": "truthfulness",
+        "total": 3,
+        "highRisk": 3,
         "riskRate": 1
       },
       {
@@ -166,9 +166,9 @@
       },
       {
         "key": "general",
-        "total": 7,
-        "highRisk": 5,
-        "riskRate": 0.714
+        "total": 8,
+        "highRisk": 6,
+        "riskRate": 0.75
       }
     ],
     "skills": [
