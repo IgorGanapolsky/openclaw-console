@@ -92,8 +92,8 @@ fun PaywallScreen(
 
             HeaderSection(requiredFeature = requiredFeature, hasPro = status.hasProEntitlement)
 
-            if (errorMessage != null) {
-                ErrorBanner(message = errorMessage!!, onDismiss = viewModel::clearError)
+            errorMessage?.let { msg ->
+                ErrorBanner(message = msg, onDismiss = viewModel::clearError)
             }
 
             if (status.hasProEntitlement) {
