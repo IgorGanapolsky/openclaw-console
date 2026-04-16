@@ -21,6 +21,14 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // RevenueCat public key. CI injects REVENUECAT_PUBLIC_KEY at build time;
+        // local builds without the secret fall through to empty string, which
+        // SubscriptionService.configure treats as "disabled".
+        val revenueCatKey = System.getenv("REVENUECAT_PUBLIC_KEY")
+            ?: providers.gradleProperty("revenueCatPublicKey").orNull
+            ?: ""
+        buildConfigField("String", "REVENUECAT_PUBLIC_KEY", "\"$revenueCatKey\"")
     }
 
     signingConfigs {
@@ -61,6 +69,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     lint {
@@ -127,6 +136,10 @@ dependencies {
 
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.6.0")
+
+    // RevenueCat (Android billing + subscription management).
+    // Mirrors iOS SubscriptionService — product IDs and entitlement name must match iOS.
+    implementation("com.revenuecat.purchases:purchases:9.29.1")
 
     // Test
     testImplementation("junit:junit:4.13.2")
