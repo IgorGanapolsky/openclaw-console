@@ -117,6 +117,7 @@ jobs:
       - name: Configure git credentials for match
         env:
           GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
         run: |
           set -euo pipefail
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
@@ -125,6 +126,44 @@ jobs:
           MATCH_AUTH=$(printf 'x-access-token:%s' "$GIT_AUTH_TOKEN" | base64 | tr -d '\n')
           echo "::add-mask::$MATCH_AUTH"
           echo "MATCH_GIT_BASIC_AUTHORIZATION=$MATCH_AUTH" >> "$GITHUB_ENV"
+
+          # Pre-flight: verify ADMIN_TOKEN can actually access the match certificates repo.
+          # If this fails, fastlane match will fail downstream with an opaque error, so we
+          # surface the real problem (invalid/expired/insufficient-scope token) up front.
+          echo "🔍 Pre-flight verifying ADMIN_TOKEN against match git repo"
+          TOKEN_USER=$(curl -fsSL -H "Authorization: token ${GIT_AUTH_TOKEN}" \
+            https://api.github.com/user 2>/dev/null | jq -r '.login // empty' || true)
+          if [ -z "$TOKEN_USER" ]; then
+            echo "❌ ADMIN_TOKEN is invalid or revoked — GitHub /user API rejected it."
+            echo "   Action required: CEO must rotate the ADMIN_TOKEN secret with a"
+            echo "   fresh PAT that has 'repo' scope, then re-run this workflow."
+            exit 1
+          fi
+          echo "✅ ADMIN_TOKEN authenticates as: $TOKEN_USER"
+
+          TOKEN_SCOPES=$(curl -fsSL -I -H "Authorization: token ${GIT_AUTH_TOKEN}" \
+            https://api.github.com/user 2>/dev/null \
+            | awk -F': ' 'tolower($1)=="x-oauth-scopes"{print $2}' | tr -d '\r' || true)
+          echo "ℹ️ Token scopes: ${TOKEN_SCOPES:-<none reported>}"
+          if [ -n "$TOKEN_SCOPES" ] && ! echo ",$TOKEN_SCOPES," | grep -q "repo"; then
+            echo "❌ ADMIN_TOKEN is missing 'repo' scope (has: $TOKEN_SCOPES)"
+            echo "   Action required: rotate with a PAT that includes 'repo' scope."
+            exit 1
+          fi
+
+          # Probe the exact match repo the Fastfile will clone.
+          if [ -n "${MATCH_GIT_URL:-}" ]; then
+            MATCH_PATH=$(echo "$MATCH_GIT_URL" | sed -E 's#^https://[^/]+/##; s#\.git$##')
+            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: token ${GIT_AUTH_TOKEN}" \
+              "https://api.github.com/repos/${MATCH_PATH}" 2>/dev/null || echo "000")
+            case "$HTTP_CODE" in
+              200) echo "✅ ADMIN_TOKEN can read match repo: ${MATCH_PATH}" ;;
+              404) echo "❌ Match repo not found or token lacks access (HTTP 404): ${MATCH_PATH}"; exit 1 ;;
+              401|403) echo "❌ Match repo access denied (HTTP $HTTP_CODE): ${MATCH_PATH}"; exit 1 ;;
+              *) echo "⚠️ Unexpected HTTP $HTTP_CODE probing match repo — continuing anyway" ;;
+            esac
+          fi
 
       - name: Setup signing certificates and profiles (match)
         env:
@@ -353,14 +392,28 @@ jobs:
             exit 1
           fi
 
-          # Determine authentication method with explicit precedence
-          # IMPORTANT: Do NOT unset FIREBASE_TOKEN when using service account — we keep it
-          # around so the retry loop below can fall back to token auth if the service
-          # account lacks the required roles (firebaseappdistro.admin).
+          # Determine authentication method with explicit precedence.
+          # CRITICAL: firebase-tools honors the FIREBASE_TOKEN env var with HIGHER priority
+          # than GOOGLE_APPLICATION_CREDENTIALS in practice. Leaving FIREBASE_TOKEN set
+          # while intending to use a service account causes firebase-tools to silently
+          # authenticate as the (potentially wrong-project) token user, producing
+          # "HTTP 400 Precondition check failed" when the token cannot touch this app.
+          # Stash FIREBASE_TOKEN in STASHED_FIREBASE_TOKEN for explicit fallback only.
           AUTH_MODE=""
+          STASHED_FIREBASE_TOKEN="${FIREBASE_TOKEN:-}"
           if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
             AUTH_MODE="service_account"
+            # Forcibly unset so firebase-tools cannot pick it up as ambient auth.
+            unset FIREBASE_TOKEN
             echo "✅ Using service account authentication (2026 best practice)"
+            # Surface service account identity + accessible project for diagnostics.
+            SA_EMAIL=$(jq -r '.client_email // empty' "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null || true)
+            SA_PROJECT=$(jq -r '.project_id // empty' "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null || true)
+            echo "ℹ️ Service account: ${SA_EMAIL:-<unknown>} (project: ${SA_PROJECT:-<unknown>})"
+            if [ -n "$SA_PROJECT" ] && [ "$SA_PROJECT" != "$FIREBASE_PROJECT_ID" ]; then
+              echo "⚠️ Service account project ($SA_PROJECT) differs from target project ($FIREBASE_PROJECT_ID)."
+              echo "   This is fine only if the SA has cross-project firebaseappdistro.admin on $FIREBASE_PROJECT_ID."
+            fi
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
             AUTH_MODE="deprecated_token"
             echo "⚠️ WARNING: Using deprecated FIREBASE_TOKEN - may fail silently or not send emails"
@@ -424,11 +477,13 @@ jobs:
             else
               rc=$?
               echo "❌ Attempt $ATTEMPT failed with exit code $rc"
-              
-              # Fallback to token if permission error (403) and token is available
-              if [ $rc -eq 1 ] && [ "$AUTH_MODE" = "service_account" ] && [ -n "${FIREBASE_TOKEN:-}" ]; then
+
+              # Fallback to token if permission error (403) and stashed token is available.
+              # Runs the fallback in a subshell with FIREBASE_TOKEN re-exported so
+              # firebase-tools can see it, without polluting the main env.
+              if [ $rc -eq 1 ] && [ "$AUTH_MODE" = "service_account" ] && [ -n "$STASHED_FIREBASE_TOKEN" ]; then
                 echo "⚠️ Detected potential permission error with service account. Attempting fallback to FIREBASE_TOKEN..."
-                TOKEN_CMD=("${BASE_CMD[@]}" --token "$FIREBASE_TOKEN")
+                TOKEN_CMD=("${BASE_CMD[@]}" --token "$STASHED_FIREBASE_TOKEN")
                 if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
                   TOKEN_CMD+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
                 elif [ -n "$TESTERS" ]; then
@@ -436,8 +491,8 @@ jobs:
                 elif [ -n "$DIST_GROUPS" ]; then
                   TOKEN_CMD+=(--groups "$DIST_GROUPS")
                 fi
-                
-                if "${TOKEN_CMD[@]}"; then
+
+                if FIREBASE_TOKEN="$STASHED_FIREBASE_TOKEN" "${TOKEN_CMD[@]}"; then
                   SUCCESS=true
                   echo "✅ Firebase distribution successful via FIREBASE_TOKEN fallback"
                   break
@@ -446,6 +501,15 @@ jobs:
 
               if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
                 echo "❌ All distribution attempts failed"
+                echo ""
+                echo "📋 Common causes of 'HTTP 400 Precondition check failed':"
+                echo "   1. Service account lacks 'Firebase App Distribution Admin' role on project $FIREBASE_PROJECT_ID"
+                echo "   2. The app ($FIREBASE_APP_ID) is not enrolled in Firebase App Distribution"
+                echo "   3. APK applicationId does not match the app registered in Firebase console"
+                echo "   4. FIREBASE_TOKEN (if used) was created under a different Google account than the SA"
+                echo ""
+                echo "🔗 Open the Firebase console to verify:"
+                echo "   https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/appdistribution/app/android:com.openclaw.console"
                 exit 1
               fi
               ((ATTEMPT++))
@@ -505,6 +569,50 @@ jobs:
           echo "🔗 Firebase console: $CONSOLE_URL"
 
           echo "✅ Firebase App Distribution verification complete"
+
+      - name: Run Firebase App Testing Agent (Android)
+        # Opt-in feature: must be enabled per-project in the Firebase console.
+        # Runs AI-driven UI smoke tests against the APK that was just distributed.
+        # Non-blocking: failures are logged but do not fail the distribution job, because
+        # the App Testing Agent is a preview feature with a 5-minute per-test timeout and
+        # a 200 tests/month default quota per project. Flip APPTESTING_BLOCKING=true to
+        # promote this to a gating check once it's stable for this app.
+        if: ${{ hashFiles('android/apptesting/**/*.yml') != '' }}
+        env:
+          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          APPTESTING_BLOCKING: ${{ vars.APPTESTING_BLOCKING || 'false' }}
+        run: |
+          set -euo pipefail
+          unset FIREBASE_TOKEN  # force service-account auth via GOOGLE_APPLICATION_CREDENTIALS
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          TEST_DIR="android/apptesting"
+
+          echo "🤖 Running Firebase App Testing Agent against $APK_PATH"
+          echo "   Test dir: $TEST_DIR"
+          echo "   App:      $FIREBASE_APP_ID"
+          echo "   Project:  $FIREBASE_PROJECT_ID"
+
+          # Fire-and-forget non-blocking by default — results land in the Firebase console.
+          if firebase apptesting:execute \
+              --app "$FIREBASE_APP_ID" \
+              --project "$FIREBASE_PROJECT_ID" \
+              --test-dir "$TEST_DIR" \
+              --test-non-blocking \
+              "$APK_PATH"; then
+            echo "✅ App Testing Agent execution queued"
+            echo "🔗 Results: https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/apptesting"
+          else
+            rc=$?
+            echo "⚠️ App Testing Agent failed with exit code $rc"
+            echo "   Most common causes: (1) feature not opted-in for project in console,"
+            echo "   (2) service account lacks firebaseapptesting.admin role,"
+            echo "   (3) monthly quota exceeded (default 200 tests/month)."
+            if [ "${APPTESTING_BLOCKING}" = "true" ]; then
+              exit $rc
+            fi
+            echo "   APPTESTING_BLOCKING=false → not failing the distribution job."
+          fi
 
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
