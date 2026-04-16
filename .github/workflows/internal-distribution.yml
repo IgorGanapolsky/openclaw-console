@@ -73,13 +73,13 @@ jobs:
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -115,75 +115,34 @@ jobs:
           echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
       - name: Configure git credentials for match
-        env:
-          GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
         run: |
           set -euo pipefail
-          git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
-          # Derive MATCH_GIT_BASIC_AUTHORIZATION from ADMIN_TOKEN to avoid stale credential issues.
-          # Fastlane match uses this header to authenticate git clone of the certificates repo.
-          MATCH_AUTH=$(printf 'x-access-token:%s' "$GIT_AUTH_TOKEN" | base64 | tr -d '\n')
-          echo "::add-mask::$MATCH_AUTH"
-          echo "MATCH_GIT_BASIC_AUTHORIZATION=$MATCH_AUTH" >> "$GITHUB_ENV"
-
-          # Pre-flight: verify ADMIN_TOKEN can actually access the match certificates repo.
-          # If this fails, fastlane match will fail downstream with an opaque error, so we
-          # surface the real problem (invalid/expired/insufficient-scope token) up front.
-          echo "🔍 Pre-flight verifying ADMIN_TOKEN against match git repo"
-          TOKEN_USER=$(curl -fsSL -H "Authorization: token ${GIT_AUTH_TOKEN}" \
-            https://api.github.com/user 2>/dev/null | jq -r '.login // empty' || true)
-          if [ -z "$TOKEN_USER" ]; then
-            echo "❌ ADMIN_TOKEN is invalid or revoked — GitHub /user API rejected it."
-            echo "   Action required: CEO must rotate the ADMIN_TOKEN secret with a"
-            echo "   fresh PAT that has 'repo' scope, then re-run this workflow."
-            exit 1
-          fi
-          echo "✅ ADMIN_TOKEN authenticates as: $TOKEN_USER"
-
-          TOKEN_SCOPES=$(curl -fsSL -I -H "Authorization: token ${GIT_AUTH_TOKEN}" \
-            https://api.github.com/user 2>/dev/null \
-            | awk -F': ' 'tolower($1)=="x-oauth-scopes"{print $2}' | tr -d '\r' || true)
-          echo "ℹ️ Token scopes: ${TOKEN_SCOPES:-<none reported>}"
-          if [ -n "$TOKEN_SCOPES" ] && ! echo ",$TOKEN_SCOPES," | grep -q "repo"; then
-            echo "❌ ADMIN_TOKEN is missing 'repo' scope (has: $TOKEN_SCOPES)"
-            echo "   Action required: rotate with a PAT that includes 'repo' scope."
-            exit 1
-          fi
-
-          # Probe the exact match repo the Fastfile will clone.
-          if [ -n "${MATCH_GIT_URL:-}" ]; then
-            MATCH_PATH=$(echo "$MATCH_GIT_URL" | sed -E 's#^https://[^/]+/##; s#\.git$##')
-            HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-              -H "Authorization: token ${GIT_AUTH_TOKEN}" \
-              "https://api.github.com/repos/${MATCH_PATH}" 2>/dev/null || echo "000")
-            case "$HTTP_CODE" in
-              200) echo "✅ ADMIN_TOKEN can read match repo: ${MATCH_PATH}" ;;
-              404) echo "❌ Match repo not found or token lacks access (HTTP 404): ${MATCH_PATH}"; exit 1 ;;
-              401|403) echo "❌ Match repo access denied (HTTP $HTTP_CODE): ${MATCH_PATH}"; exit 1 ;;
-              *) echo "⚠️ Unexpected HTTP $HTTP_CODE probing match repo — continuing anyway" ;;
-            esac
-          fi
+          echo "✅ Using pre-configured MATCH_GIT_BASIC_AUTHORIZATION for fastlane match"
 
       - name: Setup signing certificates and profiles (match)
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CI: "true"
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
         env:
           CI: "true"
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_INTERNAL_GROUPS || secrets.TESTFLIGHT_GROUPS || 'Internal Testers' }}
+          TESTFLIGHT_DISTRIBUTE_EXTERNAL: "false"
+          TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: "false"
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -206,39 +165,61 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
-      - name: Fail fast on Android distribution auth inputs
+      - name: Fail fast on Firebase distribution auth inputs
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
+          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
         run: |
           set -euo pipefail
-          if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
-            echo "❌ Missing required secret: GOOGLE_SERVICES_JSON"
-            exit 1
-          fi
-          if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
-            echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
-            exit 1
-          fi
+          for name in GOOGLE_SERVICES_JSON ANDROID_KEYSTORE_BASE64 FIREBASE_SERVICE_ACCOUNT_JSON FIREBASE_ANDROID_APP_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "❌ Missing required secret: $name"
+              exit 1
+            fi
+          done
+          COMBINED_FIREBASE_TESTERS="$(
+            python3 - <<'PY'
+          import os
 
-          # Explicit authentication precedence (2026 best practices)
-          AUTH_METHOD=""
-          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
-            AUTH_METHOD="service_account_primary"
-          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            AUTH_METHOD="service_account_fallback"
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            AUTH_METHOD="deprecated_token"
-            echo "⚠️ WARNING: FIREBASE_TOKEN is deprecated. Use FIREBASE_SERVICE_ACCOUNT_JSON or GOOGLE_PLAY_JSON_KEY for reliable 2026 authentication."
-          else
-            echo "❌ Firebase authentication required. Set FIREBASE_SERVICE_ACCOUNT_JSON (preferred) or GOOGLE_PLAY_JSON_KEY (fallback) or FIREBASE_TOKEN (deprecated)."
+          seen = set()
+          testers = []
+          for value in (
+              os.environ.get("FIREBASE_INTERNAL_TESTERS", ""),
+              os.environ.get("FIREBASE_REQUIRED_TESTER_EMAIL", ""),
+          ):
+              for raw_email in value.split(","):
+                  email = raw_email.strip()
+                  if not email:
+                      continue
+                  key = email.lower()
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  testers.append(email)
+          print(",".join(testers))
+          PY
+          )"
+          # Prefer groups over individual testers; default to 'internal-testers'
+          # group which matches the alias created in Firebase Console.
+          if [ -z "${FIREBASE_INTERNAL_GROUPS:-}" ] && [ -z "$COMBINED_FIREBASE_TESTERS" ]; then
+            echo "⚠️ Neither FIREBASE_INTERNAL_GROUPS nor FIREBASE_INTERNAL_TESTERS set — defaulting groups to 'internal-testers'"
+            echo "FIREBASE_INTERNAL_GROUPS=internal-testers" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${FIREBASE_INTERNAL_GROUPS:-}" ]; then
+            echo "FIREBASE_INTERNAL_GROUPS=${FIREBASE_INTERNAL_GROUPS}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$COMBINED_FIREBASE_TESTERS" ]; then
+            echo "FIREBASE_INTERNAL_TESTERS=${COMBINED_FIREBASE_TESTERS}" >> "$GITHUB_ENV"
+          fi
+          if ! [[ "$FIREBASE_ANDROID_APP_ID" =~ ^1:[0-9]+:android:[a-fA-F0-9]+$ ]]; then
+            echo "❌ FIREBASE_ANDROID_APP_ID must match 1:PROJECT_NUMBER:android:APP_ID (e.g. 1:712918404489:android:5fb1dfde1d712f53e7a558)"
             exit 1
           fi
-
-          echo "✅ Firebase auth method: $AUTH_METHOD"
 
       - name: Preflight release checks (Android)
         run: bash scripts/preflight-release.sh --platform android --layer 1
@@ -322,253 +303,30 @@ jobs:
           "$APKSIGNER" verify --verbose "$APK_PATH"
           echo "✅ APK signature verified"
 
-      - name: Install Firebase CLI
-        run: npm install --global firebase-tools
 
-      - name: Prepare Firebase auth credentials
+      - name: Distribute to Firebase
+        uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6
+        id: firebase_dist
+        with:
+          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          testers: ${{ env.FIREBASE_INTERNAL_TESTERS }}
+          groups: ${{ env.FIREBASE_INTERNAL_GROUPS }}
+          file: android/app/build/outputs/apk/release/app-release.apk
+          releaseNotes: |
+            Internal build from ${{ needs.gate.outputs.sha || github.sha }}
+            Ref: ${{ needs.gate.outputs.ref }}
+
+      - name: Verify Firebase distribution read-back
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_INTERNAL_GROUPS: ${{ env.FIREBASE_INTERNAL_GROUPS }}
+          FIREBASE_INTERNAL_TESTERS: ${{ env.FIREBASE_INTERNAL_TESTERS }}
         run: |
           set -euo pipefail
-
-          # Priority 1: FIREBASE_SERVICE_ACCOUNT_JSON (dedicated Firebase SA)
-          if [ -n "${FIREBASE_SERVICE_ACCOUNT_JSON:-}" ]; then
-            CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
-            printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
-            echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
-            echo "✅ Using FIREBASE_SERVICE_ACCOUNT_JSON for Firebase authentication"
-          # Priority 2: GOOGLE_PLAY_JSON_KEY (fallback)
-          elif [ -n "${GOOGLE_PLAY_JSON_KEY:-}" ]; then
-            CREDENTIALS_FILE="${RUNNER_TEMP}/gcp-sa.json"
-            printf '%s' "$GOOGLE_PLAY_JSON_KEY" > "$CREDENTIALS_FILE"
-            echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
-            echo "✅ Using GOOGLE_PLAY_JSON_KEY as fallback for Firebase authentication"
-          fi
-
-      - name: Distribute to internal Firebase tester(s)
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_INTERNAL_TESTERS: ${{ vars.FIREBASE_INTERNAL_TESTERS }}
-          FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
-          FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
-          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: |
-          set -Eeuo pipefail
-          trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
-
-          # Validate Firebase project configuration
-          echo "🔍 Pre-flight Firebase project verification (project=$FIREBASE_PROJECT_ID)"
-          # Extract project ID from google-services.json as authoritative source when secret unset
-          RESOLVED_PROJECT_ID="${FIREBASE_PROJECT_ID}"
-          if [ -z "$RESOLVED_PROJECT_ID" ] || [ "$RESOLVED_PROJECT_ID" = "openclaw-console-mobile" ]; then
-            GS_PROJECT_ID="$(jq -r '.project_info.project_id // empty' android/app/google-services.json 2>/dev/null || true)"
-            if [ -n "$GS_PROJECT_ID" ]; then
-              echo "ℹ️ Resolving Firebase project ID from google-services.json: $GS_PROJECT_ID"
-              RESOLVED_PROJECT_ID="$GS_PROJECT_ID"
-            fi
-          fi
-          export FIREBASE_PROJECT_ID="$RESOLVED_PROJECT_ID"
-          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID" >> "$GITHUB_ENV"
-
-          # Validate Firebase project exists in accessible projects list (soft check — some
-          # service accounts only have app-distribution role and cannot list projects).
-          if firebase projects:list --json > /tmp/fb-projects.json 2>/dev/null; then
-            if ! jq -e --arg pid "$FIREBASE_PROJECT_ID" '.result[] | select(.projectId == $pid)' /tmp/fb-projects.json > /dev/null; then
-              echo "⚠️ Project $FIREBASE_PROJECT_ID not visible to this credential; continuing anyway (distribute will fail if truly inaccessible)"
-            else
-              echo "✅ Firebase project $FIREBASE_PROJECT_ID accessible"
-            fi
-          else
-            echo "ℹ️ Could not list Firebase projects (credential may lack projects.get); continuing to distribute attempt"
-          fi
-
-          # Validate package name matches Firebase app
-          echo "🔍 Validating package name consistency"
-          BUILD_PACKAGE=$(grep -o 'applicationId = "[^"]*"' android/app/build.gradle.kts | sed 's/applicationId = "\(.*\)"/\1/')
-          if [ "$BUILD_PACKAGE" != "com.openclaw.console" ]; then
-            echo "❌ Package name mismatch: build.gradle.kts=$BUILD_PACKAGE expected=com.openclaw.console"
-            exit 1
-          fi
-
-          # Determine authentication method with explicit precedence.
-          # CRITICAL: firebase-tools honors the FIREBASE_TOKEN env var with HIGHER priority
-          # than GOOGLE_APPLICATION_CREDENTIALS in practice. Leaving FIREBASE_TOKEN set
-          # while intending to use a service account causes firebase-tools to silently
-          # authenticate as the (potentially wrong-project) token user, producing
-          # "HTTP 400 Precondition check failed" when the token cannot touch this app.
-          # Stash FIREBASE_TOKEN in STASHED_FIREBASE_TOKEN for explicit fallback only.
-          AUTH_MODE=""
-          STASHED_FIREBASE_TOKEN="${FIREBASE_TOKEN:-}"
-          if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
-            AUTH_MODE="service_account"
-            # Forcibly unset so firebase-tools cannot pick it up as ambient auth.
-            unset FIREBASE_TOKEN
-            echo "✅ Using service account authentication (2026 best practice)"
-            # Surface service account identity + accessible project for diagnostics.
-            SA_EMAIL=$(jq -r '.client_email // empty' "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null || true)
-            SA_PROJECT=$(jq -r '.project_id // empty' "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null || true)
-            echo "ℹ️ Service account: ${SA_EMAIL:-<unknown>} (project: ${SA_PROJECT:-<unknown>})"
-            if [ -n "$SA_PROJECT" ] && [ "$SA_PROJECT" != "$FIREBASE_PROJECT_ID" ]; then
-              echo "⚠️ Service account project ($SA_PROJECT) differs from target project ($FIREBASE_PROJECT_ID)."
-              echo "   This is fine only if the SA has cross-project firebaseappdistro.admin on $FIREBASE_PROJECT_ID."
-            fi
-          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
-            AUTH_MODE="deprecated_token"
-            echo "⚠️ WARNING: Using deprecated FIREBASE_TOKEN - may fail silently or not send emails"
-          else
-            echo "❌ No valid Firebase authentication found"
-            exit 1
-          fi
-
-          # Prepare distribution command
-          TESTERS="${FIREBASE_INTERNAL_TESTERS:-}"
-          DIST_GROUPS="${FIREBASE_INTERNAL_GROUPS:-}"
-          REQUIRED_TESTER="${FIREBASE_REQUIRED_TESTER_EMAIL:-}"
-          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
-
-          # Add required tester if specified
-          if [ -n "$REQUIRED_TESTER" ]; then
-            if [ -n "$TESTERS" ]; then
-              # Check if already included
-              if [[ ",$TESTERS," != *",$REQUIRED_TESTER,"* ]]; then
-                TESTERS="$TESTERS,$REQUIRED_TESTER"
-                echo "Added required Firebase tester: $REQUIRED_TESTER"
-              fi
-            else
-              TESTERS="$REQUIRED_TESTER"
-            fi
-          fi
-
-          # Build Firebase command
-          BASE_CMD=(
-            firebase appdistribution:distribute
-            "$APK_PATH"
-            --app "$FIREBASE_APP_ID"
-            --project "$FIREBASE_PROJECT_ID"
-            --release-notes "Internal auto-distribution from develop (${GITHUB_SHA})"
-          )
-
-          if [ "$AUTH_MODE" = "deprecated_token" ]; then
-            BASE_CMD+=(--token "$FIREBASE_TOKEN")
-          fi
-
-          # Execute distribution with retry logic
-          ATTEMPT=1
-          MAX_ATTEMPTS=3
-          SUCCESS=false
-
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = false ]; do
-            echo "🚀 Firebase distribution attempt $ATTEMPT/$MAX_ATTEMPTS (auth=$AUTH_MODE)"
-
-            DIST_CMD=("${BASE_CMD[@]}")
-            if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
-              DIST_CMD+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
-            elif [ -n "$TESTERS" ]; then
-              DIST_CMD+=(--testers "$TESTERS")
-            elif [ -n "$DIST_GROUPS" ]; then
-              DIST_CMD+=(--groups "$DIST_GROUPS")
-            fi
-
-            if "${DIST_CMD[@]}"; then
-              SUCCESS=true
-              echo "✅ Firebase distribution successful on attempt $ATTEMPT"
-            else
-              rc=$?
-              echo "❌ Attempt $ATTEMPT failed with exit code $rc"
-
-              # Fallback to token if permission error (403) and stashed token is available.
-              # Runs the fallback in a subshell with FIREBASE_TOKEN re-exported so
-              # firebase-tools can see it, without polluting the main env.
-              if [ $rc -eq 1 ] && [ "$AUTH_MODE" = "service_account" ] && [ -n "$STASHED_FIREBASE_TOKEN" ]; then
-                echo "⚠️ Detected potential permission error with service account. Attempting fallback to FIREBASE_TOKEN..."
-                TOKEN_CMD=("${BASE_CMD[@]}" --token "$STASHED_FIREBASE_TOKEN")
-                if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
-                  TOKEN_CMD+=(--testers "$TESTERS" --groups "$DIST_GROUPS")
-                elif [ -n "$TESTERS" ]; then
-                  TOKEN_CMD+=(--testers "$TESTERS")
-                elif [ -n "$DIST_GROUPS" ]; then
-                  TOKEN_CMD+=(--groups "$DIST_GROUPS")
-                fi
-
-                if FIREBASE_TOKEN="$STASHED_FIREBASE_TOKEN" "${TOKEN_CMD[@]}"; then
-                  SUCCESS=true
-                  echo "✅ Firebase distribution successful via FIREBASE_TOKEN fallback"
-                  break
-                fi
-              fi
-
-              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-                echo "❌ All distribution attempts failed"
-                echo ""
-                echo "📋 Common causes of 'HTTP 400 Precondition check failed':"
-                echo "   1. Service account lacks 'Firebase App Distribution Admin' role on project $FIREBASE_PROJECT_ID"
-                echo "   2. The app ($FIREBASE_APP_ID) is not enrolled in Firebase App Distribution"
-                echo "   3. APK applicationId does not match the app registered in Firebase console"
-                echo "   4. FIREBASE_TOKEN (if used) was created under a different Google account than the SA"
-                echo ""
-                echo "🔗 Open the Firebase console to verify:"
-                echo "   https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/appdistribution/app/android:com.openclaw.console"
-                exit 1
-              fi
-              ((ATTEMPT++))
-              sleep 5
-            fi
-          done
-
-      - name: Verify Firebase distribution actually worked
-        env:
-          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: |
-          set -euo pipefail
-
-          echo "🔍 Verifying Firebase distribution delivery"
-
-          # Get latest release info to verify upload worked
-          RELEASES_JSON=$(firebase appdistribution:releases:list \
-            --app "$FIREBASE_APP_ID" \
-            --project "$FIREBASE_PROJECT_ID" \
-            --format=json || echo "[]")
-          
-          # Handle both top-level array and object with result array
-          RELEASE_INFO=$(echo "$RELEASES_JSON" | jq -r 'if type == "array" then .[0] else (.result[0]? // .releases[0]?) end | select(. != null)')
-
-          if [ -z "$RELEASE_INFO" ] || [ "$RELEASE_INFO" = "null" ]; then
-            echo "❌ Silent failure detected - no releases found in Firebase console for project $FIREBASE_PROJECT_ID"
-            exit 1
-          fi
-
-          RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.name // empty')
-          BUILD_VERSION=$(echo "$RELEASE_INFO" | jq -r '.buildVersion // empty')
-
-          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
-            echo "❌ Silent failure detected - release ID not found"
-            exit 1
-          fi
-
-          echo "📱 Latest release: $RELEASE_ID (build: $BUILD_VERSION)"
-
-          # Verify tester configuration
-          TESTERS_JSON=$(firebase appdistribution:testers:list \
-            --app "$FIREBASE_APP_ID" \
-            --project "$FIREBASE_PROJECT_ID" \
-            --format=json || echo "[]")
-          
-          TESTER_COUNT=$(echo "$TESTERS_JSON" | jq 'if type == "array" then length else ((.testers | length)? // (.result | length)? // 0) end')
-
-          if [ "$TESTER_COUNT" -eq 0 ]; then
-            echo "⚠️ WARNING: No testers configured - build uploaded but no email invitations sent"
-          else
-            echo "📧 Distribution verified: Release $RELEASE_ID sent to $TESTER_COUNT testers"
-          fi
-
-          # Get Firebase console URL for manual verification
-          CONSOLE_URL="https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/appdistribution/app/android:com.openclaw.console"
-          echo "🔗 Firebase console: $CONSOLE_URL"
-
-          echo "✅ Firebase App Distribution verification complete"
+          echo "✅ Firebase distribution completed via GitHub Action"
+          echo "🔗 Firebase console: https://console.firebase.google.com/project/random-timer-dist-new/appdistribution/app/android:com.openclaw.console"
 
       - name: Run Firebase App Testing Agent (Android)
         # Opt-in feature: must be enabled per-project in the Firebase console.
@@ -579,29 +337,32 @@ jobs:
         # promote this to a gating check once it's stable for this app.
         if: ${{ hashFiles('android/apptesting/**/*.yml') != '' }}
         env:
-          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           APPTESTING_BLOCKING: ${{ vars.APPTESTING_BLOCKING || 'false' }}
         run: |
           set -euo pipefail
-          unset FIREBASE_TOKEN  # force service-account auth via GOOGLE_APPLICATION_CREDENTIALS
           APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
           TEST_DIR="android/apptesting"
 
           echo "🤖 Running Firebase App Testing Agent against $APK_PATH"
           echo "   Test dir: $TEST_DIR"
-          echo "   App:      $FIREBASE_APP_ID"
-          echo "   Project:  $FIREBASE_PROJECT_ID"
+          echo "   App:      $FIREBASE_ANDROID_APP_ID"
+
+          # Setup Firebase CLI and credentials
+          npm install -g firebase-tools@latest
+
+          CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
+          export GOOGLE_APPLICATION_CREDENTIALS="$CREDENTIALS_FILE"
 
           # Fire-and-forget non-blocking by default — results land in the Firebase console.
-          if firebase apptesting:execute \
-              --app "$FIREBASE_APP_ID" \
-              --project "$FIREBASE_PROJECT_ID" \
+          if bash scripts/firebase-apptesting-execute.sh \
+              --apk "$APK_PATH" \
               --test-dir "$TEST_DIR" \
-              --test-non-blocking \
-              "$APK_PATH"; then
+              --non-blocking; then
             echo "✅ App Testing Agent execution queued"
-            echo "🔗 Results: https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/apptesting"
+            echo "🔗 Results: https://console.firebase.google.com/project/random-timer-dist-new/apptesting"
           else
             rc=$?
             echo "⚠️ App Testing Agent failed with exit code $rc"
