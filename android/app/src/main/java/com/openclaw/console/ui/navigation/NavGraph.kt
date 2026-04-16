@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
@@ -21,6 +22,7 @@ import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.screens.agents.AgentDetailScreen
 import com.openclaw.console.ui.screens.agents.AgentListScreen
 import com.openclaw.console.ui.screens.bridges.BridgeListScreen
+import com.openclaw.console.ui.screens.dashboard.FleetDashboardScreen
 import com.openclaw.console.ui.screens.loops.LoopListScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
@@ -32,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class Screen(val route: String, val label: String) {
     // Bottom nav roots
+    object Dashboard : Screen("dashboard", "Dashboard")
     object Agents : Screen("agents", "Agents")
     object Incidents : Screen("incidents", "Incidents")
     object Loops : Screen("loops", "Loops")
@@ -74,6 +77,7 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     }
 
     val bottomItems = listOf(
+        BottomNavItem(Screen.Dashboard, Icons.Default.Dashboard),
         BottomNavItem(Screen.Agents, Icons.Default.Groups),
         BottomNavItem(Screen.Incidents, Icons.Default.BugReport, openIncidentCount),
         BottomNavItem(Screen.Loops, Icons.Default.Autorenew),
@@ -118,9 +122,19 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Agents.route,
+            startDestination = Screen.Dashboard.route,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // Dashboard
+            composable(Screen.Dashboard.route) {
+                FleetDashboardScreen(
+                    appViewModel = appViewModel,
+                    onAgentClick = { agentId ->
+                        navController.navigate(Screen.AgentDetail.route(agentId))
+                    }
+                )
+            }
+
             // Agents
             composable(Screen.Agents.route) {
                 AgentListScreen(

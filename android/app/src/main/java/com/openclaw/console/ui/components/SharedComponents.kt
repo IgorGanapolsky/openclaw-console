@@ -242,16 +242,19 @@ fun EmptyState(
 @Composable
 fun ConnectionStatusBanner(
     state: com.openclaw.console.data.network.ConnectionState,
+    lastSignalAt: String? = null,
+    signalSummary: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val (message, color) = when (state) {
-        com.openclaw.console.data.network.ConnectionState.CONNECTED -> return
+    val (message, color, icon) = when (state) {
+        com.openclaw.console.data.network.ConnectionState.CONNECTED ->
+            Triple(signalSummary ?: "Connected", Color(0xFFE8F5E9), Icons.Default.Cloud)
         com.openclaw.console.data.network.ConnectionState.CONNECTING ->
-            "Connecting..." to MaterialTheme.colorScheme.primaryContainer
+            Triple("Connecting...", MaterialTheme.colorScheme.primaryContainer, Icons.Default.Sync)
         com.openclaw.console.data.network.ConnectionState.RECONNECTING ->
-            "Reconnecting..." to MaterialTheme.colorScheme.tertiaryContainer
+            Triple("Reconnecting...", MaterialTheme.colorScheme.tertiaryContainer, Icons.Default.Sync)
         com.openclaw.console.data.network.ConnectionState.DISCONNECTED ->
-            "Disconnected - Go to Settings to connect" to MaterialTheme.colorScheme.errorContainer
+            Triple("Disconnected - Go to Settings to connect", MaterialTheme.colorScheme.errorContainer, Icons.Default.CloudOff)
     }
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -266,12 +269,21 @@ fun ConnectionStatusBanner(
                 state == com.openclaw.console.data.network.ConnectionState.RECONNECTING) {
                 CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
             } else {
-                Icon(Icons.Default.CloudOff, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
             }
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall
-            )
+            Column {
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                lastSignalAt?.let {
+                    Text(
+                        text = "Last signal: ${formatTimeAgo(it)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

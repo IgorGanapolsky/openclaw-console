@@ -9,6 +9,7 @@
 //   UIBackgroundModes → none required (no background processing)
 
 import SwiftUI
+import UserNotifications
 
 @main
 @available(iOS 17.0, *)
@@ -18,6 +19,12 @@ struct OpenClawConsoleApp: App {
     // webSocketService and approvalViewModel share the same WS instance.
     // They are stored as @State so the App owns their lifetime.
     @State private var services = AppServices()
+
+    init() {
+        // Register the notification action handler as the delegate BEFORE the app
+        // finishes launching, so iOS delivers queued notification responses.
+        UNUserNotificationCenter.current().delegate = NotificationActionHandler.shared
+    }
 
     var body: some Scene {
         WindowGroup {

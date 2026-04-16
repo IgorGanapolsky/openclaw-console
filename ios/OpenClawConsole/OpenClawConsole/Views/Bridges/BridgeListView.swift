@@ -67,6 +67,12 @@ struct BridgeSessionRow: View {
                     .padding(4)
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                if let projectName {
+                    Text("Project session: \(projectName)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Text("Created: \(session.createdAt.formatted(date: .abbreviated, time: .shortened))")
@@ -82,6 +88,10 @@ struct BridgeSessionRow: View {
         case "terminal": return "terminal"
         default: return "link"
         }
+    }
+
+    private var projectName: String? {
+        session.metadata["project_name"]?.value as? String
     }
 }
 

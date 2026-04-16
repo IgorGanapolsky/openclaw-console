@@ -127,10 +127,12 @@ enum InboundEventType: String {
     case incidentUpdate = "incident_update"
     case approvalRequest = "approval_request"
     case chatResponse = "chat_response"
+    case agentStatusChange = "agent_status_change"
     case bridgeSessionNew = "bridge_session_new"
     case bridgeSessionUpdate = "bridge_session_update"
     case recurringTaskUpdated = "recurring_task_updated"
     case gitStateChanged = "git_state_changed"
+    case heartbeat
     case connected
     case error
 }
@@ -144,11 +146,13 @@ enum InboundEvent {
     case incidentUpdate(IncidentUpdate)
     case approvalRequest(ApprovalRequest)
     case chatResponse(ChatMessage)
+    case agentStatusChange(agentId: String, agentName: String, previousStatus: AgentStatus, newStatus: AgentStatus)
     case bridgeSessionNew(BridgeSession)
     case bridgeSessionUpdate(BridgeSession)
     case recurringTaskUpdated(RecurringTask)
     case gitStateChanged(String, GitState)
-    case connected(sessionId: String, gatewayVersion: String)
+    case heartbeat(GatewayHeartbeatPayload, timestamp: Date?)
+    case connected(sessionId: String, gatewayVersion: String, heartbeatIntervalMs: Int, timestamp: Date?)
     case error(code: Int, message: String)
     case unknown(String)
 }
@@ -216,10 +220,28 @@ struct BridgeSession: Codable, Identifiable {
 struct ConnectedPayload: Codable {
     let sessionId: String
     let gatewayVersion: String
+    let heartbeatIntervalMs: Int
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case gatewayVersion = "gateway_version"
+        case heartbeatIntervalMs = "heartbeat_interval_ms"
+    }
+}
+
+struct GatewayHeartbeatPayload: Codable {
+    let gatewayVersion: String
+    let connectedClients: Int
+    let lastInboundAt: Date?
+    let lastOutboundAt: Date?
+    let uptimeSeconds: Int
+
+    enum CodingKeys: String, CodingKey {
+        case gatewayVersion = "gateway_version"
+        case connectedClients = "connected_clients"
+        case lastInboundAt = "last_inbound_at"
+        case lastOutboundAt = "last_outbound_at"
+        case uptimeSeconds = "uptime_seconds"
     }
 }
 
