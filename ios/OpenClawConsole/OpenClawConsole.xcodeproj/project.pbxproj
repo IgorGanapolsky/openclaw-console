@@ -13,6 +13,7 @@
 		0BBA9EA593E3DDAC46089C23 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D928179E99267A56D9E33E52 /* TaskListView.swift */; };
 		0C1AE32553026B2D6E44BF70 /* FleetDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C560C0A66A3D96BECA197352 /* FleetDashboardView.swift */; };
 		1411E663C8A4209F050783A9 /* WebSocketService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E514BCE93EB1F89A2190D0 /* WebSocketService.swift */; };
+		16A1BD2710BF953FACC6331F /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 38D99F4B062A6E575A5E59DE /* RevenueCat */; };
 		17440A7BE1F4BEFF258E597A /* AgentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADA3CC20D4CDDDEBDD0F5E4 /* AgentDetailView.swift */; };
 		20557B9A641A9353044D4921 /* SeverityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2AD462AAE57779B0DE9F4E /* SeverityBadge.swift */; };
 		276EA882F2F1AFAE8C718DBF /* FleetDashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBD4C366AAFD78D5B095C56A /* FleetDashboardViewModel.swift */; };
@@ -106,6 +107,17 @@
 		DF8869C2C89DE90325B36537 /* TaskDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailViewModel.swift; sourceTree = "<group>"; };
 		E3E2C6547FC111A0704755D8 /* IncidentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8129656D69330E1F3532DA9F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16A1BD2710BF953FACC6331F /* RevenueCat in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0316CDEF9ADF932B23A91237 /* Views */ = {
@@ -299,6 +311,7 @@
 			buildPhases = (
 				AC55413DEC7B34043F71182C /* Sources */,
 				D3B4FE988C1C4DC28FAAF903 /* Resources */,
+				8129656D69330E1F3532DA9F /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -306,6 +319,7 @@
 			);
 			name = OpenClawConsole;
 			packageProductDependencies = (
+				38D99F4B062A6E575A5E59DE /* RevenueCat */,
 			);
 			productName = OpenClawConsole;
 			productReference = DF1A595D54FA8D215174F303 /* OpenClawConsole.app */;
@@ -334,6 +348,9 @@
 			);
 			mainGroup = 386E84F76E8D76809ABB8DE2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5C34E63B4FD6DD8C0C6F4579 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 400013C51CE1D6B56A9B4C2E /* Products */;
 			projectDirPath = "";
@@ -599,6 +616,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5C34E63B4FD6DD8C0C6F4579 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.67.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		38D99F4B062A6E575A5E59DE /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5C34E63B4FD6DD8C0C6F4579 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CCC4285A4910BCC03DF52580 /* Project object */;
 }
