@@ -73,14 +73,13 @@ jobs:
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -121,6 +120,11 @@ jobs:
         run: |
           set -euo pipefail
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          # Derive MATCH_GIT_BASIC_AUTHORIZATION from ADMIN_TOKEN to avoid stale credential issues.
+          # Fastlane match uses this header to authenticate git clone of the certificates repo.
+          MATCH_AUTH=$(printf 'x-access-token:%s' "$GIT_AUTH_TOKEN" | base64 | tr -d '\n')
+          echo "::add-mask::$MATCH_AUTH"
+          echo "MATCH_GIT_BASIC_AUTHORIZATION=$MATCH_AUTH" >> "$GITHUB_ENV"
 
       - name: Setup signing certificates and profiles (match)
         env:
@@ -129,7 +133,6 @@ jobs:
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
@@ -142,7 +145,6 @@ jobs:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -312,17 +314,35 @@ jobs:
           FIREBASE_INTERNAL_GROUPS: ${{ vars.FIREBASE_INTERNAL_GROUPS }}
           FIREBASE_REQUIRED_TESTER_EMAIL: ${{ vars.FIREBASE_REQUIRED_TESTER_EMAIL }}
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'openclaw-console-mobile' }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
 
           # Validate Firebase project configuration
-          echo "🔍 Pre-flight Firebase project verification"
-          # Validate Firebase project exists in accessible projects list
-          if ! firebase projects:list --json | jq -e '.result[] | select(.projectId == "openclaw-console-mobile")' > /dev/null; then
-            echo "❌ Firebase project openclaw-console-mobile not accessible or does not exist"
-            exit 1
+          echo "🔍 Pre-flight Firebase project verification (project=$FIREBASE_PROJECT_ID)"
+          # Extract project ID from google-services.json as authoritative source when secret unset
+          RESOLVED_PROJECT_ID="${FIREBASE_PROJECT_ID}"
+          if [ -z "$RESOLVED_PROJECT_ID" ] || [ "$RESOLVED_PROJECT_ID" = "openclaw-console-mobile" ]; then
+            GS_PROJECT_ID="$(jq -r '.project_info.project_id // empty' android/app/google-services.json 2>/dev/null || true)"
+            if [ -n "$GS_PROJECT_ID" ]; then
+              echo "ℹ️ Resolving Firebase project ID from google-services.json: $GS_PROJECT_ID"
+              RESOLVED_PROJECT_ID="$GS_PROJECT_ID"
+            fi
+          fi
+          export FIREBASE_PROJECT_ID="$RESOLVED_PROJECT_ID"
+          echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID" >> "$GITHUB_ENV"
+
+          # Validate Firebase project exists in accessible projects list (soft check — some
+          # service accounts only have app-distribution role and cannot list projects).
+          if firebase projects:list --json > /tmp/fb-projects.json 2>/dev/null; then
+            if ! jq -e --arg pid "$FIREBASE_PROJECT_ID" '.result[] | select(.projectId == $pid)' /tmp/fb-projects.json > /dev/null; then
+              echo "⚠️ Project $FIREBASE_PROJECT_ID not visible to this credential; continuing anyway (distribute will fail if truly inaccessible)"
+            else
+              echo "✅ Firebase project $FIREBASE_PROJECT_ID accessible"
+            fi
+          else
+            echo "ℹ️ Could not list Firebase projects (credential may lack projects.get); continuing to distribute attempt"
           fi
 
           # Validate package name matches Firebase app
@@ -334,11 +354,12 @@ jobs:
           fi
 
           # Determine authentication method with explicit precedence
+          # IMPORTANT: Do NOT unset FIREBASE_TOKEN when using service account — we keep it
+          # around so the retry loop below can fall back to token auth if the service
+          # account lacks the required roles (firebaseappdistro.admin).
           AUTH_MODE=""
           if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
             AUTH_MODE="service_account"
-            # Clear deprecated token to prevent confusion
-            unset FIREBASE_TOKEN
             echo "✅ Using service account authentication (2026 best practice)"
           elif [ -n "${FIREBASE_TOKEN:-}" ]; then
             AUTH_MODE="deprecated_token"
@@ -435,7 +456,7 @@ jobs:
       - name: Verify Firebase distribution actually worked
         env:
           FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'openclaw-console-mobile' }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           set -euo pipefail
 
