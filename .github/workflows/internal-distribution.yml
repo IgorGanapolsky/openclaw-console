@@ -322,14 +322,16 @@ jobs:
             APP_MISMATCH=true
           fi
 
-          # Generate corrected google-services.json if there's a mismatch
-          if [ "$PROJECT_MISMATCH" = true ] || [ "$APP_MISMATCH" = true ]; then
-            echo "🛠️ Generating corrected google-services.json for OpenClaw Console project..."
+          # FORCE CORRECTION: Always use OpenClaw Console project from secrets (not Random-Timer)
+          if [ -n "${FIREBASE_PROJECT_ID:-}" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
+            echo "🔄 FORCING OpenClaw Console Firebase project configuration..."
+            echo "   FROM: google-services.json project=$GS_PROJECT_ID app=$GS_APP_ID"
+            echo "   TO:   secrets project=$FIREBASE_PROJECT_ID app=$FIREBASE_ANDROID_APP_ID"
 
             # Extract project number from app ID (format: 1:PROJECT_NUMBER:android:APP_HASH)
             PROJECT_NUMBER="$(echo "$FIREBASE_ANDROID_APP_ID" | cut -d':' -f2)"
 
-            # Generate corrected google-services.json
+            # Generate corrected OpenClaw Console google-services.json
             cat > app/google-services.json << EOF
           {
             "project_info": {
@@ -348,7 +350,7 @@ jobs:
                 "oauth_client": [],
                 "api_key": [
                   {
-                    "current_key": "placeholder_key_will_be_resolved_at_runtime"
+                    "current_key": "placeholder_api_key_resolved_at_runtime"
                   }
                 ],
                 "services": {
@@ -362,11 +364,12 @@ jobs:
           }
           EOF
 
-            echo "✅ Generated corrected google-services.json for OpenClaw Console project ($FIREBASE_PROJECT_ID)"
+            echo "✅ GENERATED OpenClaw Console google-services.json"
+            echo "   Project: $FIREBASE_PROJECT_ID (number: $PROJECT_NUMBER)"
             echo "   App ID: $FIREBASE_ANDROID_APP_ID"
-            echo "   Project Number: $PROJECT_NUMBER"
+            echo "   Package: com.openclaw.console"
           else
-            echo "✅ google-services.json configuration matches Firebase secrets - no changes needed"
+            echo "⚠️ Missing FIREBASE_PROJECT_ID or FIREBASE_ANDROID_APP_ID secrets"
           fi
 
       - name: Resolve Firebase app id
