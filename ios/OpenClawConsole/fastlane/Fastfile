@@ -148,24 +148,38 @@ platform :ios do
           add_to_search_list: true
         )
 
-        match(
-          type: "appstore",
-          app_identifier: ["com.openclaw.console"],
-          readonly: true,
-          api_key: api_key,
-          keychain_name: "fastlane_tmp_keychain",
-          keychain_password: "temp_password"
-        )
+        # Only use match if git repository is available
+        if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
+          UI.message("Using fastlane match for code signing")
+          match(
+            type: "appstore",
+            app_identifier: ["com.openclaw.console"],
+            readonly: true,
+            api_key: api_key,
+            keychain_name: "fastlane_tmp_keychain",
+            keychain_password: "temp_password"
+          )
+        else
+          UI.message("Skipping match (repository not accessible) - using automatic signing")
+          UI.message("Note: Ensure Xcode project is configured for automatic signing")
+        end
       else
         # Local development: can generate/update certificates if needed
         UI.message("Setting up certificates for local development")
 
-        match(
-          type: "appstore",
-          app_identifier: ["com.openclaw.console"],
-          readonly: false,
-          api_key: api_key
-        )
+        # Only use match if git repository is available
+        if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
+          UI.message("Using fastlane match for certificate management")
+          match(
+            type: "appstore",
+            app_identifier: ["com.openclaw.console"],
+            readonly: false,
+            api_key: api_key
+          )
+        else
+          UI.message("Skipping match (repository not configured) - using automatic signing")
+          UI.message("Note: Ensure Xcode project is configured for automatic signing")
+        end
       end
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
