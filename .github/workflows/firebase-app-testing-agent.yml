@@ -1,0 +1,185 @@
+name: Firebase App Testing Agent
+
+# Manual AI-guided UI verification via Firebase App Distribution (Android).
+# Preview: enable App Testing agent in Firebase Console → App Distribution first.
+# https://firebase.google.com/docs/app-distribution/android/app-testing-agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to checkout (empty = commit SHA that triggered this run)"
+        required: false
+        type: string
+      skip_build:
+        description: "Skip APK build; agent uses latest App Distribution release for FIREBASE_ANDROID_APP_ID"
+        required: false
+        type: boolean
+        default: false
+      test_non_blocking:
+        description: "Exit after tests are queued (check Firebase console for outcomes)"
+        required: false
+        type: boolean
+        default: true
+      test_devices:
+        description: "Semicolon-separated Test Lab device specs"
+        required: false
+        type: string
+        default: "model=panther,version=33,locale=en,orientation=portrait"
+      debug_firebase_cli:
+        description: "Verbose firebase --debug (may log tokenized URLs; use only when diagnosing failures)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: firebase-app-testing-agent-${{ github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  agent:
+    name: Android App Testing agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.sha }}
+
+      - name: Validate secrets for selected mode
+        env:
+          SKIP_BUILD: ${{ inputs.skip_build }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in FIREBASE_SERVICE_ACCOUNT_JSON FIREBASE_ANDROID_APP_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing secret: $name"
+              exit 1
+            fi
+          done
+          if ! [[ "$FIREBASE_ANDROID_APP_ID" =~ ^1:[0-9]+:android:[a-fA-F0-9]+$ ]]; then
+            echo "FIREBASE_ANDROID_APP_ID must match 1:PROJECT_NUMBER:android:APP_ID"
+            exit 1
+          fi
+          if [ "$SKIP_BUILD" != "true" ]; then
+            for name in GOOGLE_SERVICES_JSON ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+              if [ -z "${!name:-}" ]; then
+                echo "Missing secret (required when skip_build is false): $name"
+                exit 1
+              fi
+            done
+          fi
+
+      - name: Preflight release checks (Android)
+        if: ${{ !inputs.skip_build }}
+        run: bash scripts/preflight-release.sh --platform android --layer 1
+
+      - name: Setup Java
+        if: ${{ !inputs.skip_build }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Create google-services.json
+        if: ${{ !inputs.skip_build }}
+        working-directory: android
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
+      - name: Decode keystore
+        if: ${{ !inputs.skip_build }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/release.keystore
+
+      - name: Build release APK
+        if: ${{ !inputs.skip_build }}
+        working-directory: android
+        env:
+          KEYSTORE_PATH: /tmp/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ./gradlew -PciVersionCode="${{ github.run_number }}" assembleRelease --no-daemon
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Prepare Firebase service account credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$CREDENTIALS_FILE"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$CREDENTIALS_FILE" >> "$GITHUB_ENV"
+
+      - name: Run App Testing agent (with built APK)
+        if: ${{ !inputs.skip_build }}
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_APP_TESTING_DEVICES: ${{ inputs.test_devices }}
+          TEST_NON_BLOCKING: ${{ inputs.test_non_blocking }}
+          FIREBASE_APPTESTING_DEBUG: ${{ inputs.debug_firebase_cli }}
+        run: |
+          set -euo pipefail
+          EXTRA_FLAGS=()
+          if [ "$TEST_NON_BLOCKING" = "true" ]; then
+            EXTRA_FLAGS+=(--non-blocking)
+          fi
+          if [ "$FIREBASE_APPTESTING_DEBUG" = "true" ]; then
+            EXTRA_FLAGS+=(--debug)
+          fi
+          bash scripts/firebase-apptesting-execute.sh \
+            --test-devices "$FIREBASE_APP_TESTING_DEVICES" \
+            "${EXTRA_FLAGS[@]}" \
+            --apk "$GITHUB_WORKSPACE/android/app/build/outputs/apk/release/app-release.apk"
+
+      - name: Run App Testing agent (latest App Distribution release)
+        if: ${{ inputs.skip_build }}
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          FIREBASE_APP_TESTING_DEVICES: ${{ inputs.test_devices }}
+          TEST_NON_BLOCKING: ${{ inputs.test_non_blocking }}
+          FIREBASE_APPTESTING_DEBUG: ${{ inputs.debug_firebase_cli }}
+        run: |
+          set -euo pipefail
+          EXTRA_FLAGS=()
+          if [ "$TEST_NON_BLOCKING" = "true" ]; then
+            EXTRA_FLAGS+=(--non-blocking)
+          fi
+          if [ "$FIREBASE_APPTESTING_DEBUG" = "true" ]; then
+            EXTRA_FLAGS+=(--debug)
+          fi
+          bash scripts/firebase-apptesting-execute.sh \
+            --test-devices "$FIREBASE_APP_TESTING_DEVICES" \
+            "${EXTRA_FLAGS[@]}"
+
+      - name: Cleanup keystore
+        if: always()
+        run: rm -f /tmp/release.keystore
