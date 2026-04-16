@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -27,6 +28,7 @@ fun SettingsScreen(
     appViewModel: AppViewModel,
     onAddGateway: () -> Unit,
     onApprovalClick: (String) -> Unit,
+    onUpgradeClick: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
@@ -71,6 +73,11 @@ fun SettingsScreen(
                     lastSignalAt = lastGatewaySignal,
                     signalSummary = gatewaySignalSummary
                 )
+            }
+
+            // Upgrade to Pro CTA
+            item {
+                UpgradeToProCard(onClick = onUpgradeClick)
             }
 
             // Pending approvals section
@@ -219,6 +226,50 @@ private fun SwipeToDismissGatewayItem(
             isActive = isActive,
             onSetActive = onSetActive
         )
+    }
+}
+
+@Composable
+private fun UpgradeToProCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Upgrade to OpenClaw Pro",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = "DevOps integrations, advanced analytics, unlimited agents, and more.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
     }
 }
 

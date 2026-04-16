@@ -29,6 +29,7 @@ import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
 import com.openclaw.console.ui.screens.settings.AddGatewayScreen
 import com.openclaw.console.ui.screens.settings.SettingsScreen
+import com.openclaw.console.ui.screens.subscription.PaywallScreen
 import com.openclaw.console.ui.screens.tasks.TaskDetailScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -55,6 +56,10 @@ sealed class Screen(val route: String, val label: String) {
         fun route(approvalId: String) = "approvals/$approvalId"
     }
     object AddGateway : Screen("settings/add", "Add Gateway")
+    object Paywall : Screen("paywall?feature={feature}", "Upgrade to Pro") {
+        fun route(feature: String? = null): String =
+            if (feature.isNullOrBlank()) "paywall?feature=" else "paywall?feature=$feature"
+    }
 }
 
 private data class BottomNavItem(
@@ -220,6 +225,9 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                     },
                     onApprovalClick = { approvalId ->
                         navController.navigate(Screen.ApprovalDetail.route(approvalId))
+                    },
+                    onUpgradeClick = {
+                        navController.navigate(Screen.Paywall.route())
                     }
                 )
             }
@@ -240,6 +248,24 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                     approvalId = approvalId,
                     appViewModel = appViewModel,
                     onBack = { navController.navigateUp() }
+                )
+            }
+
+            // Paywall — opened from Settings "Upgrade" CTA and from feature gates
+            composable(
+                route = Screen.Paywall.route,
+                arguments = listOf(
+                    navArgument("feature") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val feature = backStackEntry.arguments?.getString("feature")?.ifBlank { null }
+                PaywallScreen(
+                    onClose = { navController.navigateUp() },
+                    requiredFeature = feature
                 )
             }
         }

@@ -87,9 +87,8 @@ jobs:
         working-directory: ios/OpenClawConsole
         run: |
           set -euo pipefail
-          if [ ! -f "OpenClawConsole.xcodeproj/project.pbxproj" ]; then
-            xcodegen generate
-          fi
+          # Always regenerate project to ensure all source files are included
+          xcodegen generate
           test -f "OpenClawConsole.xcodeproj/project.pbxproj"
 
       - name: Install Fastlane
