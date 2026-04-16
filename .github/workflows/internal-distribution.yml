@@ -115,19 +115,53 @@ jobs:
           echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
 
       - name: Configure git credentials for match
+        env:
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           set -euo pipefail
-          echo "✅ Using pre-configured MATCH_GIT_BASIC_AUTHORIZATION for fastlane match"
+
+          echo "🔍 Debugging fastlane match configuration:"
+          echo "  MATCH_GIT_URL: ${MATCH_GIT_URL:-'(not set)'}"
+          echo "  MATCH_PASSWORD: ${MATCH_PASSWORD:+set}${MATCH_PASSWORD:-'(not set)'}"
+          echo "  MATCH_GIT_BASIC_AUTHORIZATION: ${MATCH_GIT_BASIC_AUTHORIZATION:+set}${MATCH_GIT_BASIC_AUTHORIZATION:-'(not set)'}"
+
+          # Test git access to the match repository
+          if [ -n "${MATCH_GIT_URL:-}" ]; then
+            echo "🧪 Testing git access to match repository..."
+            if git ls-remote "$MATCH_GIT_URL" >/dev/null 2>&1; then
+              echo "✅ Match repository is accessible"
+              echo "MATCH_REPO_ACCESSIBLE=true" >> "$GITHUB_ENV"
+            else
+              echo "❌ Match repository is not accessible - will disable match and use automatic signing"
+              echo "MATCH_REPO_ACCESSIBLE=false" >> "$GITHUB_ENV"
+              # Clear match environment variables to trigger automatic signing fallback
+              echo "MATCH_GIT_URL=" >> "$GITHUB_ENV"
+              echo "MATCH_PASSWORD=" >> "$GITHUB_ENV"
+              echo "MATCH_GIT_BASIC_AUTHORIZATION=" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "⚠️ MATCH_GIT_URL not configured - will use automatic signing"
+            echo "MATCH_REPO_ACCESSIBLE=false" >> "$GITHUB_ENV"
+          fi
 
       - name: Setup signing certificates and profiles (match)
         env:
           CI: "true"
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-        run: bundle exec fastlane setup
+          # These will be empty if match repo is not accessible, triggering automatic signing fallback
+          MATCH_GIT_URL: ${{ env.MATCH_REPO_ACCESSIBLE == 'true' && secrets.MATCH_GIT_URL || '' }}
+          MATCH_PASSWORD: ${{ env.MATCH_REPO_ACCESSIBLE == 'true' && secrets.MATCH_PASSWORD || '' }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ env.MATCH_REPO_ACCESSIBLE == 'true' && secrets.MATCH_GIT_BASIC_AUTHORIZATION || '' }}
+        run: |
+          if [ "$MATCH_REPO_ACCESSIBLE" = "true" ]; then
+            echo "🔐 Using fastlane match for code signing"
+          else
+            echo "🤖 Using automatic code signing (match repository not accessible)"
+          fi
+          bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
@@ -137,9 +171,10 @@ jobs:
           FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          # These will be empty if match repo is not accessible, triggering automatic signing fallback
+          MATCH_GIT_URL: ${{ env.MATCH_REPO_ACCESSIBLE == 'true' && secrets.MATCH_GIT_URL || '' }}
+          MATCH_PASSWORD: ${{ env.MATCH_REPO_ACCESSIBLE == 'true' && secrets.MATCH_PASSWORD || '' }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ env.MATCH_REPO_ACCESSIBLE == 'true' && secrets.MATCH_GIT_BASIC_AUTHORIZATION || '' }}
           TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_INTERNAL_GROUPS || secrets.TESTFLIGHT_GROUPS || 'Internal Testers' }}
           TESTFLIGHT_DISTRIBUTE_EXTERNAL: "false"
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: "false"
@@ -260,26 +295,78 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Write the Google Services JSON
+          # Write the initial Google Services JSON
           echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
           # Extract project info from the file and secrets for validation
           GS_PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
           GS_APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
 
-          echo "📋 Firebase project configuration:"
+          echo "📋 Firebase project configuration analysis:"
           echo "  google-services.json project_id: $GS_PROJECT_ID"
           echo "  google-services.json app_id: $GS_APP_ID"
           echo "  FIREBASE_PROJECT_ID secret: ${FIREBASE_PROJECT_ID:-'(not set)'}"
           echo "  FIREBASE_ANDROID_APP_ID secret: ${FIREBASE_ANDROID_APP_ID:-'(not set)'}"
 
-          # Validate consistency between file and secrets
+          # Check for project mismatch and fix it
+          PROJECT_MISMATCH=false
+          APP_MISMATCH=false
+
           if [ -n "${FIREBASE_PROJECT_ID:-}" ] && [ "$GS_PROJECT_ID" != "$FIREBASE_PROJECT_ID" ]; then
-            echo "⚠️ WARNING: Project ID mismatch between google-services.json ($GS_PROJECT_ID) and FIREBASE_PROJECT_ID secret ($FIREBASE_PROJECT_ID)"
+            echo "🔄 PROJECT MISMATCH: google-services.json has $GS_PROJECT_ID but should be $FIREBASE_PROJECT_ID"
+            PROJECT_MISMATCH=true
           fi
 
           if [ -n "${FIREBASE_ANDROID_APP_ID:-}" ] && [ "$GS_APP_ID" != "$FIREBASE_ANDROID_APP_ID" ]; then
-            echo "⚠️ WARNING: App ID mismatch between google-services.json ($GS_APP_ID) and FIREBASE_ANDROID_APP_ID secret ($FIREBASE_ANDROID_APP_ID)"
+            echo "🔄 APP MISMATCH: google-services.json has $GS_APP_ID but should be $FIREBASE_ANDROID_APP_ID"
+            APP_MISMATCH=true
+          fi
+
+          # Generate corrected google-services.json if there's a mismatch
+          if [ "$PROJECT_MISMATCH" = true ] || [ "$APP_MISMATCH" = true ]; then
+            echo "🛠️ Generating corrected google-services.json for OpenClaw Console project..."
+
+            # Extract project number from app ID (format: 1:PROJECT_NUMBER:android:APP_HASH)
+            PROJECT_NUMBER="$(echo "$FIREBASE_ANDROID_APP_ID" | cut -d':' -f2)"
+
+            # Generate corrected google-services.json
+            cat > app/google-services.json << EOF
+          {
+            "project_info": {
+              "project_number": "$PROJECT_NUMBER",
+              "project_id": "$FIREBASE_PROJECT_ID",
+              "storage_bucket": "$FIREBASE_PROJECT_ID.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "$FIREBASE_ANDROID_APP_ID",
+                  "android_client_info": {
+                    "package_name": "com.openclaw.console"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "placeholder_key_will_be_resolved_at_runtime"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
+            echo "✅ Generated corrected google-services.json for OpenClaw Console project ($FIREBASE_PROJECT_ID)"
+            echo "   App ID: $FIREBASE_ANDROID_APP_ID"
+            echo "   Project Number: $PROJECT_NUMBER"
+          else
+            echo "✅ google-services.json configuration matches Firebase secrets - no changes needed"
           fi
 
       - name: Resolve Firebase app id
