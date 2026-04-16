@@ -21,4 +21,34 @@ platform :android do
       release_notes: "Dev build from develop branch (#{ENV['GITHUB_SHA'] || 'local'})"
     )
   end
+
+  desc "Run Firebase App Testing Agent against latest release APK"
+  # Invokes the Firebase App Testing Agent on the already-built release APK using
+  # the YAML cases under ../apptesting/. The CLI itself authenticates via
+  # GOOGLE_APPLICATION_CREDENTIALS — make sure that is exported before calling
+  # this lane locally. FIREBASE_ANDROID_APP_ID and FIREBASE_PROJECT_ID are
+  # required; all other flags are optional.
+  #
+  # Docs: https://firebase.google.com/docs/app-distribution/android/app-testing-agent
+  lane :apptesting do |options|
+    app_id = ENV["FIREBASE_ANDROID_APP_ID"] || options[:app]
+    project_id = ENV["FIREBASE_PROJECT_ID"] || options[:project]
+    UI.user_error!("FIREBASE_ANDROID_APP_ID is required") unless app_id
+    UI.user_error!("FIREBASE_PROJECT_ID is required") unless project_id
+
+    apk = options[:apk] || "app/build/outputs/apk/release/app-release.apk"
+    test_dir = options[:test_dir] || "../apptesting"
+    blocking = options[:blocking] == true
+
+    cmd = [
+      "firebase", "apptesting:execute",
+      "--app", app_id,
+      "--project", project_id,
+      "--test-dir", test_dir
+    ]
+    cmd << "--test-non-blocking" unless blocking
+    cmd << apk
+
+    sh(*cmd)
+  end
 end

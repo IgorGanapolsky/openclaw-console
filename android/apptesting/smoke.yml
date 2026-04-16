@@ -1,0 +1,41 @@
+# Firebase App Testing Agent — Android smoke tests
+# Docs: https://firebase.google.com/docs/app-distribution/android/app-testing-agent
+#
+# Each test gives the AI agent a natural-language goal plus a finalScreenAssertion
+# the agent uses to decide whether the step succeeded. Keep goals small and
+# unambiguous; the agent is constrained to tap / swipe / text / long-press / back / wait.
+#
+# The tests below cover the P0 user journey of the OpenClaw Work Console on first
+# launch: gateway URL entry, connection flow, and the agents list landing screen.
+# They must remain runnable against a cold install — no prior state is assumed.
+
+tests:
+  - displayName: App launches to onboarding
+    id: app-launches
+    steps:
+      - goal: Wait for the app to finish loading
+        finalScreenAssertion: The app is fully loaded and a screen is visible (not a blank/splash screen)
+
+  - displayName: Gateway URL entry screen is reachable
+    id: reach-gateway-entry
+    prerequisiteTestCaseId: app-launches
+    steps:
+      - goal: Navigate to the screen where a gateway or server URL can be entered
+        hint: The onboarding flow asks the user to configure an OpenClaw gateway endpoint before connecting
+        finalScreenAssertion: A text input field for a URL or gateway address is visible on screen
+
+  - displayName: Agents list screen is reachable without a connection
+    id: reach-agents-list
+    prerequisiteTestCaseId: app-launches
+    steps:
+      - goal: Navigate to the agents list screen
+        hint: The agents list is the main landing screen after onboarding; look for navigation tabs or a skip/continue action
+        finalScreenAssertion: A list or empty-state for agents is visible on screen
+
+  - displayName: Settings / about screen is reachable
+    id: reach-settings
+    prerequisiteTestCaseId: app-launches
+    steps:
+      - goal: Open the settings or about screen
+        hint: Usually reachable via a gear icon, overflow menu, or a Settings tab
+        finalScreenAssertion: A settings, preferences, or about screen is visible
