@@ -202,6 +202,22 @@ export interface BridgeSession {
   metadata: Record<string, unknown>;
 }
 
+export interface RuntimeConfigResponse {
+  approval_policy_preset: string;
+  heartbeat_interval_ms: number;
+  require_biometric: boolean;
+  local_model: {
+    enabled: boolean;
+    base_url: string | null;
+    model: string | null;
+  };
+}
+
+export interface RuntimeConfigUpdateRequest {
+  approval_policy_preset?: string;
+  heartbeat_interval_ms?: number;
+}
+
 // ─── Scheduled Loops ──────────────────────────────────────────────────────────
 
 /** Schedule definition for recurring tasks. */

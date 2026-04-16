@@ -49,6 +49,18 @@ jobs:
             const FAILING_CONCLUSIONS = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure", "stale"]);
             const FAILING_STATES = new Set(["error", "failure"]);
             const PENDING_STATES = new Set(["pending"]);
+            const REQUIRED_CHECK_WORKFLOWS = new Map([
+              ["Skills Tests", "ci.yml"],
+              ["Architecture Lint (Kotlin)", "ci.yml"],
+              ["Architecture Lint (Swift)", "ci.yml"],
+              ["Android Build Check", "ci.yml"],
+              ["iOS Build Check", "ci.yml"],
+              ["Secrets Scan", "security.yml"],
+              ["Dependency Audit", "security.yml"],
+              ["CodeQL Analysis (java-kotlin)", "security.yml"],
+              ["CodeQL Analysis (javascript-typescript)", "security.yml"],
+              ["CodeQL Analysis (swift)", "security.yml"]
+            ]);
             const DEFAULT_REQUIRED_CHECKS = {
               develop: ["Skills Tests", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"],
               main: [
@@ -229,9 +241,18 @@ jobs:
             }
 
             async function triggerMissingRequiredChecks(pr, missingRequiredCheckNames) {
-              const ciChecks = new Set(["Skills Tests", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"]);
-              if (missingRequiredCheckNames.some((name) => ciChecks.has(name))) {
-                await triggerWorkflow("ci.yml", pr.head.ref);
+              const workflows = new Set();
+              for (const name of missingRequiredCheckNames) {
+                const workflow = REQUIRED_CHECK_WORKFLOWS.get(name);
+                if (workflow) {
+                  workflows.add(workflow);
+                } else {
+                  core.warning(`PR #${pr.number}: no autonomous dispatch mapping for missing required check "${name}".`);
+                }
+              }
+
+              for (const workflow of workflows) {
+                await triggerWorkflow(workflow, pr.head.ref);
               }
             }
 

@@ -43,11 +43,39 @@ struct HealthResponse: Codable {
     let status: String
     let version: String?
     let gatewayVersion: String?
+    let startedAt: Date?
+    let checkedAt: Date?
+    let uptimeSeconds: Int?
+    let websocketClients: Int?
+    let lastInboundWsAt: Date?
+    let lastOutboundWsAt: Date?
+    let approvalPolicyPreset: String?
+    let localModel: LocalModelStatus?
 
     enum CodingKeys: String, CodingKey {
         case status
         case version
         case gatewayVersion = "gateway_version"
+        case startedAt = "started_at"
+        case checkedAt = "checked_at"
+        case uptimeSeconds = "uptime_seconds"
+        case websocketClients = "websocket_clients"
+        case lastInboundWsAt = "last_inbound_ws_at"
+        case lastOutboundWsAt = "last_outbound_ws_at"
+        case approvalPolicyPreset = "approval_policy_preset"
+        case localModel = "local_model"
+    }
+}
+
+struct LocalModelStatus: Codable, Hashable {
+    let enabled: Bool
+    let baseURL: String?
+    let model: String?
+
+    enum CodingKeys: String, CodingKey {
+        case enabled
+        case baseURL = "base_url"
+        case model
     }
 }
 

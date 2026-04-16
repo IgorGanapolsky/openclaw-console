@@ -20,6 +20,7 @@ import com.openclaw.console.data.model.BridgeSession
 import com.openclaw.console.data.model.BridgeSessionType
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
+import kotlinx.serialization.json.jsonPrimitive
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,6 +175,13 @@ private fun BridgeSessionItem(session: BridgeSession) {
                         .padding(horizontal = 4.dp, vertical = 2.dp),
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                 )
+                session.metadata?.get("project_name")?.jsonPrimitive?.content?.let { projectName ->
+                    Text(
+                        text = "Project session: $projectName",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 TimeAgoText(session.createdAt, style = MaterialTheme.typography.labelSmall)
             }
         }

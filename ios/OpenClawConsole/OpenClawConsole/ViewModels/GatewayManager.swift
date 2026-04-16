@@ -29,6 +29,7 @@ final class GatewayManager {
 
     // Connection status per gateway id
     private(set) var connectionStatuses: [String: GatewayConnectionStatus] = [:]
+    private(set) var gatewayHealth: [String: HealthResponse] = [:]
 
     // MARK: Private
 
@@ -129,7 +130,8 @@ final class GatewayManager {
         connectionStatuses[gateway.id] = .checking
 
         do {
-            _ = try await APIService.shared.healthCheck(gateway: gateway)
+            let health = try await APIService.shared.healthCheck(gateway: gateway)
+            gatewayHealth[gateway.id] = health
             connectionStatuses[gateway.id] = .connected
         } catch let error as OpenClawError {
             connectionStatuses[gateway.id] = .failed(error.localizedDescription)
@@ -140,5 +142,9 @@ final class GatewayManager {
 
     func connectionStatus(for gateway: GatewayConnection) -> GatewayConnectionStatus {
         connectionStatuses[gateway.id] ?? .unknown
+    }
+
+    func health(for gateway: GatewayConnection) -> HealthResponse? {
+        gatewayHealth[gateway.id]
     }
 }

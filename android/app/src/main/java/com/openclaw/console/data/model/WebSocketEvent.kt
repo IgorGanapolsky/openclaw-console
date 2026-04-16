@@ -1,7 +1,20 @@
 package com.openclaw.console.data.model
 
 sealed class WebSocketEvent {
-    data class Connected(val sessionId: String, val gatewayVersion: String) : WebSocketEvent()
+    data class Connected(
+        val sessionId: String,
+        val gatewayVersion: String,
+        val heartbeatIntervalMs: Int,
+        val timestamp: String?
+    ) : WebSocketEvent()
+    data class Heartbeat(
+        val gatewayVersion: String,
+        val connectedClients: Int,
+        val lastInboundAt: String?,
+        val lastOutboundAt: String?,
+        val uptimeSeconds: Long,
+        val timestamp: String?
+    ) : WebSocketEvent()
     data class AgentUpdate(val agentStatus: Agent) : WebSocketEvent()
     data class TaskUpdate(val update: com.openclaw.console.data.model.TaskUpdate) : WebSocketEvent()
     data class TaskStepAdded(val step: TaskStep) : WebSocketEvent()
