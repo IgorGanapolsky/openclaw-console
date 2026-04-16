@@ -255,9 +255,32 @@ jobs:
         working-directory: android
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
+
+          # Write the Google Services JSON
           echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
+          # Extract project info from the file and secrets for validation
+          GS_PROJECT_ID="$(jq -r '.project_info.project_id // empty' app/google-services.json)"
+          GS_APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
+
+          echo "📋 Firebase project configuration:"
+          echo "  google-services.json project_id: $GS_PROJECT_ID"
+          echo "  google-services.json app_id: $GS_APP_ID"
+          echo "  FIREBASE_PROJECT_ID secret: ${FIREBASE_PROJECT_ID:-'(not set)'}"
+          echo "  FIREBASE_ANDROID_APP_ID secret: ${FIREBASE_ANDROID_APP_ID:-'(not set)'}"
+
+          # Validate consistency between file and secrets
+          if [ -n "${FIREBASE_PROJECT_ID:-}" ] && [ "$GS_PROJECT_ID" != "$FIREBASE_PROJECT_ID" ]; then
+            echo "⚠️ WARNING: Project ID mismatch between google-services.json ($GS_PROJECT_ID) and FIREBASE_PROJECT_ID secret ($FIREBASE_PROJECT_ID)"
+          fi
+
+          if [ -n "${FIREBASE_ANDROID_APP_ID:-}" ] && [ "$GS_APP_ID" != "$FIREBASE_ANDROID_APP_ID" ]; then
+            echo "⚠️ WARNING: App ID mismatch between google-services.json ($GS_APP_ID) and FIREBASE_ANDROID_APP_ID secret ($FIREBASE_ANDROID_APP_ID)"
+          fi
 
       - name: Resolve Firebase app id
         id: firebase
@@ -266,16 +289,26 @@ jobs:
           FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
         run: |
           set -euo pipefail
-          APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
-          if [ -z "$APP_ID" ] && [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
+
+          # First try to get app ID from google-services.json
+          GS_APP_ID="$(jq -r '.client[0].client_info.mobilesdk_app_id // empty' app/google-services.json)"
+
+          # Use secret if available and different (indicating project mismatch fix needed)
+          if [ -n "${FIREBASE_ANDROID_APP_ID:-}" ]; then
             APP_ID="$FIREBASE_ANDROID_APP_ID"
-          fi
-          if [ -z "$APP_ID" ]; then
+            if [ -n "$GS_APP_ID" ] && [ "$GS_APP_ID" != "$FIREBASE_ANDROID_APP_ID" ]; then
+              echo "🔄 Using FIREBASE_ANDROID_APP_ID secret ($FIREBASE_ANDROID_APP_ID) instead of google-services.json app id ($GS_APP_ID)"
+            fi
+          elif [ -n "$GS_APP_ID" ]; then
+            APP_ID="$GS_APP_ID"
+            echo "📱 Using app id from google-services.json: $GS_APP_ID"
+          else
             echo "❌ Could not resolve Firebase Android app id. Set FIREBASE_ANDROID_APP_ID secret or include mobilesdk_app_id in GOOGLE_SERVICES_JSON."
             exit 1
           fi
+
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
-          echo "Resolved Firebase app id: $APP_ID"
+          echo "✅ Resolved Firebase app id: $APP_ID"
 
       - name: Decode keystore
         env:
