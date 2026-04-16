@@ -1,1 +1,1 @@
-AI Agent Console with Biometric Safety
+AI Agent Console for DevOps
