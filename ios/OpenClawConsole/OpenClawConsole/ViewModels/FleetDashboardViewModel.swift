@@ -104,7 +104,8 @@ final class FleetDashboardViewModel {
             tags: old.tags,
             lastActive: update.lastActive,
             activeTasks: update.activeTasks,
-            pendingApprovals: update.pendingApprovals
+            pendingApprovals: update.pendingApprovals,
+            gitState: update.gitState ?? old.gitState
         )
     }
 }
