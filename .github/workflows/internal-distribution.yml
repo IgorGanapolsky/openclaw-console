@@ -65,7 +65,7 @@ jobs:
     runs-on: macos-15
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
@@ -147,7 +147,7 @@ jobs:
         working-directory: ios/OpenClawConsole
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ios-ipa-internal
@@ -161,7 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
@@ -225,7 +225,7 @@ jobs:
         run: bash scripts/preflight-release.sh --platform android --layer 1
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: "temurin"
           java-version: "17"
@@ -233,7 +233,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
@@ -376,7 +376,7 @@ jobs:
           fi
 
       - name: Upload Android APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-apk-internal

@@ -8,17 +8,17 @@
     "warn",
     "deny"
   ],
-  "exampleCount": 15,
+  "exampleCount": 16,
   "labelCounts": {
     "allow": 9,
-    "recall": 0,
+    "recall": 1,
     "verify": 6,
     "warn": 0,
     "deny": 0
   },
   "labelTokenTotals": {
     "allow": 98,
-    "recall": 0,
+    "recall": 7,
     "verify": 157,
     "warn": 0,
     "deny": 0
@@ -79,7 +79,15 @@
       "source_tool-latency": 3,
       "tool_recall": 4
     },
-    "recall": {},
+    "recall": {
+      "kind_feedback": 1,
+      "signal_negative": 1,
+      "tool_unknown": 1,
+      "cmdtok_down": 1,
+      "tag_claude-history-sync": 1,
+      "tag_auto-capture-fallback": 1,
+      "text_down": 1
+    },
     "verify": {
       "kind_feedback": 6,
       "signal_negative": 6,
@@ -196,28 +204,28 @@
     "warn": {},
     "deny": {}
   },
-  "vocabularySize": 159,
+  "vocabularySize": 161,
   "metrics": {
     "trainingAccuracy": 0,
     "holdoutAccuracy": 0,
     "holdoutSize": 5,
-    "trainingExamples": 10
+    "trainingExamples": 11
   },
   "sourceCounts": {
-    "feedback": 9,
+    "feedback": 10,
     "audit": 6,
     "diagnostic": 0,
     "decision": 0
   },
-  "updatedAt": "2026-04-16T00:00:30.453Z",
+  "updatedAt": "2026-04-16T21:37:43.543Z",
   "labelMetrics": {
     "allow": {
-      "total": 5,
+      "total": 4,
       "correct": 0,
       "accuracy": 0
     },
     "recall": {
-      "total": 0,
+      "total": 1,
       "correct": 0,
       "accuracy": 0
     },
@@ -256,7 +264,24 @@
         "count": 3
       }
     ],
-    "recall": [],
+    "recall": [
+      {
+        "token": "cmdtok_down",
+        "count": 1
+      },
+      {
+        "token": "kind_feedback",
+        "count": 1
+      },
+      {
+        "token": "signal_negative",
+        "count": 1
+      },
+      {
+        "token": "tag_auto-capture-fallback",
+        "count": 1
+      }
+    ],
     "verify": [
       {
         "token": "kind_feedback",

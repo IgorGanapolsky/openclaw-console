@@ -1,10 +1,10 @@
 {
   "version": 1,
   "algorithm": "adaboost-stumps",
-  "trainedAt": "2026-03-12T19:00:45.878Z",
-  "exampleCount": 8,
-  "highRiskExamples": 6,
-  "baseRate": 0.75,
+  "trainedAt": "2026-04-16T21:37:43.539Z",
+  "exampleCount": 9,
+  "highRiskExamples": 7,
+  "baseRate": 0.7777777777777778,
   "featureRegistry": {
     "topTags": [
       "truthfulness",
@@ -14,7 +14,7 @@
       "architecture",
       "assumption",
       "auto-capture",
-      "automation"
+      "auto-capture-fallback"
     ],
     "topSkills": [
       "release-verification"
@@ -71,7 +71,7 @@
     "tag:architecture",
     "tag:assumption",
     "tag:auto-capture",
-    "tag:automation",
+    "tag:auto-capture-fallback",
     "skill:release-verification"
   ],
   "learners": [
@@ -160,9 +160,9 @@
       },
       {
         "key": "general",
-        "total": 5,
-        "highRisk": 3,
-        "riskRate": 0.6
+        "total": 6,
+        "highRisk": 4,
+        "riskRate": 0.667
       }
     ],
     "skills": [
