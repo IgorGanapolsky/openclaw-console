@@ -9,6 +9,12 @@ sealed class WebSocketEvent {
     data class IncidentUpdate(val update: com.openclaw.console.data.model.IncidentUpdate) : WebSocketEvent()
     data class ApprovalRequest(val request: com.openclaw.console.data.model.ApprovalRequest) : WebSocketEvent()
     data class ChatResponse(val message: ChatMessage) : WebSocketEvent()
+    data class AgentStatusChange(
+        val agentId: String,
+        val agentName: String,
+        val previousStatus: AgentStatus,
+        val newStatus: AgentStatus
+    ) : WebSocketEvent()
     data class BridgeSessionNew(val session: BridgeSession) : WebSocketEvent()
     data class BridgeSessionUpdate(val session: BridgeSession) : WebSocketEvent()
     data class RecurringTaskUpdated(val task: RecurringTask) : WebSocketEvent()

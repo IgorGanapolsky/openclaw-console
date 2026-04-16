@@ -127,6 +127,7 @@ enum InboundEventType: String {
     case incidentUpdate = "incident_update"
     case approvalRequest = "approval_request"
     case chatResponse = "chat_response"
+    case agentStatusChange = "agent_status_change"
     case bridgeSessionNew = "bridge_session_new"
     case bridgeSessionUpdate = "bridge_session_update"
     case recurringTaskUpdated = "recurring_task_updated"
@@ -144,6 +145,7 @@ enum InboundEvent {
     case incidentUpdate(IncidentUpdate)
     case approvalRequest(ApprovalRequest)
     case chatResponse(ChatMessage)
+    case agentStatusChange(agentId: String, agentName: String, previousStatus: AgentStatus, newStatus: AgentStatus)
     case bridgeSessionNew(BridgeSession)
     case bridgeSessionUpdate(BridgeSession)
     case recurringTaskUpdated(RecurringTask)

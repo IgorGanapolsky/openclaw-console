@@ -155,6 +155,15 @@ open class WebSocketClient(
                         val chatMsg = json.decodeFromJsonElement(ChatMessage.serializer(), msg.payload)
                         WebSocketEvent.ChatResponse(chatMsg)
                     }
+                    "agent_status_change" -> {
+                        val agentId = msg.payload["agent_id"]?.jsonPrimitive?.content ?: ""
+                        val agentName = msg.payload["agent_name"]?.jsonPrimitive?.content ?: ""
+                        val previousStr = msg.payload["previous_status"]?.jsonPrimitive?.content ?: "offline"
+                        val newStr = msg.payload["new_status"]?.jsonPrimitive?.content ?: "offline"
+                        val previousStatus = try { AgentStatus.valueOf(previousStr.uppercase()) } catch (_: Exception) { AgentStatus.OFFLINE }
+                        val newStatus = try { AgentStatus.valueOf(newStr.uppercase()) } catch (_: Exception) { AgentStatus.OFFLINE }
+                        WebSocketEvent.AgentStatusChange(agentId, agentName, previousStatus, newStatus)
+                    }
                     "bridge_session_new" -> {
                         val session = json.decodeFromJsonElement(BridgeSession.serializer(), msg.payload)
                         WebSocketEvent.BridgeSessionNew(session)

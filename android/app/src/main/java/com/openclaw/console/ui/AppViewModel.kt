@@ -9,6 +9,7 @@ import com.openclaw.console.data.network.ApiService
 import com.openclaw.console.data.network.ConnectionState
 import com.openclaw.console.data.network.WebSocketClient
 import com.openclaw.console.data.repository.*
+import com.openclaw.console.service.NotificationActionReceiver
 import com.openclaw.console.service.SecureStorage
 import com.openclaw.console.service.NotificationService
 import kotlinx.coroutines.flow.*
@@ -80,6 +81,9 @@ class AppViewModel(private val application: Application) : ViewModel() {
 
         _apiService.value = api
         _wsClient.value = ws
+
+        // Wire up the notification action receiver so it can send HTTP approval responses
+        NotificationActionReceiver.activeApiService = api
 
         _agentRepository.value = AgentRepository(api, ws)
         _taskRepository.value = TaskRepository(api, ws)

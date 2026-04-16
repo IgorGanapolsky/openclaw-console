@@ -10,19 +10,33 @@ struct MainTabView: View {
     @EnvironmentObject private var webSocket: WebSocketService
     @Environment(ApprovalViewModel.self) private var approvalViewModel
 
-    @State private var selectedTab: Tab = .agents
+    @State private var selectedTab: Tab = .dashboard
+    @State private var fleetDashboardVM: FleetDashboardViewModel?
     @State private var agentListVM: AgentListViewModel?
     @State private var incidentListVM: IncidentListViewModel?
     @State private var bridgeListVM: BridgeListViewModel?
     // @State private var loopListVM: LoopListViewModel?
 
     enum Tab: Int {
-        case agents, incidents, loops, bridges, settings
+        case dashboard, agents, incidents, loops, bridges, settings
     }
 
     var body: some View {
         ZStack(alignment: .top) {
             TabView(selection: $selectedTab) {
+                // MARK: Dashboard Tab
+                NavigationStack {
+                    if let vm = fleetDashboardVM {
+                        FleetDashboardView(viewModel: vm)
+                    } else {
+                        ProgressView()
+                    }
+                }
+                .tabItem {
+                    Label("Dashboard", systemImage: "gauge.with.dots.needle.33percent")
+                }
+                .tag(Tab.dashboard)
+
                 // MARK: Agents Tab
                 NavigationStack {
                     if let vm = agentListVM {
@@ -108,11 +122,13 @@ struct MainTabView: View {
         guard let gateway = gatewayManager.activeGateway,
               let token = KeychainService.shared.retrieve(for: gateway.id) else { return }
 
+        let dashboardVM = FleetDashboardViewModel(webSocket: webSocket)
         let agentVM = AgentListViewModel(webSocket: webSocket)
         let incidentVM = IncidentListViewModel(webSocket: webSocket)
         let bridgeVM = BridgeListViewModel(webSocket: webSocket)
         // let loopVM = LoopListViewModel(webSocket: webSocket)
 
+        fleetDashboardVM = dashboardVM
         agentListVM = agentVM
         incidentListVM = incidentVM
         bridgeListVM = bridgeVM
@@ -123,6 +139,7 @@ struct MainTabView: View {
 
         // Fetch initial data
         _Concurrency.Task {
+            await dashboardVM.fetchAgents()
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
             await bridgeVM.fetchBridges()

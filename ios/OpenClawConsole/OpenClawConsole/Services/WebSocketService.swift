@@ -132,6 +132,7 @@ final class WebSocketService: NSObject, ObservableObject {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     private func parseMessage(_ text: String) {
         guard let data = text.data(using: .utf8) else { return }
 
@@ -182,6 +183,21 @@ final class WebSocketService: NSObject, ObservableObject {
         case .chatResponse:
             if let obj = try? decoder.decode(ChatMessage.self, from: payloadData) {
                 event = .chatResponse(obj)
+            }
+        case .agentStatusChange:
+            if let payload = raw["payload"] as? [String: Any],
+               let agentId = payload["agent_id"] as? String,
+               let agentName = payload["agent_name"] as? String,
+               let previousStr = payload["previous_status"] as? String,
+               let newStr = payload["new_status"] as? String,
+               let previousStatus = AgentStatus(rawValue: previousStr),
+               let newStatus = AgentStatus(rawValue: newStr) {
+                event = .agentStatusChange(
+                    agentId: agentId,
+                    agentName: agentName,
+                    previousStatus: previousStatus,
+                    newStatus: newStatus
+                )
             }
         case .bridgeSessionNew:
             if let obj = try? decoder.decode(BridgeSession.self, from: payloadData) {
