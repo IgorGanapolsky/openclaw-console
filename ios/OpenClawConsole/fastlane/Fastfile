@@ -160,8 +160,17 @@ platform :ios do
             keychain_password: "temp_password"
           )
         else
-          UI.message("Skipping match (repository not accessible) - using automatic signing")
-          UI.message("Note: Ensure Xcode project is configured for automatic signing")
+          UI.message("Skipping match (repository not accessible) - configuring automatic signing")
+
+          # Configure automatic signing when match is not available
+          update_code_signing_settings(
+            use_automatic_signing: true,
+            path: "OpenClawConsole.xcodeproj",
+            targets: ["OpenClawConsole"],
+            code_sign_identity: "Apple Distribution"  # For App Store distribution
+          )
+
+          UI.message("✅ Configured automatic signing for App Store distribution")
         end
       else
         # Local development: can generate/update certificates if needed
@@ -177,8 +186,17 @@ platform :ios do
             api_key: api_key
           )
         else
-          UI.message("Skipping match (repository not configured) - using automatic signing")
-          UI.message("Note: Ensure Xcode project is configured for automatic signing")
+          UI.message("Skipping match (repository not configured) - configuring automatic signing")
+
+          # Configure automatic signing when match is not available
+          update_code_signing_settings(
+            use_automatic_signing: true,
+            path: "OpenClawConsole.xcodeproj",
+            targets: ["OpenClawConsole"],
+            code_sign_identity: "Apple Development"  # For development
+          )
+
+          UI.message("✅ Configured automatic signing for development")
         end
       end
     else
