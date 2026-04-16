@@ -2,7 +2,7 @@ name: PR State Machine
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, closed]
   check_suite:
     types: [completed]
   workflow_dispatch:
@@ -414,10 +414,28 @@ jobs:
               })).data;
 
               if (pr.state !== "open") {
-                core.info(`Skipping PR #${prNumber}: state is ${pr.state}`);
+                const finalDescription = pr.merged
+                  ? "PR merged; required checks passed."
+                  : "PR closed; state machine inactive.";
+                await github.rest.repos.createCommitStatus({
+                  owner,
+                  repo,
+                  sha: pr.head.sha,
+                  state: "success",
+                  context: "pr/state-machine",
+                  description: finalDescription,
+                  target_url: runUrl
+                });
+
+                if (pr.merged) {
+                  await setStateLabel(prNumber, "pr-state:ci_green");
+                }
+
+                core.info(`Finalized PR #${prNumber}: state=${pr.state}, merged=${pr.merged}`);
                 return {
                   prNumber,
-                  skipped: true
+                  finalized: true,
+                  merged: pr.merged
                 };
               }
 
