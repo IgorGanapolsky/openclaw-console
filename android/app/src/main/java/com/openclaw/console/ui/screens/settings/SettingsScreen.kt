@@ -35,6 +35,8 @@ fun SettingsScreen(
         derivedStateOf { approvalRepo?.pendingApprovals?.value ?: emptyList() }
     }
     val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
+    val lastGatewaySignal by appViewModel.lastGatewaySignal.collectAsStateWithLifecycle()
+    val gatewaySignalSummary by appViewModel.gatewaySignalSummary.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.setRepository(gatewayRepo)
@@ -64,7 +66,11 @@ fun SettingsScreen(
         ) {
             // Connection status
             item {
-                ConnectionStatusBanner(state = connectionState)
+                ConnectionStatusBanner(
+                    state = connectionState,
+                    lastSignalAt = lastGatewaySignal,
+                    signalSummary = gatewaySignalSummary
+                )
             }
 
             // Pending approvals section

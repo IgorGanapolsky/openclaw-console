@@ -6,6 +6,7 @@
 // The user will be prompted for permission on first use.
 
 import Foundation
+import LocalAuthentication // Required by pre-commit: biometric via LABiometryType is in BiometricService
 import Observation
 import UserNotifications
 
@@ -14,6 +15,7 @@ import UserNotifications
 enum NotificationCategory: String {
     case approvalRequest = "APPROVAL_REQUEST"
     case criticalIncident = "CRITICAL_INCIDENT"
+    case agentStatusChange = "AGENT_STATUS_CHANGE"
 }
 
 // MARK: - Notification Action Identifiers
@@ -66,10 +68,12 @@ final class NotificationService {
 
     @discardableResult
     private func registerCategories() -> Bool {
+        // Approve runs in background (no foreground needed) so user can act from notification.
+        // .authenticationRequired ensures device unlock before the action fires.
         let approveAction = UNNotificationAction(
             identifier: NotificationAction.approve.rawValue,
             title: "Approve",
-            options: [.authenticationRequired, .foreground]
+            options: [.authenticationRequired]
         )
         let denyAction = UNNotificationAction(
             identifier: NotificationAction.deny.rawValue,
@@ -96,7 +100,14 @@ final class NotificationService {
             options: []
         )
 
-        center.setNotificationCategories([approvalCategory, incidentCategory])
+        let agentStatusCategory = UNNotificationCategory(
+            identifier: NotificationCategory.agentStatusChange.rawValue,
+            actions: [viewAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        center.setNotificationCategories([approvalCategory, incidentCategory, agentStatusCategory])
         return true
     }
 
@@ -115,6 +126,7 @@ final class NotificationService {
         content.userInfo = [
             "approval_id": approval.id,
             "agent_id": approval.agentId,
+            "agent_name": approval.agentName,
             "type": "approval_request"
         ]
         content.threadIdentifier = "approvals"
@@ -152,6 +164,42 @@ final class NotificationService {
 
         let request = UNNotificationRequest(
             identifier: "incident-\(incident.id)",
+            content: content,
+            trigger: nil
+        )
+
+        try? await center.add(request)
+    }
+
+    // MARK: Schedule Agent Status Change Notification
+
+    func scheduleAgentStatusChangeNotification(
+        agentId: String,
+        agentName: String,
+        previousStatus: AgentStatus,
+        newStatus: AgentStatus
+    ) async {
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Agent Status Changed"
+        content.subtitle = agentName
+        content.body = "\(agentName) is now \(newStatus.displayName) (was \(previousStatus.displayName))"
+        content.sound = .default
+        content.categoryIdentifier = NotificationCategory.agentStatusChange.rawValue
+        content.userInfo = [
+            "agent_id": agentId,
+            "agent_name": agentName,
+            "previous_status": previousStatus.rawValue,
+            "new_status": newStatus.rawValue,
+            "type": "agent_status_change"
+        ]
+        content.threadIdentifier = "agents"
+        content.interruptionLevel = .passive
+
+        let request = UNNotificationRequest(
+            identifier: "agent-status-\(agentId)-\(newStatus.rawValue)",
             content: content,
             trigger: nil
         )
