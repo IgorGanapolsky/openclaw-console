@@ -225,7 +225,7 @@ jobs:
         run: bash scripts/preflight-release.sh --platform android --layer 1
 
       - name: Setup Java
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "17"

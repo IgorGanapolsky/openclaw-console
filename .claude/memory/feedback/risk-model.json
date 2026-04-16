@@ -1,20 +1,20 @@
 {
   "version": 1,
   "algorithm": "adaboost-stumps",
-  "trainedAt": "2026-04-16T21:37:43.539Z",
-  "exampleCount": 9,
-  "highRiskExamples": 7,
-  "baseRate": 0.7777777777777778,
+  "trainedAt": "2026-04-16T22:09:33.417Z",
+  "exampleCount": 10,
+  "highRiskExamples": 8,
+  "baseRate": 0.8,
   "featureRegistry": {
     "topTags": [
       "truthfulness",
+      "auto-capture-fallback",
+      "claude-history-sync",
       "firebase",
       "release-verification",
       "testflight",
       "architecture",
-      "assumption",
-      "auto-capture",
-      "auto-capture-fallback"
+      "assumption"
     ],
     "topSkills": [
       "release-verification"
@@ -65,13 +65,13 @@
     "domain:architecture",
     "domain:data-modeling",
     "tag:truthfulness",
+    "tag:auto-capture-fallback",
+    "tag:claude-history-sync",
     "tag:firebase",
     "tag:release-verification",
     "tag:testflight",
     "tag:architecture",
     "tag:assumption",
-    "tag:auto-capture",
-    "tag:auto-capture-fallback",
     "skill:release-verification"
   ],
   "learners": [
@@ -133,6 +133,18 @@
         "riskRate": 1
       },
       {
+        "key": "auto-capture-fallback",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      },
+      {
+        "key": "claude-history-sync",
+        "total": 2,
+        "highRisk": 2,
+        "riskRate": 1
+      },
+      {
         "key": "firebase",
         "total": 2,
         "highRisk": 2,
@@ -140,12 +152,6 @@
       },
       {
         "key": "release-verification",
-        "total": 2,
-        "highRisk": 2,
-        "riskRate": 1
-      },
-      {
-        "key": "testflight",
         "total": 2,
         "highRisk": 2,
         "riskRate": 1
@@ -160,9 +166,9 @@
       },
       {
         "key": "general",
-        "total": 6,
-        "highRisk": 4,
-        "riskRate": 0.667
+        "total": 7,
+        "highRisk": 5,
+        "riskRate": 0.714
       }
     ],
     "skills": [
