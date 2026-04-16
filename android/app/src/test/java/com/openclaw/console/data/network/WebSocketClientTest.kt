@@ -116,7 +116,7 @@ class WebSocketClientTest {
         client.setConnectionState(ConnectionState.CONNECTED)
         advanceUntilIdle()
 
-        client.emitEvent(WebSocketEvent.Connected("session-123", "1.0.0"))
+        client.emitEvent(WebSocketEvent.Connected("session-123", "1.0.0", 10_000, "2026-04-15T12:00:00Z"))
         advanceUntilIdle()
 
         // Verify state progression
@@ -139,7 +139,7 @@ class WebSocketClientTest {
 
         client.connect()
         client.setConnectionState(ConnectionState.CONNECTED)
-        client.emitEvent(WebSocketEvent.Connected("session-123", "1.0.0"))
+        client.emitEvent(WebSocketEvent.Connected("session-123", "1.0.0", 10_000, "2026-04-15T12:00:00Z"))
 
         // Simulate connection failure with reconnection event
         client.setConnectionState(ConnectionState.DISCONNECTED)

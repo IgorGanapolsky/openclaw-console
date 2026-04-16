@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -125,7 +126,18 @@ open class WebSocketClient(
                     "connected" -> {
                         val sessionId = msg.payload["session_id"]?.jsonPrimitive?.content ?: ""
                         val version = msg.payload["gateway_version"]?.jsonPrimitive?.content ?: ""
-                        WebSocketEvent.Connected(sessionId, version)
+                        val heartbeatIntervalMs = msg.payload["heartbeat_interval_ms"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                        WebSocketEvent.Connected(sessionId, version, heartbeatIntervalMs, msg.timestamp)
+                    }
+                    "heartbeat" -> {
+                        WebSocketEvent.Heartbeat(
+                            gatewayVersion = msg.payload["gateway_version"]?.jsonPrimitive?.content ?: "",
+                            connectedClients = msg.payload["connected_clients"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+                            lastInboundAt = msg.payload["last_inbound_at"]?.jsonPrimitive?.contentOrNull,
+                            lastOutboundAt = msg.payload["last_outbound_at"]?.jsonPrimitive?.contentOrNull,
+                            uptimeSeconds = msg.payload["uptime_seconds"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0L,
+                            timestamp = msg.timestamp
+                        )
                     }
                     "agent_update" -> {
                         val agent = json.decodeFromJsonElement(Agent.serializer(), msg.payload)

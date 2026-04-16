@@ -97,6 +97,12 @@ private struct GatewayRow: View {
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 }
+
+                if let health = gatewayManager.health(for: gateway) {
+                    Text(runtimeSummary(health))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -159,5 +165,12 @@ private struct GatewayRow: View {
             }
         }
         .frame(minHeight: 44)
+    }
+
+    private func runtimeSummary(_ health: HealthResponse) -> String {
+        let policy = health.approvalPolicyPreset ?? "manual"
+        let clients = health.websocketClients ?? 0
+        let checked = health.checkedAt?.formatted(date: .omitted, time: .shortened) ?? "unknown"
+        return "Policy: \(policy) • WS clients: \(clients) • Checked: \(checked)"
     }
 }

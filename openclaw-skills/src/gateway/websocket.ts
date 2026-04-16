@@ -47,6 +47,7 @@ interface ClientSession {
 
 export interface WebSocketRuntimeSnapshot {
   connected_clients: number;
+  heartbeat_interval_ms: number;
   last_inbound_at: string | null;
   last_outbound_at: string | null;
   sessions: Array<{
@@ -75,9 +76,7 @@ export class WebSocketManager {
     this.state = state;
     this.config = config;
     this.attachStateListeners();
-    this.heartbeatTimer = setInterval(() => {
-      this.broadcastHeartbeat();
-    }, this.config.heartbeatIntervalMs);
+    this.heartbeatTimer = this.createHeartbeatTimer();
   }
 
   // ── State → Broadcast bridge ─────────────────────────────────────────────
@@ -341,6 +340,7 @@ export class WebSocketManager {
   public getRuntimeSnapshot(): WebSocketRuntimeSnapshot {
     return {
       connected_clients: this.clients.size,
+      heartbeat_interval_ms: this.config.heartbeatIntervalMs,
       last_inbound_at: this.lastInboundAt,
       last_outbound_at: this.lastOutboundAt,
       sessions: Array.from(this.clients.values()).map((session) => ({
@@ -354,6 +354,13 @@ export class WebSocketManager {
 
   public stop(): void {
     clearInterval(this.heartbeatTimer);
+  }
+
+  public updateHeartbeatInterval(intervalMs: number): void {
+    this.config.heartbeatIntervalMs = intervalMs;
+    clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = this.createHeartbeatTimer();
+    this.broadcastHeartbeat();
   }
 
   /** WebSocketServer instance (for attaching to HTTP server). */
@@ -370,6 +377,12 @@ export class WebSocketManager {
       uptime_seconds: Math.floor((Date.now() - this.startedAt) / 1000),
     };
     this.broadcastToAll('heartbeat', payload);
+  }
+
+  private createHeartbeatTimer(): ReturnType<typeof setInterval> {
+    return setInterval(() => {
+      this.broadcastHeartbeat();
+    }, this.config.heartbeatIntervalMs);
   }
 }
 
