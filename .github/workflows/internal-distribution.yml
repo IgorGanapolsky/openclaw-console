@@ -467,10 +467,10 @@ jobs:
           fi
 
       - name: Distribute to Firebase
-        uses: wzieba/Firebase-Distribution-Github-Action@bd494989dd4bec0343f78adee87fe66e48279ad6
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.1
         id: firebase_dist
         with:
-          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          appId: ${{ steps.firebase.outputs.app_id }}
           serviceCredentialsFile: ${{ env.FIREBASE_CREDENTIALS_FILE }}
           testers: ${{ env.FIREBASE_INTERNAL_TESTERS }}
           groups: ${{ env.FIREBASE_INTERNAL_GROUPS }}
