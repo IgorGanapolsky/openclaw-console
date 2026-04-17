@@ -167,7 +167,7 @@ platform :ios do
             use_automatic_signing: true,
             path: "OpenClawConsole.xcodeproj",
             targets: ["OpenClawConsole"],
-            code_sign_identity: "Apple Distribution"  # For App Store distribution
+            code_sign_identity: "Apple Development"  # For automatic signing
           )
 
           UI.message("✅ Configured automatic signing for App Store distribution")
@@ -193,7 +193,7 @@ platform :ios do
             use_automatic_signing: true,
             path: "OpenClawConsole.xcodeproj",
             targets: ["OpenClawConsole"],
-            code_sign_identity: "Apple Development"  # For development
+            code_sign_identity: "Apple Development"  # For automatic signing
           )
 
           UI.message("✅ Configured automatic signing for development")
