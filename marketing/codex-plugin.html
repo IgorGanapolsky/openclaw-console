@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw Console — Codex Plugin Install Guide</title>
+<meta name="description" content="How to wire OpenAI Codex into an OpenClaw Console session as a spawnable sub-agent runtime via the coding-agent skill.">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0b; --bg-raised: #111113; --bg-card: #161618;
+    --border: #222225; --text: #e8e8ec; --text-muted: #8b8b96;
+    --cyan: #22d3ee; --cyan-dim: rgba(34, 211, 238, 0.12); --green: #4ade80;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    --mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; padding: 0; }
+  .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+  nav { position: sticky; top: 0; z-index: 50; background: rgba(10,10,11,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 0; }
+  nav .container { display: flex; justify-content: space-between; align-items: center; }
+  .nav-logo { font-weight: 700; font-size: 15px; color: var(--text); text-decoration: none; }
+  .nav-logo span { color: var(--cyan); }
+  .nav-back { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .nav-back:hover { color: var(--text); }
+  .page-header { padding: 64px 0 40px; }
+  .page-header h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 12px; }
+  .page-header p { font-size: 16px; color: var(--text-muted); max-width: 600px; }
+  .section { padding: 32px 0; border-top: 1px solid var(--border); }
+  .section h2 { font-size: 20px; font-weight: 700; margin-bottom: 12px; color: var(--cyan); }
+  .section p { font-size: 15px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.65; }
+  .code-block { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; font-family: var(--mono); font-size: 13px; color: var(--cyan); line-height: 1.7; overflow-x: auto; margin: 12px 0; }
+  .section ul { list-style: none; margin: 12px 0; }
+  .section li { font-size: 14px; color: var(--text-muted); padding: 5px 0; display: flex; gap: 8px; }
+  .section li::before { content: "→"; color: var(--cyan); flex-shrink: 0; }
+  .btn { display: inline-block; padding: 10px 24px; background: var(--cyan); color: var(--bg); border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; margin-top: 16px; }
+  .btn:hover { opacity: 0.85; }
+  footer { border-top: 1px solid var(--border); padding: 24px 0; margin-top: 64px; }
+  footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .footer-links a:hover { color: var(--text); }
+  .footer-copy { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="/" class="nav-logo"><span>🦾</span> OpenClaw Console</a>
+    <a href="/" class="nav-back">← Back to home</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Codex Plugin Install Guide</h1>
+    <p>How to wire OpenAI Codex into an OpenClaw Console session as a spawnable sub-agent runtime via the <code style="font-family:var(--mono);color:var(--cyan)">coding-agent</code> skill.</p>
+  </div>
+
+  <div class="section">
+    <h2>1. Prerequisites</h2>
+    <ul>
+      <li>OpenClaw Console installed and gateway running (<code style="font-family:var(--mono);color:var(--cyan)">openclaw gateway start</code>)</li>
+      <li>OpenAI Codex CLI installed and authenticated</li>
+      <li>Node.js &gt;=18 on your machine</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>2. Install the coding-agent skill</h2>
+    <p>The <code style="font-family:var(--mono);color:var(--cyan)">coding-agent</code> skill handles spawning Codex (and Claude Code, Pi) as background sub-agents from within your OpenClaw session.</p>
+    <div class="code-block">clawhub install coding-agent</div>
+    <p>Or use the built-in skill if you have a full openclaw-mono checkout — it's in <code style="font-family:var(--mono);color:var(--cyan)">skills/coding-agent/SKILL.md</code>.</p>
+  </div>
+
+  <div class="section">
+    <h2>3. Spawn Codex from your agent</h2>
+    <p>Once the skill is installed, ask your agent to delegate coding tasks to Codex. The coding-agent skill instructions specify: use PTY=true for Codex (required for interactive terminal UI).</p>
+    <div class="code-block"># Example: ask OpenClaw to delegate to Codex
+"Use Codex to implement the user authentication feature in src/auth.ts"
+
+# The coding-agent skill will spawn Codex with pty:true
+# and manage the session via the process tool</div>
+  </div>
+
+  <div class="section">
+    <h2>4. Skill notes</h2>
+    <ul>
+      <li>Use Codex for: building/creating new features, reviewing PRs in temp dirs, refactoring large codebases, iterative coding that needs file exploration</li>
+      <li>NOT for: simple one-liner fixes (use edit tool directly), reading code (use read tool), or any work in the ~/clawd workspace</li>
+      <li>Codex requires <code style="font-family:var(--mono);color:var(--cyan)">pty:true</code> — it's a TTY-required CLI</li>
+      <li>Claude Code: use <code style="font-family:var(--mono);color:var(--cyan)">--print --permission-mode bypassPermissions</code> (no PTY needed)</li>
+      <li>Results auto-announce when done — do not busy-poll for completion</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>5. Full skill reference</h2>
+    <p>Read the complete coding-agent SKILL.md for all options, agent-specific flags, and patterns:</p>
+    <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/coding-agent" target="_blank" rel="noopener" class="btn">View coding-agent skill on GitHub →</a>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://clawhub.com" target="_blank" rel="noopener">ClawHub</a>
+    </div>
+    <span class="footer-copy">© 2026 Igor Ganapolsky · OpenClaw Console · MIT License</span>
+  </div>
+</footer>
+
+</body>
+</html>

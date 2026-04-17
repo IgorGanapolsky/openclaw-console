@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw Console — AI automation environment with 50+ skills, sessions, and memory</title>
+<meta name="description" content="OpenClaw Console runs local AI automation on your own machine. Use 50+ skills (gh-issues, 1password, cron, bear-notes, spotify, Hue, Sonos), read/edit/exec/sessions/memory tools, and a full agent runtime — all under your control, no cloud required.">
+<meta name="author" content="Igor Ganapolsky">
+<meta name="keywords" content="OpenClaw, openclaw console, AI automation environment, local AI agent, 50 skills, gh-issues skill, 1password skill, cron automation, bear notes, coding agent, agent runtime, MCP tools, read edit exec sessions memory, self-hosted AI, agent skills, claude code, codex, gemini, amp, openclaw-mono">
+
+<!-- Open Graph -->
+<meta property="og:title" content="OpenClaw Console — AI automation environment with 50+ skills, sessions, and memory">
+<meta property="og:description" content="OpenClaw Console runs local AI automation on your own machine. Use 50+ skills (gh-issues, 1password, cron, bear-notes, spotify, Hue, Sonos), read/edit/exec/sessions/memory tools, and a full agent runtime — all under your control, no cloud required.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://openclaw.dev">
+
+<!-- Privacy-friendly analytics by Plausible -->
+<script defer data-domain="openclaw.dev" src="https://plausible.io/js/script.js"></script>
+
+<!-- PostHog Analytics -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a=u._i.push([i,s,a]),u._i.push([i,s,a]),u.init=function(t,e,i){g(u,"capture"),u.push(["init",t,e,i])},u.capture=function(t,e,i,o){u.push(["capture",t,e,i,o])},u.identify=function(t,e,i){u.push(["identify",t,e,i])},u.alias=function(t,e){u.push(["alias",t,e])},u.people={set:function(t,e,i){u.push(["people.set",t,e,i])}},u.featureFlags={},u.onFeatureFlags=function(t){u.push(["onFeatureFlags",t])},u.toString=function(t){var e="posthog";return a&&a!==e&&(e+="."+a),t||(e+=" (stub)"),e},u.people.set_once=function(t,e,i){u.push(["people.set_once",t,e,i])},u.group=function(t,e,i){u.push(["group",t,e,i])},u.setGroupPropertiesForFlags=function(t){u.push(["setGroupPropertiesForFlags",t])},u.reloadFeatureFlags=function(){u.push(["reloadFeatureFlags"])},0===t.indexOf(".")){var s=t.substring(1);u=e[s]=[],u._i=[]}e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  posthog.init('phc_openclaw_placeholder', {
+    api_host: 'https://us.i.posthog.com',
+    ui_host: 'https://us.posthog.com',
+    person_profiles: 'identified_only',
+  });
+  posthog.capture('$pageview');
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "OpenClaw Console",
+  "alternateName": "openclaw",
+  "description": "OpenClaw Console is a local AI automation environment. It gives AI agents read/edit/exec/sessions/memory tools and 50+ skills — gh-issues, 1password, cron, bear-notes, spotify, Hue lights, Sonos, coding-agent, and more — all running on your own machine under your full control.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Cross-platform, Node.js >=18",
+  "url": "https://github.com/IgorGanapolsky/openclaw-mono",
+  "creator": {
+    "@type": "Person",
+    "name": "Igor Ganapolsky",
+    "url": "https://github.com/IgorGanapolsky"
+  },
+  "featureList": [
+    "read/edit/exec/sessions/memory tools for AI agents",
+    "50+ installable skills: gh-issues, 1password, cron, bear-notes, spotify, openhue, sonos, coding-agent, weather, and more",
+    "Local-first: no cloud required, runs on your own machine",
+    "Agent gateway daemon with persistent sessions",
+    "MCP-compatible — works with Claude Code, Codex, Gemini, Amp, and OpenCode",
+    "Skill creator for authoring custom agent skills",
+    "ClawHub registry for discovering and publishing skills",
+    "MEMORY.md persistent memory across sessions",
+    "Background task execution with process management",
+    "Web search, web fetch, and research tools built in",
+    "Apple Notes, Apple Reminders, Bear Notes, Things 3 integrations",
+    "GitHub issues, PRs, and CI via gh-issues skill",
+    "1Password CLI integration for secrets management",
+    "Cron-based scheduled automation",
+    "Image analysis, TTS, and Whisper transcription skills"
+  ],
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "Free / Open Source",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Full local agent runtime, 50+ skills, all tools — free and open source"
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to get your AI agent running local automations with OpenClaw Console",
+  "description": "Set up OpenClaw Console so your AI agent can read files, run shell commands, manage sessions, search the web, and trigger 50+ skills — all on your own machine.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Install OpenClaw Console",
+      "text": "Clone the openclaw-mono repo and run npm install. The gateway daemon starts with: openclaw gateway start"
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Configure your agent",
+      "text": "Point your AI agent (Claude Code, Codex, Gemini, or any MCP-compatible agent) at the OpenClaw gateway. The agent gains read, edit, exec, sessions, memory, and web_search tools automatically."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Install skills",
+      "text": "Use ClawHub to browse and install skills: clawhub install gh-issues, clawhub install 1password, clawhub install cron. Each skill adds new commands and capabilities to your agent."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 4,
+      "name": "Start automating",
+      "text": "Ask your agent to triage GitHub issues, manage 1Password secrets, schedule cron jobs, control Hue lights, play Spotify, send iMessages, or write code — all from a single chat."
+    }
+  ],
+  "totalTime": "PT10M",
+  "tool": { "@type": "SoftwareApplication", "name": "openclaw", "url": "https://github.com/IgorGanapolsky/openclaw-mono" }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is OpenClaw Console?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "OpenClaw Console is a local AI automation environment. It gives AI agents a rich set of tools — read, edit, exec, sessions, memory, web_search, web_fetch, image — plus 50+ installable skills covering GitHub, 1Password, Spotify, Hue lights, Sonos, Apple Notes, Bear, Things 3, iMessage, cron, coding agents, and more. Everything runs on your own machine."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What tools does OpenClaw give AI agents?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Core tools: read (file contents), edit (precise file edits), exec (shell commands with PTY and background), process (manage running sessions), web_search, web_fetch, image (vision), memory_search, memory_get, and sessions_yield. These tools are always available to any agent running inside OpenClaw."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How many skills does OpenClaw have?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "OpenClaw ships with 50+ built-in skills and the ClawHub registry hosts community skills. Key skills include: gh-issues (GitHub issues/PRs/CI), 1password (secrets via op CLI), coding-agent (spawn Claude Code/Codex/Pi), cron (scheduled tasks), bear-notes, apple-notes, apple-reminders, things-mac, obsidian, spotify-player, openhue (Philips Hue), sonoscli, blucli (BluOS), imsg (iMessage), wacli (WhatsApp), himalaya (email), gog (Google Workspace), weather, video-frames, songsee, peekaboo (macOS UI automation), and many more."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does OpenClaw work with Claude Code, Codex, and Gemini?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. OpenClaw Console works with Claude Code, OpenAI Codex, Gemini CLI, Amp, OpenCode, and any MCP-compatible agent. The coding-agent skill lets you spawn any of these agents as subagents from within a conversation."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is OpenClaw cloud-based or local?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Local-first. OpenClaw Console runs entirely on your own machine. No cloud account is required. You own the data, the sessions, and the memory. Optional cloud features (like VPS node pairing) are available but not required for the core runtime."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the gh-issues skill?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The gh-issues skill lets your agent fetch GitHub issues, spawn sub-agents to implement fixes and open PRs, monitor PR review comments, and respond to reviews — all from a single command. Usage: /gh-issues [owner/repo] [--label bug] [--limit 5] [--watch] [--cron]."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the 1password skill?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The 1password skill sets up and uses the 1Password CLI (op). Use it to install the CLI, enable desktop app integration, sign in to single or multi-account setups, and read/inject/run secrets via op — all from your agent conversation."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does OpenClaw memory work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "OpenClaw uses a MEMORY.md file plus memory/*.md shards for persistent cross-session memory. The memory_search tool does semantic search across all memory files. The memory_get tool does exact excerpt reads. Agents automatically recall prior decisions, preferences, and context across sessions."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I create a custom skill?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use the skill-creator skill: it guides you through creating, editing, auditing, and improving agent skills. You can also publish skills to ClawHub for others to install. Each skill is a directory with a SKILL.md file, optional scripts, and optional reference files."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the Codex plugin for OpenClaw?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "OpenClaw Console supports Codex as an agent runtime via the coding-agent skill. The Codex plugin install page (/codex-plugin.html) has the full setup guide for wiring Codex into an OpenClaw session."
+      }
+    }
+  ]
+}
+</script>
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0b;
+    --bg-raised: #111113;
+    --bg-card: #161618;
+    --border: #222225;
+    --text: #e8e8ec;
+    --text-muted: #8b8b96;
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34, 211, 238, 0.12);
+    --cyan-glow: rgba(34, 211, 238, 0.25);
+    --green: #4ade80;
+    --red: #f87171;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    --mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* NAV */
+  nav { position: sticky; top: 0; z-index: 50; background: rgba(10,10,11,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 14px 0; }
+  nav .container { display: flex; justify-content: space-between; align-items: center; }
+  .nav-logo { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+  .nav-logo span { color: var(--cyan); }
+  .nav-links { display: flex; gap: 24px; align-items: center; }
+  .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; transition: color 0.15s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta { background: var(--cyan); color: var(--bg); padding: 6px 14px; border-radius: 6px; font-weight: 600; font-size: 13px; text-decoration: none; transition: opacity 0.15s; }
+  .nav-cta:hover { opacity: 0.85; }
+
+  /* HERO */
+  .hero { padding: 100px 0 72px; text-align: center; }
+  .hero-thumbs { font-size: 72px; margin-bottom: 20px; line-height: 1; filter: drop-shadow(0 0 24px rgba(34,211,238,0.3)); }
+  .hero-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--cyan); background: var(--cyan-dim); border: 1px solid rgba(34,211,238,0.2); padding: 4px 12px; border-radius: 100px; margin-bottom: 24px; font-weight: 500; letter-spacing: 0.02em; text-transform: uppercase; }
+  .hero h1 { font-size: clamp(32px, 5vw, 52px); font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; max-width: 700px; margin: 0 auto 16px; }
+  .hero p { font-size: 17px; color: var(--text-muted); max-width: 520px; margin: 0 auto 36px; line-height: 1.6; }
+  .hero-persona { font-size: 15px; color: var(--cyan); max-width: 600px; margin: 0 auto 20px; line-height: 1.5; font-weight: 500; }
+  .hero-signals { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin: 0 auto 28px; max-width: 760px; }
+  .signal-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-raised); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+  .signal-pill.signal-up { border-color: rgba(74, 222, 128, 0.28); color: #b8f7c8; background: rgba(74, 222, 128, 0.08); }
+  .signal-pill.signal-down { border-color: rgba(248, 113, 113, 0.28); color: #ffc0c0; background: rgba(248, 113, 113, 0.08); }
+  .hero-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin: 0 auto 16px; max-width: 760px; }
+  .btn-pro-page { display: inline-flex; align-items: center; justify-content: center; padding: 11px 18px; background: var(--cyan); color: var(--bg); border-radius: 999px; text-decoration: none; font-size: 14px; font-weight: 700; box-shadow: 0 0 0 1px rgba(34,211,238,0.28), 0 12px 32px rgba(34,211,238,0.18); transition: opacity 0.15s, transform 0.15s; }
+  .btn-pro-page:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-gpt-page { display: inline-flex; align-items: center; justify-content: center; padding: 14px 32px; background: var(--green); color: #06120a; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 800; box-shadow: 0 0 0 1px rgba(74,222,128,0.32), 0 12px 32px rgba(74,222,128,0.18); transition: opacity 0.15s, transform 0.15s; }
+  .btn-gpt-page:hover { opacity: 0.92; transform: translateY(-1px); }
+  .hero-install { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 14px 24px; display: inline-flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 15px; margin-bottom: 40px; cursor: pointer; transition: border-color 0.2s; position: relative; max-width: 100%; overflow-x: auto; }
+  .hero-install:hover { border-color: var(--cyan); }
+  .hero-install .prompt { color: var(--text-muted); user-select: none; }
+  .hero-install .cmd { color: var(--cyan); }
+  .hero-install .copy-hint { font-size: 11px; color: var(--text-muted); font-family: var(--font); margin-left: 8px; }
+  .hero-install .copied { color: var(--green); }
+  .first-gate-card { max-width: 820px; margin: 0 auto 28px; text-align: left; border: 1px solid rgba(34,211,238,0.28); background: linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(74,222,128,0.06) 100%); border-radius: 14px; padding: 22px; box-shadow: 0 18px 60px rgba(0,0,0,0.22); }
+  .first-gate-card h2 { font-size: clamp(22px, 3vw, 30px); line-height: 1.15; margin-bottom: 8px; letter-spacing: -0.025em; }
+  .first-gate-card p { max-width: none; margin: 0 0 16px; color: var(--text-muted); font-size: 15px; }
+  .first-gate-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+  .first-gate-step { border: 1px solid var(--border); border-radius: 10px; background: rgba(10,10,11,0.62); padding: 14px; }
+  .first-gate-step strong { display: block; color: var(--cyan); margin-bottom: 6px; }
+  .first-gate-step p { font-size: 13px; line-height: 1.5; margin: 0; }
+  .first-gate-example { font-family: var(--mono); color: var(--green); background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.24); border-radius: 8px; padding: 10px 12px; font-size: 12px; margin-top: 12px; overflow-x: auto; }
+
+  /* SOCIAL PROOF BAR */
+  .proof-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 24px; font-size: 13px; color: var(--text-muted); padding: 0 0 8px; }
+  .proof-bar a { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; transition: color 0.15s; }
+  .proof-bar a:hover { color: var(--cyan); }
+  .proof-bar .dot { width: 4px; height: 4px; background: var(--border); border-radius: 50%; display: inline-block; }
+
+  /* COMPATIBILITY */
+  .compatibility { padding: 0 0 80px; }
+  .compatibility-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .compat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; text-decoration: none; color: inherit; display: block; transition: border-color 0.2s, transform 0.15s; cursor: pointer; }
+  .compat-card:hover { border-color: rgba(34,211,238,0.3); transform: translateY(-2px); }
+  .compat-card h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 10px; }
+  .compat-card .card-arrow { font-size: 13px; color: var(--cyan); margin-top: 12px; font-weight: 500; }
+  .compat-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+  .compat-card code { font-family: var(--mono); font-size: 12px; background: rgba(34,211,238,0.08); color: var(--cyan); padding: 2px 6px; border-radius: 4px; }
+
+  /* AGENT GRID (social proof) */
+  .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .agent-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+  .agent-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  .agent-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+  /* SEO PAGES */
+  .seo-pages { padding: 0 0 80px; }
+  .seo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .seo-card {
+    background: linear-gradient(180deg, rgba(17,17,19,0.98) 0%, rgba(22,22,24,0.96) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .seo-card:hover { border-color: rgba(34,211,238,0.3); transform: translateY(-2px); }
+  .seo-card h3 { font-size: 18px; margin-bottom: 10px; letter-spacing: -0.02em; }
+  .seo-card p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+  .seo-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--cyan);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  .seo-card .card-arrow { font-size: 13px; color: var(--cyan); margin-top: 12px; font-weight: 500; }
+
+  /* HOW IT WORKS */
+  .how-it-works { padding: 80px 0; }
+  .section-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--cyan); font-weight: 600; margin-bottom: 12px; text-align: center; }
+  .section-title { font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -0.025em; text-align: center; margin-bottom: 48px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .step { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; position: relative; transition: border-color 0.2s; }
+  .step:hover { border-color: rgba(34,211,238,0.3); }
+  .step-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--cyan-dim); color: var(--cyan); font-size: 13px; font-weight: 700; margin-bottom: 16px; }
+  .step h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .step p { font-size: 14px; color: var(--text-muted); line-height: 1.55; }
+  .step code { font-family: var(--mono); font-size: 12px; background: rgba(34,211,238,0.08); color: var(--cyan); padding: 2px 6px; border-radius: 4px; }
+
+  /* CODE EXAMPLE */
+  .code-section { padding: 0 0 80px; }
+  .code-block { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 640px; margin: 0 auto; }
+  .code-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .code-dot.red { background: #f87171; }
+  .code-dot.yellow { background: #fbbf24; }
+  .code-dot.green { background: #4ade80; }
+  .code-header span { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+  .code-body { padding: 20px; font-family: var(--mono); font-size: 13px; line-height: 1.7; overflow-x: auto; }
+  .code-body .comment { color: #6b7280; }
+  .code-body .keyword { color: #c084fc; }
+  .code-body .string { color: #4ade80; }
+  .code-body .fn { color: var(--cyan); }
+
+  /* PRICING */
+  .pricing { padding: 80px 0; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1080px; margin: 0 auto; }
+  .price-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 32px 28px; }
+  .price-card.pro { border-color: rgba(34,211,238,0.35); }
+  .price-card.free-highlight { border-color: var(--cyan); box-shadow: 0 0 40px var(--cyan-dim), inset 0 1px 0 rgba(34,211,238,0.15); }
+  .price-card.team { border-color: rgba(74,222,128,0.45); box-shadow: inset 0 1px 0 rgba(74,222,128,0.16); }
+  .price-card .tier { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+  .price-card.pro .tier { color: var(--cyan); }
+  .price-card.team .tier { color: var(--green); }
+  .price-card .price { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 4px; }
+  .price-card .price-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+  .price-card ul { list-style: none; margin-bottom: 28px; }
+  .price-card li { font-size: 14px; color: var(--text-muted); padding: 6px 0; display: flex; align-items: flex-start; gap: 8px; }
+  .price-card li::before { content: "✓"; color: var(--cyan); font-weight: 700; flex-shrink: 0; }
+  .price-card.pro li::before { color: var(--cyan); }
+  .btn-free,
+  .btn-demo-link { display: block; text-align: center; padding: 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); text-decoration: none; font-size: 14px; font-weight: 500; transition: border-color 0.15s; }
+  .btn-free:hover,
+  .btn-demo-link:hover { border-color: var(--text-muted); }
+  .btn-pro { display: block; text-align: center; padding: 10px; background: var(--cyan); color: var(--bg); border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: opacity 0.15s; }
+  .btn-pro:hover { opacity: 0.85; }
+  .btn-team { display: block; text-align: center; padding: 10px; background: rgba(74,222,128,0.14); color: var(--green); border: 1px solid rgba(74,222,128,0.4); border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: border-color 0.15s, transform 0.15s; }
+  .btn-team:hover { border-color: var(--green); transform: translateY(-1px); }
+
+  /* FAQ */
+  .faq { padding: 80px 0; }
+  .faq-list { max-width: 640px; margin: 0 auto; }
+  .faq-item { border-bottom: 1px solid var(--border); }
+  .faq-q { padding: 20px 0; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: none; border: none; color: var(--text); width: 100%; text-align: left; font-family: var(--font); }
+  .faq-q::after { content: "+"; font-size: 18px; color: var(--text-muted); transition: transform 0.2s; }
+  .faq-item.open .faq-q::after { transform: rotate(45deg); }
+  .faq-a { font-size: 14px; color: var(--text-muted); line-height: 1.65; padding-bottom: 20px; display: none; }
+  .faq-item.open .faq-a { display: block; }
+
+  /* CTA SECTION */
+  .final-cta { padding: 80px 0; text-align: center; }
+  .final-cta h2 { font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -0.025em; margin-bottom: 12px; }
+  .final-cta p { font-size: 15px; color: var(--text-muted); margin-bottom: 28px; }
+
+  /* STICKY BOTTOM CTA BAR */
+  .sticky-cta { position: fixed; bottom: 0; left: 0; right: 0; z-index: 999; background: rgba(10,10,10,0.96); border-top: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: center; gap: 12px; transform: translateY(100%); transition: transform 0.3s ease; backdrop-filter: blur(8px); }
+  .sticky-cta.visible { transform: translateY(0); }
+  .sticky-cta-text { font-size: 14px; color: var(--text-muted); }
+  .sticky-cta-text strong { color: var(--text); }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 32px 0; }
+  footer .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; transition: color 0.15s; }
+  .footer-links a:hover { color: var(--text); }
+  .footer-copy { font-size: 12px; color: var(--text-muted); }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    .steps { grid-template-columns: 1fr; }
+    .compatibility-grid { grid-template-columns: 1fr; }
+    .first-gate-steps { grid-template-columns: 1fr; }
+    .agent-grid { grid-template-columns: 1fr; }
+    .seo-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .hero { padding: 72px 0 56px; }
+    .hero-actions { flex-direction: column; }
+    .hero-actions a { width: 100%; }
+    .nav-links a:not(.nav-cta) { display: none; }
+    .proof-bar { gap: 16px; }
+    .proof-bar .dot { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container">
+    <a href="#" class="nav-logo"><span>🦾</span> OpenClaw Console</a>
+    <div class="nav-links">
+      <a href="#how-it-works">How It Works</a>
+      <a href="#skills">Skills</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener">GitHub</a>
+      <a href="/codex-plugin.html">Codex plugin install →</a>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener" class="nav-cta" onclick="posthog.capture('nav_cta_click',{cta:'get_started'})">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-thumbs">🦾🤖</div>
+    <div class="hero-badge">● Local AI automation environment — 50+ skills, all tools, your machine</div>
+    <h1>Your AI agent, fully equipped.<br>Runs on your machine.</h1>
+    <p style="font-size:18px;color:var(--text-muted);max-width:660px;margin:0 auto 20px;line-height:1.6;">OpenClaw Console gives your AI agent <code>read</code>, <code>edit</code>, <code>exec</code>, <code>sessions</code>, and <code>memory</code> tools — plus 50+ skills covering GitHub, 1Password, cron, Apple Notes, Spotify, Hue lights, iMessage, coding agents, and more.<br><strong style="color:var(--text)">Everything runs locally on your own machine. No cloud required.</strong></p>
+    <div class="hero-signals">
+      <div class="signal-pill signal-up">🛠️ read/edit/exec/sessions/memory tools built in</div>
+      <div class="signal-pill signal-up">✅ 50+ skills: gh-issues, 1password, cron, coding-agent</div>
+      <div class="signal-pill">🔁 Works with Claude Code, Codex, Gemini, Amp, OpenCode</div>
+    </div>
+    <div class="hero-actions" style="margin-top:32px;">
+      <div class="hero-install hero-install-primary" onclick="copyInstall(this)" title="Click to copy" style="margin-bottom:0;font-size:20px;padding:18px 32px;border:2px solid var(--cyan);box-shadow:0 0 32px var(--cyan-glow);">
+        <span class="prompt">$</span>
+        <span class="cmd">openclaw gateway start</span>
+        <span class="copy-hint">click to copy</span>
+      </div>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener" onclick="posthog.capture('hero_github_click')" class="btn-gpt-page btn-install-hero" style="font-size:18px;padding:16px 36px;">Get OpenClaw Free</a>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/dist-runtime/extensions" target="_blank" rel="noopener" onclick="posthog.capture('hero_skills_click')" class="btn-pro-page" style="font-size:13px;padding:10px 18px;margin-bottom:4px;opacity:0.85;">Browse 50+ Skills →</a>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener" class="btn-free" style="display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:999px;" onclick="posthog.capture('hero_star_click')">⭐ Star on GitHub</a>
+      <a href="/codex-plugin.html" class="btn-install-link" style="font-size:13px;color:var(--text-muted);text-decoration:none;padding:8px 14px;">Codex plugin install →</a>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin:16px auto 0;max-width:660px;">OpenClaw Console is a local-first agent runtime. No account needed. No cloud data. Your agent, your machine, your rules. Works with Claude Code, Cursor, Codex, Gemini, Amp, OpenCode, and any MCP-compatible agent.</p>
+    <div class="first-gate-card" id="quick-start">
+      <div class="section-label" style="text-align:left;margin-bottom:8px;">Quick Start Path</div>
+      <h2>Up and running in under 10 minutes.</h2>
+      <p>The fastest path to productive AI automation: install, connect your agent, install a skill, and start asking it to do real work on your machine.</p>
+      <div class="first-gate-steps">
+        <div class="first-gate-step">
+          <strong>1. Start the gateway</strong>
+          <p>Run <code>openclaw gateway start</code>. The daemon starts and your agent gets all core tools: read, edit, exec, sessions, memory, web_search, image.</p>
+        </div>
+        <div class="first-gate-step">
+          <strong>2. Connect your agent</strong>
+          <p>Point Claude Code, Codex, or any MCP-compatible agent at the OpenClaw gateway. Core tools are available immediately — no configuration needed.</p>
+        </div>
+        <div class="first-gate-step">
+          <strong>3. Install your first skill</strong>
+          <p>Run <code>clawhub install gh-issues</code> or <code>clawhub install 1password</code>. Your agent can now triage GitHub issues, manage secrets, and more.</p>
+        </div>
+      </div>
+      <div class="first-gate-example">$ openclaw gateway start &amp;&amp; clawhub install gh-issues &amp;&amp; clawhub install 1password</div>
+    </div>
+    <div class="proof-bar">
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener">GitHub repo →</a>
+      <span class="dot"></span>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/dist-runtime/extensions" target="_blank" rel="noopener">50+ built-in skills →</a>
+      <span class="dot"></span>
+      <a href="/codex-plugin.html">Codex plugin install →</a>
+      <span class="dot"></span>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/gh-issues" target="_blank" rel="noopener">gh-issues skill →</a>
+      <span class="dot"></span>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/1password" target="_blank" rel="noopener">1password skill →</a>
+      <span class="dot"></span>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/coding-agent" target="_blank" rel="noopener">coding-agent skill →</a>
+      <span class="dot"></span>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/cron" target="_blank" rel="noopener" style="display:none">cron skill →</a>
+      <a href="#skills">Claude Code · Codex · Gemini · Amp · OpenCode</a>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS SHOWCASE -->
+<section class="compatibility" id="skills">
+  <div class="container">
+    <div class="section-label">50+ Skills</div>
+    <h2 class="section-title">One agent, every tool you need</h2>
+    <div class="compatibility-grid">
+      <a class="compat-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/gh-issues" target="_blank" rel="noopener">
+        <h3>🐙 gh-issues</h3>
+        <p>Fetch GitHub issues, spawn sub-agents to implement fixes and open PRs, monitor review comments, address feedback. Usage: <code>/gh-issues owner/repo --label bug --watch</code></p>
+        <div class="card-arrow">View gh-issues skill →</div>
+      </a>
+      <a class="compat-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/1password" target="_blank" rel="noopener">
+        <h3>🔑 1password</h3>
+        <p>Set up and use the 1Password CLI (<code>op</code>). Install, enable desktop integration, sign in, and read/inject/run secrets via op — all from your agent conversation.</p>
+        <div class="card-arrow">View 1password skill →</div>
+      </a>
+      <a class="compat-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/coding-agent" target="_blank" rel="noopener">
+        <h3>💻 coding-agent</h3>
+        <p>Delegate coding tasks to Claude Code, Codex, or Pi agents as background subagents. Build features, review PRs, refactor large codebases — all in parallel.</p>
+        <div class="card-arrow">View coding-agent skill →</div>
+      </a>
+      <a class="compat-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/bear-notes" target="_blank" rel="noopener">
+        <h3>🐻 bear-notes</h3>
+        <p>Create, search, and manage Bear notes via the grizzly CLI. Full CRUD on your note library from your agent.</p>
+        <div class="card-arrow">View bear-notes skill →</div>
+      </a>
+      <a class="compat-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/openhue" target="_blank" rel="noopener">
+        <h3>💡 openhue + sonoscli</h3>
+        <p>Control Philips Hue lights, scenes, and groups via OpenHue CLI. Control Sonos speakers (discover, play, volume, group) via sonoscli. Also: blucli for BluOS.</p>
+        <div class="card-arrow">View openhue skill →</div>
+      </a>
+      <a class="compat-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/spotify-player" target="_blank" rel="noopener">
+        <h3>🎵 spotify-player</h3>
+        <p>Terminal Spotify playback and search via spogo (preferred) or spotify_player. Search, play, queue, and control from your agent chat.</p>
+        <div class="card-arrow">View spotify skill →</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ALL SKILLS GRID -->
+<section class="compatibility" id="all-skills">
+  <div class="container">
+    <div class="section-label">Full Skills Catalog</div>
+    <h2 class="section-title">Every skill in OpenClaw Console</h2>
+    <div class="agent-grid">
+      <div class="agent-card">
+        <h3>📋 Notes &amp; Tasks</h3>
+        <p>apple-notes, bear-notes, obsidian, apple-reminders, things-mac — manage your entire note and task ecosystem from one agent.</p>
+      </div>
+      <div class="agent-card">
+        <h3>📧 Communication</h3>
+        <p>imsg (iMessage/SMS), wacli (WhatsApp), himalaya (email IMAP/SMTP), gog (Google Workspace: Gmail, Calendar, Drive, Sheets).</p>
+      </div>
+      <div class="agent-card">
+        <h3>🔧 Dev &amp; DevOps</h3>
+        <p>gh-issues (GitHub), coding-agent (Claude Code/Codex/Pi), github (gh CLI), 1password (secrets), healthcheck (security auditing), mcporter (MCP servers).</p>
+      </div>
+      <div class="agent-card">
+        <h3>🌐 Research &amp; Web</h3>
+        <p>tavily (deep web research), perplexity (AI search), summarize (URL/podcast/video transcription), xurl (X/Twitter API), weather (wttr.in/Open-Meteo).</p>
+      </div>
+      <div class="agent-card">
+        <h3>🎬 Media &amp; Audio</h3>
+        <p>video-frames (ffmpeg frame extraction), songsee (spectrograms), openai-whisper (local speech-to-text), sherpa-onnx-tts (local TTS), gifgrep (GIF search).</p>
+      </div>
+      <div class="agent-card">
+        <h3>🏠 Smart Home</h3>
+        <p>openhue (Philips Hue), sonoscli (Sonos), blucli (BluOS), eightctl (Eight Sleep pods), spotify-player — control your environment from your agent.</p>
+      </div>
+      <div class="agent-card">
+        <h3>📷 Vision &amp; UI</h3>
+        <p>peekaboo (macOS UI automation and screenshot capture), camsnap (RTSP/ONVIF camera frames/clips), image tool (vision model analysis).</p>
+      </div>
+      <div class="agent-card">
+        <h3>🔄 Automation</h3>
+        <p>taskflow (durable multi-task flows), blogwatcher (RSS/blog monitoring), ordercli (Foodora order tracking), tmux (remote terminal control), nano-pdf (PDF editing).</p>
+      </div>
+      <div class="agent-card">
+        <h3>🧠 Memory &amp; Skills</h3>
+        <p>MEMORY.md persistent cross-session memory, memory_search (semantic), memory_get (exact), skill-creator (author/audit skills), clawhub (install/publish skills).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEO PAGES / GUIDES -->
+<section class="seo-pages" id="guides">
+  <div class="container">
+    <div class="section-label">Setup Guides</div>
+    <h2 class="section-title">Get the most out of OpenClaw Console</h2>
+    <div class="seo-grid">
+      <a class="seo-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/gh-issues" target="_blank" rel="noopener">
+        <div class="seo-kicker">Skill Guide</div>
+        <h3>gh-issues: Automate GitHub with AI</h3>
+        <p>Fetch issues, spawn agents to fix bugs and open PRs, watch review comments, handle cron-based triage — all from one command.</p>
+        <div class="card-arrow">Read the gh-issues guide →</div>
+      </a>
+      <a class="seo-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/1password" target="_blank" rel="noopener">
+        <div class="seo-kicker">Skill Guide</div>
+        <h3>1password: Secrets Management for AI Agents</h3>
+        <p>How to set up the op CLI, enable desktop app integration, sign in to multiple accounts, and inject secrets into your automation workflows.</p>
+        <div class="card-arrow">Read the 1password guide →</div>
+      </a>
+      <a class="seo-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/coding-agent" target="_blank" rel="noopener">
+        <div class="seo-kicker">Skill Guide</div>
+        <h3>coding-agent: Spawn Claude Code and Codex</h3>
+        <p>Delegate complex coding tasks — new features, PR reviews, refactors — to background sub-agents with full file exploration capabilities.</p>
+        <div class="card-arrow">Read the coding-agent guide →</div>
+      </a>
+      <a class="seo-card" href="/codex-plugin.html">
+        <div class="seo-kicker">Integration</div>
+        <h3>Codex Plugin Install for OpenClaw</h3>
+        <p>The complete guide for wiring OpenAI Codex into an OpenClaw session as a spawnable sub-agent runtime.</p>
+        <div class="card-arrow">Read the Codex plugin guide →</div>
+      </a>
+      <a class="seo-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/taskflow" target="_blank" rel="noopener">
+        <div class="seo-kicker">Advanced</div>
+        <h3>TaskFlow: Durable Multi-Step Automations</h3>
+        <p>Build automations that span detached tasks, handle waiting states, link child tasks, and surface progress to users — the flow substrate under everything.</p>
+        <div class="card-arrow">Read the TaskFlow guide →</div>
+      </a>
+      <a class="seo-card" href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/skills/skill-creator" target="_blank" rel="noopener">
+        <div class="seo-kicker">Guide</div>
+        <h3>Skill Creator: Build Your Own Skills</h3>
+        <p>Author, edit, audit, and improve agent skills. Structure a skill directory, write a SKILL.md, add scripts and references, publish to ClawHub.</p>
+        <div class="card-arrow">Read the skill creator guide →</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works" id="how-it-works">
+  <div class="container">
+    <div class="section-label">How It Works</div>
+    <h2 class="section-title">Three layers that make your agent truly capable</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Core Tools</h3>
+        <p>Every OpenClaw agent gets <code>read</code>, <code>edit</code>, <code>exec</code>, <code>process</code>, <code>web_search</code>, <code>web_fetch</code>, <code>image</code>, <code>memory_search</code>, and <code>memory_get</code> tools — always available, no configuration required.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Skills</h3>
+        <p>Install skills from ClawHub or from the 50+ built-in skills. Each skill adds domain-specific capabilities: <code>gh-issues</code> for GitHub, <code>1password</code> for secrets, <code>coding-agent</code> for spawning sub-agents, <code>openhue</code> for smart lights.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Memory &amp; Sessions</h3>
+        <p>MEMORY.md and memory/*.md persist context across sessions. The agent remembers your preferences, prior decisions, and project context. Sessions are durable and resumable with the <code>process</code> tool for long-running background work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENFORCEMENT / GUARDRAILS -->
+<section class="compatibility" id="tools">
+  <div class="container">
+    <div class="section-label">Core Tools</div>
+    <h2 class="section-title">The tools that make everything possible</h2>
+    <div class="agent-grid">
+      <div class="agent-card">
+        <h3>📖 read</h3>
+        <p>Read file contents — text files and images (jpg, png, gif, webp). Supports offset/limit for large files. Output truncated to 2000 lines or 50KB per call.</p>
+      </div>
+      <div class="agent-card">
+        <h3>✏️ edit</h3>
+        <p>Make precise file edits using exact text replacement. Multiple targeted replacements per call. Creates parent directories automatically.</p>
+      </div>
+      <div class="agent-card">
+        <h3>⚡ exec</h3>
+        <p>Run shell commands with background continuation, PTY support for TTY-required CLIs, timeout, environment variables, and working directory control.</p>
+      </div>
+      <div class="agent-card">
+        <h3>🔄 process</h3>
+        <p>Manage running exec sessions: list, poll, log, write, send-keys, submit, paste, kill. Use for long-running background work, interactive CLIs, and coding agents.</p>
+      </div>
+      <div class="agent-card">
+        <h3>🧠 memory</h3>
+        <p>memory_search (semantic search across MEMORY.md + memory/*.md shards) and memory_get (exact excerpt reads). Persistent context across all sessions.</p>
+      </div>
+      <div class="agent-card">
+        <h3>🌐 web_search + web_fetch</h3>
+        <p>Search the web via Brave API. Fetch and extract readable content from URLs (HTML → markdown/text). Built-in research and documentation lookup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CODE EXAMPLE -->
+<section class="code-section">
+  <div class="container">
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dot red"></div>
+        <div class="code-dot yellow"></div>
+        <div class="code-dot green"></div>
+        <span>terminal — openclaw gateway + skills</span>
+      </div>
+      <div class="code-body">
+        <div><span class="comment"># Start the OpenClaw gateway</span></div>
+        <div><span class="fn">openclaw</span> gateway start</div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># Install skills from ClawHub</span></div>
+        <div><span class="fn">clawhub</span> install gh-issues</div>
+        <div><span class="fn">clawhub</span> install 1password</div>
+        <div><span class="fn">clawhub</span> install coding-agent</div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># Now your agent can...</span></div>
+        <div><span class="keyword">Agent:</span> <span class="string">"Triage all open bugs in IgorGanapolsky/openclaw-mono"</span></div>
+        <div><span class="fn">→ gh-issues</span> fetches issues, spawns fix agents, opens PRs</div>
+        <div>&nbsp;</div>
+        <div><span class="keyword">Agent:</span> <span class="string">"Get my AWS_SECRET_ACCESS_KEY from 1Password"</span></div>
+        <div><span class="fn">→ 1password</span> reads secret via op CLI, injects into environment</div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># Core tools always available</span></div>
+        <div><span class="fn">read</span> / <span class="fn">edit</span> / <span class="fn">exec</span> / <span class="fn">process</span> / <span class="fn">memory</span> / <span class="fn">web_search</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL FOR YOUR AGENT -->
+<section id="install" style="padding: 60px 40px; max-width: 900px; margin: 0 auto;">
+  <h2 style="font-size: 2em; text-align: center; margin-bottom: 40px;">Connect Your Agent</h2>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div style="background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d;">
+      <h3>Claude Code</h3>
+      <code style="display: block; background: #0d1117; padding: 12px; border-radius: 8px; color: #58a6ff; margin: 12px 0;">openclaw gateway start</code>
+      <p style="color: #8b949e; font-size: 14px;">Point Claude Code at the OpenClaw gateway for full tool access</p>
+    </div>
+
+    <div style="background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d;">
+      <h3>Codex</h3>
+      <code style="display: block; background: #0d1117; padding: 12px; border-radius: 8px; color: #58a6ff; margin: 12px 0;">See /codex-plugin.html →</code>
+      <p style="color: #8b949e; font-size: 14px;"><a href="/codex-plugin.html" style="color: #58a6ff;">Full Codex plugin install guide</a></p>
+    </div>
+
+    <div style="background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d;">
+      <h3>Gemini CLI</h3>
+      <code style="display: block; background: #0d1117; padding: 12px; border-radius: 8px; color: #58a6ff; margin: 12px 0;">openclaw gateway start</code>
+      <p style="color: #8b949e; font-size: 14px;">MCP-compatible — connect Gemini CLI to the gateway</p>
+    </div>
+
+    <div style="background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d;">
+      <h3>Amp</h3>
+      <code style="display: block; background: #0d1117; padding: 12px; border-radius: 8px; color: #58a6ff; margin: 12px 0;">openclaw gateway start</code>
+      <p style="color: #8b949e; font-size: 14px;">Amp agent integration via MCP transport</p>
+    </div>
+
+    <div style="background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d;">
+      <h3>OpenCode</h3>
+      <code style="display: block; background: #0d1117; padding: 12px; border-radius: 8px; color: #58a6ff; margin: 12px 0;">openclaw gateway start</code>
+      <p style="color: #8b949e; font-size: 14px;">OpenCode agent integration via MCP</p>
+    </div>
+
+    <div style="background: #161b22; border-radius: 12px; padding: 24px; border: 1px solid #30363d;">
+      <h3>Any MCP Client</h3>
+      <code style="display: block; background: #0d1117; padding: 12px; border-radius: 8px; color: #58a6ff; margin: 12px 0;">openclaw gateway status</code>
+      <p style="color: #8b949e; font-size: 14px;">Any MCP-compatible agent can connect to the OpenClaw gateway</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Free and open source. No lock-in. Your machine.</h2>
+    <div class="pricing-grid">
+      <div class="price-card free-highlight" style="border-color:var(--cyan);box-shadow:0 0 40px var(--cyan-dim), inset 0 1px 0 rgba(34,211,238,0.15);position:relative;">
+        <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--cyan);color:#000;padding:4px 16px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;">Free &amp; Open Source</div>
+        <div class="tier" style="color:var(--cyan);">Core Runtime</div>
+        <div class="price">$0</div>
+        <div class="price-sub">Forever free · Full local agent runtime</div>
+        <p style="font-size:13px;color:#aaa;margin-bottom:16px;">Everything you need to run AI automation on your own machine. No account. No cloud. No lock-in.</p>
+        <ul>
+          <li>read/edit/exec/sessions/memory core tools</li>
+          <li>web_search, web_fetch, image tools</li>
+          <li>50+ built-in skills</li>
+          <li>ClawHub skill registry access</li>
+          <li>Persistent MEMORY.md cross-session context</li>
+          <li>Background exec with process management</li>
+          <li>MCP gateway (Claude Code, Codex, Gemini, Amp, OpenCode)</li>
+          <li>Full OpenClaw gateway daemon</li>
+        </ul>
+        <div class="hero-install" onclick="copyInstall(this)" title="Click to copy" style="margin-bottom:12px;width:100%;justify-content:center;">
+          <span class="prompt">$</span>
+          <span class="cmd">openclaw gateway start</span>
+          <span class="copy-hint">click to copy</span>
+        </div>
+        <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener" class="btn-free" onclick="posthog.capture('pricing_free_click')">Get on GitHub — Free</a>
+      </div>
+      <div class="price-card pro">
+        <div class="tier">Skills Pack</div>
+        <div class="price">50+</div>
+        <div class="price-sub">Built-in skills · Zero extra cost</div>
+        <p style="font-size:13px;color:var(--cyan);margin-bottom:16px;font-weight:500;">All 50+ skills are included. Install any of them instantly with ClawHub. Publish your own skills to ClawHub for others.</p>
+        <ul>
+          <li>gh-issues (GitHub issues, PRs, CI)</li>
+          <li>1password (secrets via op CLI)</li>
+          <li>coding-agent (Claude Code, Codex, Pi)</li>
+          <li>bear-notes, apple-notes, obsidian</li>
+          <li>things-mac, apple-reminders</li>
+          <li>openhue, sonoscli, blucli, eightctl</li>
+          <li>spotify-player, imsg, wacli, himalaya</li>
+          <li>gog (Google Workspace), weather, xurl</li>
+          <li>peekaboo, camsnap, video-frames</li>
+          <li>taskflow, blogwatcher, tmux, nano-pdf</li>
+          <li>tavily, perplexity, summarize</li>
+          <li>skill-creator, clawhub, oracle, gemini</li>
+          <li>openai-whisper, sherpa-onnx-tts, songsee</li>
+        </ul>
+        <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/dist-runtime/extensions" target="_blank" rel="noopener" class="btn-pro" onclick="posthog.capture('pricing_skills_click')">Browse All Skills →</a>
+      </div>
+      <div class="price-card team">
+        <div class="tier">ClawHub</div>
+        <div class="price">∞</div>
+        <div class="price-sub">Skill registry · Publish &amp; discover</div>
+        <p style="font-size:13px;color:var(--green);margin-bottom:16px;font-weight:500;">ClawHub is the skill registry for finding, installing, updating, and publishing OpenClaw skills. Community-powered. Open ecosystem.</p>
+        <ul>
+          <li>Search and install skills: <code>clawhub install X</code></li>
+          <li>Sync to latest: <code>clawhub update X</code></li>
+          <li>Publish your skills: <code>clawhub publish</code></li>
+          <li>Version-pinned installs</li>
+          <li>Skill metadata and discovery</li>
+          <li>Community skill contributions</li>
+          <li>skill-creator authoring guidance</li>
+          <li>AgentSkills spec compliance</li>
+        </ul>
+        <a href="https://clawhub.com" target="_blank" rel="noopener" class="btn-team" onclick="posthog.capture('pricing_clawhub_click')">Visit ClawHub →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions</h2>
+    <div class="faq-list">
+      <div class="faq-item open">
+        <button class="faq-q" type="button" aria-expanded="true" onclick="toggleFaq(this)">What is OpenClaw Console?</button>
+        <div class="faq-a">OpenClaw Console is a local AI automation environment. It gives AI agents a rich set of tools — read, edit, exec, sessions, memory, web_search, web_fetch, image — plus 50+ installable skills covering GitHub, 1Password, Spotify, Hue lights, Sonos, Apple Notes, Bear, Things 3, iMessage, cron, coding agents, and more. Everything runs on your own machine.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">What tools does OpenClaw give AI agents?</button>
+        <div class="faq-a">Core tools: read (file contents with offset/limit), edit (precise text replacement edits), write (create/overwrite files), exec (shell commands with PTY, background, timeout, env), process (manage running sessions), web_search, web_fetch, image (vision), memory_search (semantic), memory_get (exact excerpt), and sessions_yield. These tools are always available to any agent running inside OpenClaw.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">How many skills does OpenClaw have?</button>
+        <div class="faq-a">OpenClaw ships with 50+ built-in skills. Key skills include: gh-issues (GitHub issues/PRs/CI), 1password (secrets via op CLI), coding-agent (spawn Claude Code/Codex/Pi), cron (scheduled tasks), bear-notes, apple-notes, apple-reminders, things-mac, obsidian, spotify-player, openhue (Philips Hue), sonoscli, blucli (BluOS), eightctl (Eight Sleep), imsg (iMessage), wacli (WhatsApp), himalaya (email), gog (Google Workspace), weather, xurl (X/Twitter), video-frames, songsee, peekaboo (macOS UI), camsnap, taskflow, blogwatcher, tmux, nano-pdf, tavily, perplexity, summarize, skill-creator, clawhub, oracle, gemini, openai-whisper, sherpa-onnx-tts, gifgrep, ordercli, node-connect, mcporter, session-logs, model-usage, and more.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">Does OpenClaw work with Claude Code, Codex, and Gemini?</button>
+        <div class="faq-a">Yes. OpenClaw Console works with Claude Code, OpenAI Codex, Gemini CLI, Amp, OpenCode, and any MCP-compatible agent. The coding-agent skill lets you spawn any of these agents as background subagents from within a conversation.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">Is OpenClaw cloud-based or local?</button>
+        <div class="faq-a">Local-first. OpenClaw Console runs entirely on your own machine. No cloud account is required. You own the data, the sessions, and the memory. Optional cloud features (like VPS node pairing via Tailscale) are available but not required for the core runtime.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">What is the gh-issues skill?</button>
+        <div class="faq-a">The gh-issues skill lets your agent fetch GitHub issues, spawn sub-agents to implement fixes and open PRs, monitor PR review comments, and respond to reviews — all from a single command. Usage: /gh-issues [owner/repo] [--label bug] [--limit 5] [--milestone v1.0] [--assignee @me] [--fork user/repo] [--watch] [--interval 5] [--reviews-only] [--cron] [--dry-run] [--model glm-5] [--notify-channel -1002381931352].</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">What is the 1password skill?</button>
+        <div class="faq-a">The 1password skill sets up and uses the 1Password CLI (op). Use it to install the CLI, enable desktop app integration, sign in to single or multi-account setups, and read/inject/run secrets via op — all from your agent conversation.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">How does OpenClaw memory work?</button>
+        <div class="faq-a">OpenClaw uses a MEMORY.md file plus memory/*.md shards for persistent cross-session memory. The memory_search tool does semantic search across all memory files. The memory_get tool does exact excerpt reads. Agents automatically recall prior decisions, preferences, and project context across sessions.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">How do I create a custom skill?</button>
+        <div class="faq-a">Use the skill-creator skill: it guides you through creating, editing, auditing, and improving agent skills. You can also publish skills to ClawHub for others to install. Each skill is a directory with a SKILL.md file, optional scripts/ subdirectory, and optional references/ subdirectory. Trigger phrases like "create a skill", "tidy up a skill", "improve this skill", or "audit the skill" activate skill-creator automatically.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">What is the Codex plugin for OpenClaw?</button>
+        <div class="faq-a">OpenClaw Console supports Codex as an agent runtime via the coding-agent skill. The Codex plugin install page (/codex-plugin.html) has the full setup guide for wiring Codex into an OpenClaw session as a spawnable sub-agent.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">How do I manage the gateway daemon?</button>
+        <div class="faq-a">The OpenClaw gateway daemon is controlled via: openclaw gateway status, openclaw gateway start, openclaw gateway stop, and openclaw gateway restart. Run openclaw help for all available subcommands.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta">
+  <div class="container">
+    <h2>Your AI agent, fully equipped. Starting now.</h2>
+    <p>Free and open source. No signup. No cloud. Install the gateway, add skills, start automating in minutes.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center;">
+      <div class="hero-install" onclick="copyInstall(this)" title="Click to copy" style="margin-bottom:0;font-size:16px;padding:14px 24px;border:2px solid var(--cyan);">
+        <span class="prompt">$</span>
+        <span class="cmd">openclaw gateway start</span>
+        <span class="copy-hint">click to copy</span>
+      </div>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener" onclick="posthog.capture('final_github_click')" class="btn-pro" style="padding:12px 32px;font-size:15px;">Get on GitHub — Free</a>
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono/tree/main/dist-runtime/extensions" target="_blank" rel="noopener" onclick="posthog.capture('final_skills_click')" class="btn-team" style="background:var(--green);">Browse 50+ Skills →</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-links">
+      <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://clawhub.com" target="_blank" rel="noopener">ClawHub</a>
+      <a href="https://x.com/IgorGanapolsky" target="_blank" rel="noopener">X / Twitter</a>
+      <a href="https://www.linkedin.com/in/igorganapolsky" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="/codex-plugin.html">Codex Plugin</a>
+    </div>
+    <span class="footer-copy">© 2026 Igor Ganapolsky · OpenClaw Console · MIT License</span>
+  </div>
+</footer>
+
+<!-- STICKY BOTTOM CTA -->
+<div class="sticky-cta" id="sticky-cta">
+  <span class="sticky-cta-text"><strong>openclaw gateway start</strong> — free, local, no cloud</span>
+  <div class="hero-install" onclick="copyInstall(this)" title="Click to copy" style="margin-bottom:0;padding:8px 16px;font-size:13px;">
+    <span class="prompt">$</span>
+    <span class="cmd">openclaw gateway start</span>
+    <span class="copy-hint">copy</span>
+  </div>
+  <a href="https://github.com/IgorGanapolsky/openclaw-mono" target="_blank" rel="noopener" onclick="posthog.capture('sticky_github_click')" class="btn-pro" style="padding:8px 16px;font-size:12px;border-radius:6px;white-space:nowrap;">Get on GitHub →</a>
+</div>
+
+<script>
+(function() {
+  var stickyCta = document.getElementById('sticky-cta');
+  var heroSection = document.querySelector('.hero');
+  if (!stickyCta || !heroSection) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        stickyCta.classList.remove('visible');
+      } else {
+        stickyCta.classList.add('visible');
+      }
+    });
+  }, { threshold: 0 });
+  observer.observe(heroSection);
+})();
+
+function toggleFaq(el) {
+  var item = el.parentElement;
+  var open = item.classList.toggle('open');
+  el.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function copyInstall(el) {
+  // Extract the cmd text from the clicked element
+  var cmdEl = el.querySelector ? el.querySelector('.cmd') : null;
+  var text = cmdEl ? cmdEl.textContent : 'openclaw gateway start';
+  navigator.clipboard.writeText(text).then(function() {
+    var hint = el.querySelector ? el.querySelector('.copy-hint') : null;
+    if (hint) {
+      hint.textContent = 'copied!';
+      hint.classList.add('copied');
+      setTimeout(function() { hint.textContent = 'click to copy'; hint.classList.remove('copied'); }, 2000);
+    }
+  });
+  if (typeof plausible === 'function') plausible('install_copy');
+  if (typeof posthog !== 'undefined') posthog.capture('install_copy', { command: text });
+}
+
+/* Plausible + scroll depth tracking */
+(function() {
+  var scrollMarks = { 25: false, 50: false, 75: false, 100: false };
+  window.addEventListener('scroll', function() {
+    var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    if (docHeight <= 0) return;
+    var pct = Math.round((window.scrollY / docHeight) * 100);
+    [25, 50, 75, 100].forEach(function(mark) {
+      if (pct >= mark && !scrollMarks[mark]) {
+        scrollMarks[mark] = true;
+        if (typeof plausible === 'function') plausible('scroll_depth', { props: { depth: mark + '%' } });
+      }
+    });
+  });
+
+  /* FAQ accordion opens */
+  document.querySelectorAll('.faq-q').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var question = (this.textContent || '').trim().substring(0, 60);
+      if (typeof plausible === 'function') plausible('faq_open', { props: { question: question } });
+    });
+  });
+
+  /* CTA clicks */
+  document.querySelectorAll('.btn-pro, .btn-gpt-page, .btn-free, .btn-team, .btn-pro-page, .nav-cta').forEach(function(el) {
+    el.addEventListener('click', function() {
+      var label = (el.textContent || '').trim().substring(0, 40);
+      if (typeof plausible === 'function') plausible('cta_click', { props: { label: label } });
+    });
+  });
+
+  /* Proof bar clicks */
+  document.querySelectorAll('.proof-bar a').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (typeof plausible === 'function') plausible('proof_bar_click');
+    });
+  });
+
+  /* Compatibility card clicks */
+  document.querySelectorAll('.compat-card').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (typeof plausible === 'function') plausible('compat_click');
+    });
+  });
+
+  /* SEO card clicks */
+  document.querySelectorAll('.seo-card').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (typeof plausible === 'function') plausible('seo_page_click');
+    });
+  });
+})();
+</script>
+</body>
+</html>
