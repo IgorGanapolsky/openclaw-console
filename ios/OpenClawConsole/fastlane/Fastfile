@@ -100,8 +100,8 @@ platform :ios do
         }
       )
     else
-      # Local development: use automatic signing
-      UI.message("Local development detected - using automatic signing")
+      # No match available: use automatic signing with API key and allow provisioning updates
+      UI.message("No match available - using automatic signing with API key")
 
       if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
         update_code_signing_settings(
