@@ -466,12 +466,26 @@ jobs:
             exit 1
           fi
 
-      - name: Distribute to Firebase
-        uses: wzieba/Firebase-Distribution-Github-Action@v1.7.1
+      - name: Distribute to Firebase via CLI
         id: firebase_dist
-        with:
-          appId: ${{ steps.firebase.outputs.app_id }}
-          serviceCredentialsFile: ${{ env.FIREBASE_CREDENTIALS_FILE }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ env.FIREBASE_CREDENTIALS_FILE }}
+        run: |
+          set -euo pipefail
+          npm install -g firebase-tools
+
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          APP_ID="${{ steps.firebase.outputs.app_id }}"
+
+          echo "🚀 Distributing via Firebase CLI"
+          echo "App ID: $APP_ID"
+          echo "APK: $APK_PATH"
+
+          firebase appdistribution:distribute "$APK_PATH" \
+            --app "$APP_ID" \
+            --testers "${{ env.FIREBASE_INTERNAL_TESTERS }}" \
+            --groups "${{ env.FIREBASE_INTERNAL_GROUPS }}" \
+            --release-notes "Internal build from ${{ needs.gate.outputs.sha || github.sha }}"
           testers: ${{ env.FIREBASE_INTERNAL_TESTERS }}
           groups: ${{ env.FIREBASE_INTERNAL_GROUPS }}
           file: android/app/build/outputs/apk/release/app-release.apk
