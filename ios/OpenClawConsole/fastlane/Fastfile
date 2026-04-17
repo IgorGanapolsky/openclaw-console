@@ -114,7 +114,7 @@ platform :ios do
 
       build_app(
         scheme: "OpenClawConsole",
-        export_method: "development",
+        export_method: "ad-hoc",
         xcargs: "-allowProvisioningUpdates"
       )
     end
