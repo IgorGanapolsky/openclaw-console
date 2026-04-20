@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@revenuecat/purchases-js": "^1.27.0",
+    "@revenuecat/purchases-js": "^1.35.0",
     "@slack/oauth": "^3.0.4",
     "@slack/web-api": "^7.15.1",
     "express": "^5.2.1",
