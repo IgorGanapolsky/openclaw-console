@@ -66,17 +66,17 @@ platform :ios do
     )
 
     # Method 2: Direct agvtool update (low level)
-    sh("cd OpenClawConsole && agvtool new-version -all #{next_build_number}")
+    sh("cd .. && agvtool new-version -all #{next_build_number}")
 
     # Method 3: Update CFBundleVersion in Info.plist directly
-    sh("cd OpenClawConsole && /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion #{next_build_number}' OpenClawConsole/Info.plist")
+    sh("cd .. && /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion #{next_build_number}' OpenClawConsole/Info.plist")
 
     # Verify the build number was actually set
     updated_build_number = get_build_number(xcodeproj: "OpenClawConsole.xcodeproj").to_i
     UI.message("Verified build number in project: #{updated_build_number}")
 
     # Also verify via agvtool
-    agvtool_version = sh("cd OpenClawConsole && agvtool what-version -terse", return_stdout: true).strip.to_i
+    agvtool_version = sh("cd .. && agvtool what-version -terse", return_stdout: true).strip.to_i
     UI.message("Verified build number via agvtool: #{agvtool_version}")
 
     if updated_build_number != next_build_number || agvtool_version != next_build_number
