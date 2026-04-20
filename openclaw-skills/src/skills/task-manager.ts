@@ -7,6 +7,7 @@
 
 import type { Task, TaskStatus, TaskStep, StepType, ResourceLink } from '../types/protocol.js';
 import type { IStateManager } from '../gateway/state-interface.js';
+import { MessageFormatter, formatters } from '../utils/message-formatter.js';
 
 export interface CreateTaskOptions {
   agentId: string;
@@ -121,5 +122,63 @@ export class TaskManagerSkill {
   public async listForAgent(agentId: string): Promise<Task[]> {
     if (!this.state.listTasksForAgent) return [];
     return this.state.listTasksForAgent(agentId);
+  }
+
+  // ========== PROFESSIONAL LOGGING METHODS ==========
+
+  /**
+   * Log a professional status update with action items
+   */
+  public async logStatus(taskId: string, title: string, items: Array<{description: string, completed?: boolean, details?: string}>, summary?: string): Promise<TaskStep | null> {
+    const formatted = MessageFormatter.inProgress(title, items, summary);
+    return this.log(taskId, formatted);
+  }
+
+  /**
+   * Log a successful completion with action breakdown
+   */
+  public async logSuccess(taskId: string, title: string, items: Array<{description: string, completed?: boolean, details?: string}>, nextStep?: string): Promise<TaskStep | null> {
+    const formatted = MessageFormatter.success(title, items, nextStep);
+    return this.log(taskId, formatted);
+  }
+
+  /**
+   * Log an error with action items and next steps
+   */
+  public async logError(taskId: string, title: string, items: Array<{description: string, completed?: boolean, details?: string}>, nextStep?: string): Promise<TaskStep | null> {
+    const formatted = MessageFormatter.error(title, items, nextStep);
+    return this.addStep({ taskId, type: 'error', content: formatted });
+  }
+
+  /**
+   * Log deployment progress
+   */
+  public async logDeployment(taskId: string, status: 'started' | 'completed' | 'failed', version: string, platform: string): Promise<TaskStep | null> {
+    const formatted = formatters.deployment(status, version, platform);
+    return this.log(taskId, formatted);
+  }
+
+  /**
+   * Log build progress
+   */
+  public async logBuildStep(taskId: string, step: string, current: number, total: number, details?: string): Promise<TaskStep | null> {
+    const formatted = formatters.buildProgress(step, total, current, details);
+    return this.log(taskId, formatted);
+  }
+
+  /**
+   * Log approval request
+   */
+  public async logApprovalRequest(taskId: string, action: string, risk: 'low' | 'medium' | 'high'): Promise<TaskStep | null> {
+    const formatted = formatters.approval(action, risk);
+    return this.log(taskId, formatted);
+  }
+
+  /**
+   * Log incident report
+   */
+  public async logIncident(taskId: string, severity: 'critical' | 'warning' | 'info', title: string, details: string): Promise<TaskStep | null> {
+    const formatted = formatters.incident(severity, title, details);
+    return this.log(taskId, formatted);
   }
 }

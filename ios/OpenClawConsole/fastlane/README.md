@@ -39,6 +39,22 @@ Setup certificates and profiles via match
 
 Distribute to Firebase App Distribution
 
+### ios add_testers
+
+```sh
+[bundle exec] fastlane ios add_testers
+```
+
+Add external TestFlight testers
+
+### ios cleanup_certificates
+
+```sh
+[bundle exec] fastlane ios cleanup_certificates
+```
+
+Clean up old/expired certificates and provisioning profiles
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

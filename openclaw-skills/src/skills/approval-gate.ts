@@ -11,6 +11,7 @@ import type { ApprovalRequest, ApprovalResponse, ActionType, RiskLevel, GitOpera
 import type { IStateManager } from '../gateway/state-interface.js';
 import type { GatewayConfig } from '../config/default.js';
 import { evaluateApprovalPolicy } from '../gateway/policy.js';
+import { formatters } from '../utils/message-formatter.js';
 
 export interface DangerousActionOptions {
   agentId: string;
@@ -136,11 +137,11 @@ export class ApprovalGateSkill {
         autoApproved: true,
         policyReason: policy.reason,
       });
-      console.info(`[approval-gate] Auto-approved ${request.id} via ${policy.preset}: ${policy.reason}`);
+      console.info(`[approval-gate] ✅ AUTO-APPROVED: ${options.title} (${policy.preset})`);
       return { approved: true, response, timedOut: false };
     }
 
-    console.info(`[approval-gate] Requesting approval: "${options.title}" (${request.id})`);
+    console.info(`[approval-gate] 🎯 APPROVAL REQUIRED: ${options.title} (${options.context.riskLevel} risk)`);
 
     try {
       const response = await this.state.queueApproval(request, timeoutMs);
@@ -154,15 +155,16 @@ export class ApprovalGateSkill {
         (!this.config.requireBiometric || response.biometric_verified);
 
       if (!approved && response.decision === 'approved' && !response.biometric_verified) {
-        console.warn(`[approval-gate] Approval ${request.id} approved but biometric NOT verified — rejecting`);
+        console.warn(`[approval-gate] ❌ BIOMETRIC REQUIRED: ${options.title} - approval rejected`);
       }
 
-      console.info(`[approval-gate] Approval ${request.id}: ${approved ? 'APPROVED' : 'DENIED'}`);
+      const status = approved ? '✅ APPROVED' : '❌ DENIED';
+      console.info(`[approval-gate] ${status}: ${options.title}`);
       return { approved, response, timedOut: false };
     } catch {
       logEntry.decision = 'timed_out';
       this.decisionLog.push(logEntry);
-      console.warn(`[approval-gate] Approval ${request.id} timed out`);
+      console.warn(`[approval-gate] ⏰ TIMEOUT: ${options.title} - no response received`);
       return { approved: false, response: null, timedOut: true };
     }
   }
