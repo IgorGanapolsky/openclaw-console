@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Reconcile Dependabot PRs
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           TARGET_PR_NUMBER: ${{ github.event.inputs.pr_number || '' }}
           REQUIRED_CHECKS_DEVELOP: ${{ vars.PR_REQUIRED_CHECKS_DEVELOP || '' }}
