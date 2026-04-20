@@ -57,18 +57,30 @@ platform :ios do
 
     UI.message("Using build number #{next_build_number} for version #{marketing_version}")
 
-    # Force update build number in multiple ways to ensure it sticks
+    # Force update build number in ALL possible locations to ensure it sticks
+
+    # Method 1: Fastlane increment_build_number
     increment_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
       build_number: next_build_number
     )
 
+    # Method 2: Direct agvtool update (low level)
+    sh("cd OpenClawConsole && agvtool new-version -all #{next_build_number}")
+
+    # Method 3: Update CFBundleVersion in Info.plist directly
+    sh("cd OpenClawConsole && /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion #{next_build_number}' OpenClawConsole/Info.plist")
+
     # Verify the build number was actually set
     updated_build_number = get_build_number(xcodeproj: "OpenClawConsole.xcodeproj").to_i
     UI.message("Verified build number in project: #{updated_build_number}")
 
-    if updated_build_number != next_build_number
-      UI.user_error!("Build number update failed! Expected #{next_build_number}, got #{updated_build_number}")
+    # Also verify via agvtool
+    agvtool_version = sh("cd OpenClawConsole && agvtool what-version -terse", return_stdout: true).strip.to_i
+    UI.message("Verified build number via agvtool: #{agvtool_version}")
+
+    if updated_build_number != next_build_number || agvtool_version != next_build_number
+      UI.user_error!("Build number update failed! Expected #{next_build_number}, fastlane: #{updated_build_number}, agvtool: #{agvtool_version}")
     end
 
     # Use automatic signing for both CI and local builds for simplicity and reliability
