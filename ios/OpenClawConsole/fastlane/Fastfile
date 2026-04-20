@@ -51,79 +51,36 @@ platform :ios do
       build_number: next_build_number
     )
 
-    if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"] && api_key
-      # CI environment: use match for certificate and profile management
-      UI.message("CI detected - using match for signing certificates and profiles")
+    # Use automatic signing for both CI and local builds for simplicity and reliability
+    UI.message("Using automatic signing with API key")
 
-      # Setup temporary keychain for CI
-      create_keychain(
-        name: "fastlane_tmp_keychain",
-        password: "temp_password",
-        default_keychain: false,
-        unlock: true,
-        timeout: 3600,
-        add_to_search_list: true
-      )
-
-      # Download certificates and profiles via match
-      match(
-        type: "appstore",
-        app_identifier: ["com.openclaw.console"],
-        readonly: true,
-        api_key: api_key,
-        keychain_name: "fastlane_tmp_keychain",
-        keychain_password: "temp_password"
-      )
-
-      # Get the profile name set by match
-      app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
-
-      # Configure manual signing with match-managed certificates
+    if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
       update_code_signing_settings(
         path: "OpenClawConsole.xcodeproj",
-        use_automatic_signing: false,
+        use_automatic_signing: true,
         targets: ["OpenClawConsole"],
-        code_sign_identity: "Apple Distribution",
-        profile_name: app_profile,
         team_id: ENV["APPLE_TEAM_ID"]
-      )
-
-      # Build with manual signing
-      build_app(
-        scheme: "OpenClawConsole",
-        export_method: "app-store",
-        export_options: {
-          signingStyle: "manual",
-          provisioningProfiles: {
-            "com.openclaw.console" => app_profile
-          }
-        }
-      )
-    else
-      # Local development: use automatic signing
-      UI.message("Local development detected - using automatic signing")
-
-      if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
-        update_code_signing_settings(
-          path: "OpenClawConsole.xcodeproj",
-          use_automatic_signing: true,
-          targets: ["OpenClawConsole"],
-          team_id: ENV["APPLE_TEAM_ID"]
-        )
-      end
-
-      build_app(
-        scheme: "OpenClawConsole",
-        export_method: "app-store",
-        xcargs: "-allowProvisioningUpdates"
       )
     end
 
+    build_app(
+      scheme: "OpenClawConsole",
+      export_method: "app-store",
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    # Ensure external testers are configured before uploading
+    add_testers
+
     upload_to_testflight(
-      skip_waiting_for_build_processing: true,
+      skip_waiting_for_build_processing: false,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
-      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"
+      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com",
+      distribute_external: true,
+      notify_external_testers: true,
+      groups: ["External Testers"],
+      changelog: "Latest OpenClaw Console beta build"
     )
   end
 
@@ -135,37 +92,47 @@ platform :ios do
       api_key = app_store_api_key_from_env
 
       if ENV["CI"] == "true"
-        # CI environment: readonly mode with temporary keychain
-        UI.message("Setting up certificates for CI environment (readonly mode)")
+        # CI environment: use automatic signing for reliability
+        UI.message("Setting up certificates for CI environment (automatic signing)")
 
-        # Setup temporary keychain for CI
-        create_keychain(
-          name: "fastlane_tmp_keychain",
-          password: "temp_password",
-          default_keychain: false,
-          unlock: true,
-          timeout: 3600,
-          add_to_search_list: true
-        )
-
-        match(
-          type: "appstore",
-          app_identifier: ["com.openclaw.console"],
-          readonly: true,
-          api_key: api_key,
-          keychain_name: "fastlane_tmp_keychain",
-          keychain_password: "temp_password"
-        )
+        # Configure automatic signing for CI
+        if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
+          update_code_signing_settings(
+            use_automatic_signing: true,
+            path: "OpenClawConsole.xcodeproj",
+            targets: ["OpenClawConsole"],
+            team_id: ENV["APPLE_TEAM_ID"]
+          )
+          UI.message("✅ Configured automatic signing for App Store distribution")
+        else
+          UI.user_error!("APPLE_TEAM_ID is required for automatic signing in CI")
+        end
       else
         # Local development: can generate/update certificates if needed
         UI.message("Setting up certificates for local development")
 
-        match(
-          type: "appstore",
-          app_identifier: ["com.openclaw.console"],
-          readonly: false,
-          api_key: api_key
-        )
+        # Only use match if git repository is available
+        if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
+          UI.message("Using fastlane match for certificate management")
+          match(
+            type: "appstore",
+            app_identifier: ["com.openclaw.console"],
+            readonly: false,
+            api_key: api_key
+          )
+        else
+          UI.message("Skipping match (repository not configured) - configuring automatic signing")
+
+          # Configure automatic signing when match is not available
+          update_code_signing_settings(
+            use_automatic_signing: true,
+            path: "OpenClawConsole.xcodeproj",
+            targets: ["OpenClawConsole"],
+            code_sign_identity: "Apple Development"  # For automatic signing
+          )
+
+          UI.message("✅ Configured automatic signing for development")
+        end
       end
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
@@ -186,6 +153,63 @@ platform :ios do
       groups: "qa-team,developers",
       release_notes: "Dev build from develop branch (#{ENV['GITHUB_SHA'] || 'local'})"
     )
+  end
+
+  desc "Add external TestFlight testers"
+  lane :add_testers do
+    api_key = app_store_api_key_from_env
+
+    unless api_key
+      UI.user_error!("App Store Connect API key required for tester management")
+    end
+
+    # List of external testers to add
+    external_testers = [
+      "iganapolsky@gmail.com",
+      "igor.ganapolsky@icloud.com"
+    ]
+
+    UI.message("Adding external TestFlight testers...")
+
+    # First ensure the External Testers group exists
+    begin
+      pilot(
+        api_key: api_key,
+        app_identifier: "com.openclaw.console",
+        distribute_only: false,
+        groups: ["External Testers"],
+        demo_account_required: false,
+        beta_app_feedback_email: "igor.ganapolsky@icloud.com",
+        localized_app_info: {
+          "default" => {
+            feedback_email: "igor.ganapolsky@icloud.com",
+            marketing_url: "https://github.com/igorganapolsky/openclaw-console",
+            description: "OpenClaw Console - Mobile control plane for OpenClaw agents"
+          }
+        }
+      )
+      UI.success("External Testers group is ready")
+    rescue => e
+      UI.message("Group setup issue (may already exist): #{e}")
+    end
+
+    # Add each tester to the group
+    external_testers.each do |email|
+      begin
+        pilot(
+          api_key: api_key,
+          app_identifier: "com.openclaw.console",
+          distribute_only: false,
+          testers: [email],
+          groups: ["External Testers"]
+        )
+        UI.success("Added tester: #{email}")
+      rescue => e
+        UI.message("Could not add #{email} (may already exist): #{e}")
+      end
+    end
+
+    UI.success("✅ TestFlight testers configured successfully")
   end
 
   desc "Clean up old/expired certificates and provisioning profiles"

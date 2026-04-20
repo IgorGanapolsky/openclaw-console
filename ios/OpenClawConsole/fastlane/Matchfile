@@ -1,8 +1,15 @@
-git_url(ENV["MATCH_GIT_URL"])
-storage_mode("git")
+# Conditional configuration based on MATCH_GIT_URL availability
+if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
+  git_url(ENV["MATCH_GIT_URL"])
+  storage_mode("git")
+  git_branch("main")
+else
+  # No git storage mode when MATCH_GIT_URL is not available
+  # This allows fastlane to use automatic signing fallback
+end
+
 type("appstore")
 app_identifier("com.openclaw.console")
-git_branch("main")
 
 # Use App Store Connect API key instead of Apple ID
 # No username needed when using API key authentication
