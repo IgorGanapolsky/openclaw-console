@@ -502,7 +502,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "✅ Firebase distribution completed via GitHub Action"
-          echo "🔗 Firebase console: https://console.firebase.google.com/project/random-timer-dist-new/appdistribution/app/android:com.openclaw.console"
+          echo "🔗 Firebase console: https://console.firebase.google.com/project/openclaw-console-mobile-8d53d/appdistribution/app/android:com.openclaw.console"
 
       - name: Run Firebase App Testing Agent (Android)
         # Opt-in feature: must be enabled per-project in the Firebase console.
@@ -538,7 +538,7 @@ jobs:
               --test-dir "$TEST_DIR" \
               --non-blocking; then
             echo "✅ App Testing Agent execution queued"
-            echo "🔗 Results: https://console.firebase.google.com/project/random-timer-dist-new/apptesting"
+            echo "🔗 Results: https://console.firebase.google.com/project/openclaw-console-mobile-8d53d/apptesting"
           else
             rc=$?
             echo "⚠️ App Testing Agent failed with exit code $rc"
