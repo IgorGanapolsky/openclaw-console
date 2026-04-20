@@ -486,12 +486,6 @@ jobs:
             --testers "${{ env.FIREBASE_INTERNAL_TESTERS }}" \
             --groups "${{ env.FIREBASE_INTERNAL_GROUPS }}" \
             --release-notes "Internal build from ${{ needs.gate.outputs.sha || github.sha }}"
-          testers: ${{ env.FIREBASE_INTERNAL_TESTERS }}
-          groups: ${{ env.FIREBASE_INTERNAL_GROUPS }}
-          file: android/app/build/outputs/apk/release/app-release.apk
-          releaseNotes: |
-            Internal build from ${{ needs.gate.outputs.sha || github.sha }}
-            Ref: ${{ needs.gate.outputs.ref }}
 
       - name: Verify Firebase distribution read-back
         env:
