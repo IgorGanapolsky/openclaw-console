@@ -63,11 +63,20 @@ platform :ios do
       )
     end
 
-    build_app(
-      scheme: "OpenClawConsole",
-      export_method: "app-store",
-      xcargs: "-allowProvisioningUpdates"
-    )
+    # Set up authentication for automatic signing
+    if api_key && ENV["APPSTORE_KEY_PATH"]
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        xcargs: "-allowProvisioningUpdates -authenticationKeyID #{ENV['APPSTORE_KEY_ID']} -authenticationKeyIssuerID #{ENV['APPSTORE_ISSUER_ID']} -authenticationKeyPath #{ENV['APPSTORE_KEY_PATH']}"
+      )
+    else
+      build_app(
+        scheme: "OpenClawConsole",
+        export_method: "app-store",
+        xcargs: "-allowProvisioningUpdates"
+      )
+    end
 
     # Ensure external testers are configured before uploading
     add_testers
