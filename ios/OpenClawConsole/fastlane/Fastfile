@@ -158,14 +158,27 @@ platform :ios do
         # Only use match if git repository is available
         if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
           UI.message("Using fastlane match for code signing")
-          match(
-            type: "appstore",
-            app_identifier: ["com.openclaw.console"],
-            readonly: true,
-            api_key: api_key,
-            keychain_name: "fastlane_tmp_keychain",
-            keychain_password: "temp_password"
-          )
+          # Try to fetch certificates first, create if they don't exist
+          begin
+            match(
+              type: "appstore",
+              app_identifier: ["com.openclaw.console"],
+              readonly: true,
+              api_key: api_key,
+              keychain_name: "fastlane_tmp_keychain",
+              keychain_password: "temp_password"
+            )
+          rescue => e
+            UI.message("No existing certificates found, creating new ones: #{e}")
+            match(
+              type: "appstore",
+              app_identifier: ["com.openclaw.console"],
+              readonly: false,
+              api_key: api_key,
+              keychain_name: "fastlane_tmp_keychain",
+              keychain_password: "temp_password"
+            )
+          end
         else
           UI.message("Skipping match (repository not accessible) - configuring automatic signing")
 
