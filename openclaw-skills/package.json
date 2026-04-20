@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
-    "@revenuecat/purchases-js": "^1.27.0",
+    "@revenuecat/purchases-js": "^1.35.0",
     "@slack/oauth": "^3.0.4",
     "@slack/web-api": "^7.14.1",
     "express": "^5.2.1",
@@ -38,7 +38,7 @@
     "ts-jest": "^29.1.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.58.2"
   },
   "jest": {
     "preset": "ts-jest",
