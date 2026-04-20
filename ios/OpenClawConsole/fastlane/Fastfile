@@ -26,14 +26,14 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       target: "OpenClawConsole"
     )
-    # Always use epoch timestamp build number to ensure uniqueness and avoid race conditions
-    timestamp_build_number = Time.now.to_i  # Unix epoch time - guaranteed unique and much higher
-    UI.message("Generated epoch timestamp build number: #{timestamp_build_number}")
+    # Generate epoch timestamp build number but ensure it's higher than any existing version
+    timestamp_build_number = Time.now.to_i  # Unix epoch time base
+    UI.message("Generated base epoch timestamp: #{timestamp_build_number}")
     current_build_number = get_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj"
     ).to_i
 
-    # Ensure the timestamp build number is higher than any previous build
+    # Ensure build number is higher than any previous build (local and remote)
     if api_key
       begin
         latest_remote_build_number = latest_testflight_build_number(
@@ -42,9 +42,15 @@ platform :ios do
           version: marketing_version,
           initial_build_number: current_build_number
         ).to_i
-        # Always use epoch timestamp since it's guaranteed to be much higher than any previous build
-        next_build_number = timestamp_build_number
-        UI.message("Found remote build number #{latest_remote_build_number}, using epoch timestamp #{next_build_number}")
+
+        # Use timestamp if higher, otherwise increment the latest remote version
+        if timestamp_build_number > latest_remote_build_number
+          next_build_number = timestamp_build_number
+          UI.message("Remote build: #{latest_remote_build_number}, using higher epoch timestamp: #{next_build_number}")
+        else
+          next_build_number = latest_remote_build_number + 1
+          UI.message("Remote build: #{latest_remote_build_number} is higher than epoch #{timestamp_build_number}, incrementing to: #{next_build_number}")
+        end
       rescue => e
         UI.important("Could not read latest TestFlight build number: #{e}")
         next_build_number = timestamp_build_number
