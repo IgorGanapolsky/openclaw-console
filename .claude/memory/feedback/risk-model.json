@@ -1,10 +1,10 @@
 {
   "version": 1,
   "algorithm": "adaboost-stumps",
-  "trainedAt": "2026-04-16T22:11:45.536Z",
-  "exampleCount": 11,
-  "highRiskExamples": 9,
-  "baseRate": 0.8181818181818182,
+  "trainedAt": "2026-04-20T19:40:37.453Z",
+  "exampleCount": 28,
+  "highRiskExamples": 26,
+  "baseRate": 0.9285714285714286,
   "featureRegistry": {
     "topTags": [
       "auto-capture-fallback",
@@ -128,14 +128,14 @@
     "tags": [
       {
         "key": "auto-capture-fallback",
-        "total": 3,
-        "highRisk": 3,
+        "total": 20,
+        "highRisk": 20,
         "riskRate": 1
       },
       {
         "key": "claude-history-sync",
-        "total": 3,
-        "highRisk": 3,
+        "total": 20,
+        "highRisk": 20,
         "riskRate": 1
       },
       {
@@ -166,9 +166,9 @@
       },
       {
         "key": "general",
-        "total": 8,
-        "highRisk": 6,
-        "riskRate": 0.75
+        "total": 25,
+        "highRisk": 23,
+        "riskRate": 0.92
       }
     ],
     "skills": [

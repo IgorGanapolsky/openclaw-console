@@ -132,9 +132,12 @@ export class CiMonitorSkill {
       });
       this.activeTasks.set(run.runId, task.id);
 
-      await this.taskManager.log(task.id, `Workflow "${run.workflow}" triggered on branch "${run.branch}"`);
-      await this.taskManager.log(task.id, `Commit: ${run.commit}`);
-      await this.taskManager.recordToolCall(task.id, 'github_api.get_workflow_run', { run_id: run.runId, repo: this.options.repository });
+      await this.taskManager.logStatus(task.id, 'CI WORKFLOW STARTED', [
+        { description: `Workflow: ${run.workflow}`, completed: true },
+        { description: `Branch: ${run.branch}`, completed: true },
+        { description: `Commit: ${run.commit.slice(0, 7)}`, completed: true },
+        { description: 'Build in progress', completed: false }
+      ], 'Monitoring workflow execution...');
     }
 
     const taskId = this.activeTasks.get(run.runId);
@@ -142,11 +145,18 @@ export class CiMonitorSkill {
 
     if (run.status === 'completed') {
       if (run.conclusion === 'success') {
-        await this.taskManager.log(taskId, `Workflow completed successfully`, { conclusion: 'success' });
+        await this.taskManager.logSuccess(taskId, 'CI WORKFLOW COMPLETED', [
+          { description: 'Build passed', completed: true },
+          { description: 'Tests passed', completed: true },
+          { description: 'Deployment ready', completed: true }
+        ], 'Ready for production deployment');
         await this.taskManager.complete(taskId, `✓ CI passed for ${run.branch}@${run.commit.slice(0, 7)}`);
       } else if (run.conclusion === 'failure') {
-        await this.taskManager.log(taskId, `Workflow FAILED`, { conclusion: 'failure' });
-        await this.taskManager.recordError(taskId, `CI failure on ${run.branch} — commit ${run.commit.slice(0, 7)}`);
+        await this.taskManager.logError(taskId, 'CI WORKFLOW FAILED', [
+          { description: `Workflow: ${run.workflow}`, completed: false },
+          { description: `Branch: ${run.branch}`, completed: false },
+          { description: `Commit: ${run.commit.slice(0, 7)}`, completed: false }
+        ], 'Creating incident for investigation');
 
         // Surface as incident with proactive triage
         const incident = await this.incidentManager.createIncident({
