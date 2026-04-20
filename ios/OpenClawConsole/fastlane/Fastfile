@@ -26,8 +26,8 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       target: "OpenClawConsole"
     )
-    # Always use timestamp-based build number to ensure uniqueness and avoid race conditions
-    timestamp_build_number = Time.now.strftime("%Y%m%d%H%M").to_i
+    # Always use epoch timestamp build number to ensure uniqueness and avoid race conditions
+    timestamp_build_number = Time.now.to_i  # Unix epoch time - guaranteed unique and much higher
     current_build_number = get_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj"
     ).to_i
