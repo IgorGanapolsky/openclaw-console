@@ -28,6 +28,7 @@ platform :ios do
     )
     # Always use epoch timestamp build number to ensure uniqueness and avoid race conditions
     timestamp_build_number = Time.now.to_i  # Unix epoch time - guaranteed unique and much higher
+    UI.message("Generated epoch timestamp build number: #{timestamp_build_number}")
     current_build_number = get_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj"
     ).to_i
@@ -41,8 +42,9 @@ platform :ios do
           version: marketing_version,
           initial_build_number: current_build_number
         ).to_i
-        next_build_number = [timestamp_build_number, latest_remote_build_number + 1].max
-        UI.message("Found remote build number #{latest_remote_build_number}, using timestamp-based #{next_build_number}")
+        # Always use epoch timestamp since it's guaranteed to be much higher than any previous build
+        next_build_number = timestamp_build_number
+        UI.message("Found remote build number #{latest_remote_build_number}, using epoch timestamp #{next_build_number}")
       rescue => e
         UI.important("Could not read latest TestFlight build number: #{e}")
         next_build_number = timestamp_build_number
