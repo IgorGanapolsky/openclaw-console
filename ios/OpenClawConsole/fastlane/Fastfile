@@ -26,11 +26,13 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       target: "OpenClawConsole"
     )
+    # Always use timestamp-based build number to ensure uniqueness and avoid race conditions
+    timestamp_build_number = Time.now.strftime("%Y%m%d%H%M").to_i
     current_build_number = get_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj"
     ).to_i
-    next_build_number = current_build_number + 1
 
+    # Ensure the timestamp build number is higher than any previous build
     if api_key
       begin
         latest_remote_build_number = latest_testflight_build_number(
@@ -39,19 +41,15 @@ platform :ios do
           version: marketing_version,
           initial_build_number: current_build_number
         ).to_i
-        next_build_number = [next_build_number, latest_remote_build_number + 1].max
-        UI.message("Found remote build number #{latest_remote_build_number}, using #{next_build_number}")
+        next_build_number = [timestamp_build_number, latest_remote_build_number + 1].max
+        UI.message("Found remote build number #{latest_remote_build_number}, using timestamp-based #{next_build_number}")
       rescue => e
         UI.important("Could not read latest TestFlight build number: #{e}")
-        # Fallback to timestamp-based build number to ensure uniqueness
-        timestamp_build_number = Time.now.strftime("%Y%m%d%H%M").to_i
-        next_build_number = [next_build_number, timestamp_build_number].max
+        next_build_number = timestamp_build_number
         UI.message("Using timestamp-based build number: #{next_build_number}")
       end
     else
-      # No API key available, use timestamp to ensure uniqueness
-      timestamp_build_number = Time.now.strftime("%Y%m%d%H%M").to_i
-      next_build_number = [next_build_number, timestamp_build_number].max
+      next_build_number = timestamp_build_number
       UI.message("No API key, using timestamp-based build number: #{next_build_number}")
     end
 
