@@ -7,25 +7,23 @@ import os
 import requests
 import jwt
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def create_jwt_token():
     """Create JWT token for App Store Connect API"""
-    key_id = "P8DPVD8JSL"
-    issuer_id = "9e5d7ebf-d4fe-47c2-8370-14dd87c17113"
+    # Use environment variables for credentials
+    key_id = os.getenv("APPSTORE_KEY_ID")
+    issuer_id = os.getenv("APPSTORE_ISSUER_ID")
+    private_key = os.getenv("APPSTORE_PRIVATE_KEY")
 
-    # Read private key
-    key_path = os.path.expanduser("~/.appstoreconnect/private_keys/AuthKey_P8DPVD8JSL.p8")
-
-    if not os.path.exists(key_path):
-        print(f"❌ API key not found at {key_path}")
+    if not all([key_id, issuer_id, private_key]):
+        print("❌ Missing required environment variables:")
+        print("   APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, APPSTORE_PRIVATE_KEY")
+        print("   Source them from Random-Timer/.env")
         return None
 
-    with open(key_path, 'r') as f:
-        private_key = f.read()
-
     # Create JWT
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     payload = {
         'iss': issuer_id,
         'aud': 'appstoreconnect-v1',
