@@ -61,6 +61,11 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
+          # Git 2.54 HTTP rate limiting for CI/CD reliability
+          git config --global http.maxRetries 3
+          git config --global http.maxRetryTime 300
+          git config --global http.retryAfter true
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$VERSION" -m "Release $VERSION"
