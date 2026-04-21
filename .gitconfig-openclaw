@@ -1,0 +1,37 @@
+# OpenClaw Console Git Configuration
+# Usage: git config --global include.path "$(pwd)/.gitconfig-openclaw"
+
+[http]
+    # Git 2.54+ rate limiting for CI/CD reliability
+    maxRetries = 3
+    maxRetryTime = 300
+    retryAfter = true
+
+[gc]
+    # Geometric repacking for better performance (Git 2.54+ default)
+    writeCommitGraph = true
+
+[pack]
+    # Enable multi-pack-index for performance
+    useBitmaps = true
+
+[rebase]
+    # Add review trailers automatically
+    autoSquash = true
+
+[core]
+    # Performance improvements
+    preloadindex = true
+    fscache = true
+
+[fetch]
+    # Parallel fetching for faster operations
+    parallel = 4
+
+[push]
+    # Default to current branch for safety
+    default = current
+
+[pull]
+    # Rebase to maintain clean history
+    rebase = true
