@@ -26,8 +26,8 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       target: "OpenClawConsole"
     )
-    # Force build number higher than latest TestFlight version 230286599767
-    forced_high_build_number = 230286599768  # One higher than current maximum
+    # Force build number higher than latest TestFlight version 230286599768
+    forced_high_build_number = 230286599769  # One higher than current maximum
     UI.message("Using forced high build number to bypass TestFlight conflict: #{forced_high_build_number}")
     current_build_number = get_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj"
