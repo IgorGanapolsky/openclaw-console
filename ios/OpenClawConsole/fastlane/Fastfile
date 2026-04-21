@@ -65,32 +65,39 @@ platform :ios do
       UI.user_error!("Build number update failed! Expected #{next_build_number}, fastlane: #{updated_build_number}, agvtool: #{agvtool_version}")
     end
 
-    # Use automatic signing for both CI and local builds for simplicity and reliability
-    UI.message("Using automatic signing with API key")
+    # Force automatic signing with certificate creation enabled
+    UI.message("Forcing automatic signing with certificate auto-generation")
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
       update_code_signing_settings(
         path: "OpenClawConsole.xcodeproj",
         use_automatic_signing: true,
         targets: ["OpenClawConsole"],
-        team_id: ENV["APPLE_TEAM_ID"]
+        team_id: ENV["APPLE_TEAM_ID"],
+        code_sign_identity: "iPhone Distribution"
       )
     end
 
-    # Set up authentication for automatic signing
+    # Force certificate creation during build with comprehensive auth
+    build_args = [
+      "-allowProvisioningUpdates",
+      "-allowProvisioningDeviceRegistration"
+    ]
+
     if api_key && ENV["APPSTORE_KEY_PATH"]
-      build_app(
-        scheme: "OpenClawConsole",
-        export_method: "app-store",
-        xcargs: "-allowProvisioningUpdates -authenticationKeyID #{ENV['APPSTORE_KEY_ID']} -authenticationKeyIssuerID #{ENV['APPSTORE_ISSUER_ID']} -authenticationKeyPath #{ENV['APPSTORE_KEY_PATH']}"
-      )
-    else
-      build_app(
-        scheme: "OpenClawConsole",
-        export_method: "app-store",
-        xcargs: "-allowProvisioningUpdates"
-      )
+      build_args += [
+        "-authenticationKeyID", ENV['APPSTORE_KEY_ID'],
+        "-authenticationKeyIssuerID", ENV['APPSTORE_ISSUER_ID'],
+        "-authenticationKeyPath", ENV['APPSTORE_KEY_PATH']
+      ]
     end
+
+    build_app(
+      scheme: "OpenClawConsole",
+      export_method: "app-store",
+      xcargs: build_args.join(" "),
+      skip_profile_detection: true
+    )
 
     # Ensure external testers are configured before uploading
     add_testers
