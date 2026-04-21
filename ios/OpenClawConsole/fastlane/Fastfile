@@ -73,8 +73,7 @@ platform :ios do
         path: "OpenClawConsole.xcodeproj",
         use_automatic_signing: true,
         targets: ["OpenClawConsole"],
-        team_id: ENV["APPLE_TEAM_ID"],
-        code_sign_identity: "iPhone Distribution"
+        team_id: ENV["APPLE_TEAM_ID"]
       )
     end
 
