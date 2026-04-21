@@ -1,0 +1,61 @@
+name: Certificate Cleanup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup-certificates:
+    runs-on: macos-15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ios/OpenClawConsole
+
+      - name: Write API key
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
+          echo "APPSTORE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Clean up certificates and profiles
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        working-directory: ios/OpenClawConsole
+        run: |
+          # Revoke old certificates via fastlane match
+          bundle exec fastlane match nuke appstore --readonly false || true
+
+          # Regenerate fresh certificates
+          bundle exec fastlane match appstore --readonly false --force_for_new_devices
+
+      - name: Immediate TestFlight build with clean certificates
+        env:
+          CI: "true"
+          FASTLANE_SKIP_UPDATE_CHECK: "true"
+          FASTLANE_DISABLE_COLORS: "true"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        working-directory: ios/OpenClawConsole
+        run: bundle exec fastlane beta
