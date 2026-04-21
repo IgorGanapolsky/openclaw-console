@@ -1,6 +1,6 @@
 {
-  "historyOffset": 792248,
-  "historySize": 792248,
+  "historyOffset": 793608,
+  "historySize": 793608,
   "processedIds": [
     "claude-history:88bb0d785622435569cabe3ad2b8e32862dcb396809e53b53a1cd0dee194ea14",
     "claude-history:849572a638755ac83f101b3187caa36c3c5fab043e318900223a3eb80d0869ec",
@@ -24,5 +24,5 @@
     "claude-history:21f5a509c67c6b72e58e1bdb47798146bf32dfe913f3de060898ee378063c1ff",
     "claude-history:754c499a79f9a49fc506b33d652540ac1bdfa6f5ddee2464132d22784fb0d432"
   ],
-  "updatedAt": "2026-04-20T23:22:07.878Z"
+  "updatedAt": "2026-04-21T13:24:59.721Z"
 }
