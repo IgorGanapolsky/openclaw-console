@@ -112,6 +112,11 @@ jobs:
           # Configure git credentials for match repository access
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
+          # Git 2.54 HTTP rate limiting for CI/CD reliability
+          git config --global http.maxRetries 3
+          git config --global http.maxRetryTime 300
+          git config --global http.retryAfter true
+
           # Disable git prompts and set safe defaults for CI
           git config --global core.askpass ""
           git config --global credential.helper ""
@@ -156,6 +161,13 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure git for reliability
+        run: |
+          # Git 2.54 HTTP rate limiting for CI/CD reliability
+          git config --global http.maxRetries 3
+          git config --global http.maxRetryTime 300
+          git config --global http.retryAfter true
 
       - name: Setup Java
         uses: actions/setup-java@v5
