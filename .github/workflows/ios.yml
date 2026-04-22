@@ -3,18 +3,18 @@ name: iOS CI
 on:
   pull_request:
     paths:
-      - 'openclaw-skills/ios/**'
+      - 'ios/**'
   push:
     branches: [main, develop]
     paths:
-      - 'openclaw-skills/ios/**'
+      - 'ios/**'
 
 jobs:
   build-and-test:
     runs-on: macos-14
     defaults:
       run:
-        working-directory: openclaw-skills/ios/OpenClawConsole
+        working-directory: ios/OpenClawConsole
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
     runs-on: macos-14
     defaults:
       run:
-        working-directory: openclaw-skills/ios/OpenClawConsole
+        working-directory: ios/OpenClawConsole
 
     steps:
       - uses: actions/checkout@v4
