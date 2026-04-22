@@ -65,8 +65,8 @@ platform :ios do
       UI.user_error!("Build number update failed! Expected #{next_build_number}, fastlane: #{updated_build_number}, agvtool: #{agvtool_version}")
     end
 
-    # Force automatic signing with certificate creation enabled
-    UI.message("Forcing automatic signing with certificate auto-generation")
+    # Use existing certificates only - no auto-generation
+    UI.message("Using existing certificates without auto-generation")
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
       update_code_signing_settings(
@@ -77,11 +77,8 @@ platform :ios do
       )
     end
 
-    # Force certificate creation during build with comprehensive auth
-    build_args = [
-      "-allowProvisioningUpdates",
-      "-allowProvisioningDeviceRegistration"
-    ]
+    # Build without certificate auto-generation
+    build_args = []
 
     if api_key && ENV["APPSTORE_KEY_PATH"]
       build_args += [
