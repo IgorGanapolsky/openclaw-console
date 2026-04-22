@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.openclaw.console"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.openclaw.console"
@@ -77,7 +77,7 @@ android {
         disable += "RememberInComposition"
         disable += "FrequentlyChangingValue"
         disable += "AutoboxingStateCreation"
-        // AGP 8.7.3 lint crashes with IncompatibleClassChangeError on multiple Compose/Lifecycle detectors.
+        // AGP lint remains noisy around several Compose/Lifecycle detectors in CI.
         // This is a known tooling bug, not a code issue. The build itself compiles fine.
         abortOnError = false
     }
