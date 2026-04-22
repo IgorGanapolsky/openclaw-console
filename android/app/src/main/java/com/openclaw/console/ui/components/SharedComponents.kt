@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,6 +22,13 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+
+private data class BannerStyle(
+    val message: String,
+    val containerColor: Color,
+    val icon: ImageVector,
+    val accentColor: Color
+)
 
 @Composable
 fun StatusDot(
@@ -148,25 +156,38 @@ fun ApprovalBanner(
     modifier: Modifier = Modifier
 ) {
     if (count <= 0) return
+    val colors = LocalOpenClawColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.errorContainer,
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.92f),
+        shape = RoundedCornerShape(18.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.45f)),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         onClick = onClick
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.size(20.dp)
-            )
+            Surface(
+                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.12f),
+                shape = CircleShape
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(16.dp)
+                )
+            }
             Text(
                 text = "$count approval${if (count > 1) "s" else ""} awaiting your decision",
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.weight(1f)
             )
@@ -215,27 +236,46 @@ fun EmptyState(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    val colors = LocalOpenClawColors.current
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        color = colors.cardBackground,
+        shape = RoundedCornerShape(24.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.55f))
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(48.dp)
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Surface(
+                color = colors.searchField,
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.glowCyan,
+                    modifier = Modifier
+                        .padding(14.dp)
+                        .size(28.dp)
+                )
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -246,35 +286,60 @@ fun ConnectionStatusBanner(
     signalSummary: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val (message, color, icon) = when (state) {
+    val colors = LocalOpenClawColors.current
+    val bannerStyle = when (state) {
         com.openclaw.console.data.network.ConnectionState.CONNECTED ->
-            Triple(signalSummary ?: "Connected", Color(0xFFE8F5E9), Icons.Default.Cloud)
+            BannerStyle(signalSummary ?: "Connected", colors.connectedBanner, Icons.Default.Cloud, colors.glowGreen)
         com.openclaw.console.data.network.ConnectionState.CONNECTING ->
-            Triple("Connecting...", MaterialTheme.colorScheme.primaryContainer, Icons.Default.Sync)
+            BannerStyle("Connecting...", colors.cardBackground, Icons.Default.Sync, colors.glowCyan)
         com.openclaw.console.data.network.ConnectionState.RECONNECTING ->
-            Triple("Reconnecting...", MaterialTheme.colorScheme.tertiaryContainer, Icons.Default.Sync)
+            BannerStyle("Reconnecting...", colors.cardBackground, Icons.Default.Sync, colors.glowCyan)
         com.openclaw.console.data.network.ConnectionState.DISCONNECTED ->
-            Triple("Disconnected - Go to Settings to connect", MaterialTheme.colorScheme.errorContainer, Icons.Default.CloudOff)
+            BannerStyle(
+                "Disconnected - Go to Settings to connect",
+                colors.disconnectedBanner,
+                Icons.Default.CloudOff,
+                MaterialTheme.colorScheme.error
+            )
     }
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = color
+        color = bannerStyle.containerColor,
+        shape = RoundedCornerShape(18.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.45f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (state == com.openclaw.console.data.network.ConnectionState.CONNECTING ||
                 state == com.openclaw.console.data.network.ConnectionState.RECONNECTING) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = bannerStyle.accentColor
+                )
             } else {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                Surface(
+                    color = bannerStyle.accentColor.copy(alpha = 0.12f),
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        bannerStyle.icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(16.dp),
+                        tint = bannerStyle.accentColor
+                    )
+                }
             }
             Column {
                 Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall
+                    text = bannerStyle.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
                 )
                 lastSignalAt?.let {
                     Text(

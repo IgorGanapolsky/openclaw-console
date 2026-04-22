@@ -10,11 +10,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
     primary = Primary40,
-    onPrimary = Primary100,
+    onPrimary = Neutral10,
     primaryContainer = Primary90,
     onPrimaryContainer = Primary10,
     secondary = Secondary40,
@@ -22,16 +23,16 @@ private val LightColorScheme = lightColorScheme(
     secondaryContainer = Secondary90,
     onSecondaryContainer = Primary10,
     tertiary = Tertiary40,
-    onTertiary = Primary100,
+    onTertiary = Neutral10,
     tertiaryContainer = Tertiary90,
     onTertiaryContainer = Primary10,
     error = Error40,
     onError = Primary100,
     errorContainer = Error90,
     onErrorContainer = Error10,
-    background = Neutral99,
+    background = AppBackgroundLight,
     onBackground = Neutral10,
-    surface = Neutral99,
+    surface = SurfaceRaisedLight,
     onSurface = Neutral10,
     surfaceVariant = NeutralVariant90,
     onSurfaceVariant = NeutralVariant30,
@@ -56,7 +57,7 @@ private val DarkColorScheme = darkColorScheme(
     onError = Error10,
     errorContainer = Error40,
     onErrorContainer = Error90,
-    background = SurfaceDark,
+    background = AppBackgroundDark,
     onBackground = Neutral90,
     surface = SurfaceDark,
     onSurface = Neutral90,
@@ -75,7 +76,17 @@ data class OpenClawColors(
     val severityWarning: androidx.compose.ui.graphics.Color,
     val severityWarningContainer: androidx.compose.ui.graphics.Color,
     val severityInfo: androidx.compose.ui.graphics.Color,
-    val severityInfoContainer: androidx.compose.ui.graphics.Color
+    val severityInfoContainer: androidx.compose.ui.graphics.Color,
+    val appBackground: androidx.compose.ui.graphics.Color,
+    val chromeBackground: androidx.compose.ui.graphics.Color,
+    val cardBackground: androidx.compose.ui.graphics.Color,
+    val elevatedCardBackground: androidx.compose.ui.graphics.Color,
+    val searchField: androidx.compose.ui.graphics.Color,
+    val borderSubtle: androidx.compose.ui.graphics.Color,
+    val glowCyan: androidx.compose.ui.graphics.Color,
+    val glowGreen: androidx.compose.ui.graphics.Color,
+    val connectedBanner: androidx.compose.ui.graphics.Color,
+    val disconnectedBanner: androidx.compose.ui.graphics.Color
 )
 
 val LocalOpenClawColors = staticCompositionLocalOf {
@@ -88,14 +99,24 @@ val LocalOpenClawColors = staticCompositionLocalOf {
         severityWarning = SeverityWarning,
         severityWarningContainer = SeverityWarningContainer,
         severityInfo = SeverityInfo,
-        severityInfoContainer = SeverityInfoContainer
+        severityInfoContainer = SeverityInfoContainer,
+        appBackground = AppBackgroundDark,
+        chromeBackground = SurfaceDark,
+        cardBackground = SurfaceVariantDark,
+        elevatedCardBackground = SurfaceRaisedDark,
+        searchField = SearchFieldDark,
+        borderSubtle = BorderSubtleDark,
+        glowCyan = GlowCyan,
+        glowGreen = GlowGreen,
+        connectedBanner = ConnectedBannerDark,
+        disconnectedBanner = DisconnectedBannerDark
     )
 }
 
 @Composable
 fun OpenClawTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -107,7 +128,53 @@ fun OpenClawTheme(
         else -> LightColorScheme
     }
 
-    CompositionLocalProvider(LocalOpenClawColors provides LocalOpenClawColors.current) {
+    val brandColors = if (darkTheme) {
+        OpenClawColors(
+            statusOnline = StatusOnline,
+            statusOffline = StatusOffline,
+            statusBusy = StatusBusy,
+            severityCritical = SeverityCritical,
+            severityCriticalContainer = SeverityCriticalContainer,
+            severityWarning = SeverityWarning,
+            severityWarningContainer = SeverityWarningContainer,
+            severityInfo = SeverityInfo,
+            severityInfoContainer = SeverityInfoContainer,
+            appBackground = AppBackgroundDark,
+            chromeBackground = SurfaceDark,
+            cardBackground = SurfaceVariantDark,
+            elevatedCardBackground = SurfaceRaisedDark,
+            searchField = SearchFieldDark,
+            borderSubtle = BorderSubtleDark,
+            glowCyan = GlowCyan,
+            glowGreen = GlowGreen,
+            connectedBanner = ConnectedBannerDark,
+            disconnectedBanner = DisconnectedBannerDark
+        )
+    } else {
+        OpenClawColors(
+            statusOnline = StatusOnline,
+            statusOffline = StatusOffline,
+            statusBusy = StatusBusy,
+            severityCritical = Color(0xFFD4425E),
+            severityCriticalContainer = Color(0xFFFFE1E5),
+            severityWarning = Color(0xFFAC6500),
+            severityWarningContainer = Color(0xFFFFE5BF),
+            severityInfo = Color(0xFF086EA0),
+            severityInfoContainer = Color(0xFFDFF4FF),
+            appBackground = AppBackgroundLight,
+            chromeBackground = SurfaceRaisedLight,
+            cardBackground = Neutral99,
+            elevatedCardBackground = SurfaceRaisedLight,
+            searchField = SearchFieldLight,
+            borderSubtle = BorderSubtleLight,
+            glowCyan = GlowCyan,
+            glowGreen = GlowGreen,
+            connectedBanner = ConnectedBannerLight,
+            disconnectedBanner = DisconnectedBannerLight
+        )
+    }
+
+    CompositionLocalProvider(LocalOpenClawColors provides brandColors) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,

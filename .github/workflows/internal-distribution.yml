@@ -65,7 +65,7 @@ jobs:
     runs-on: macos-15
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
@@ -73,13 +73,14 @@ jobs:
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -112,39 +113,53 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "$APPSTORE_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
+          echo "APPSTORE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
       - name: Configure git credentials for match
         env:
           GIT_AUTH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: |
           set -euo pipefail
           git config --global url."https://x-access-token:${GIT_AUTH_TOKEN}@github.com/".insteadOf "https://github.com/"
-          # Derive MATCH_GIT_BASIC_AUTHORIZATION from ADMIN_TOKEN to avoid stale credential issues.
-          # Fastlane match uses this header to authenticate git clone of the certificates repo.
-          MATCH_AUTH=$(printf 'x-access-token:%s' "$GIT_AUTH_TOKEN" | base64 | tr -d '\n')
-          echo "::add-mask::$MATCH_AUTH"
-          echo "MATCH_GIT_BASIC_AUTHORIZATION=$MATCH_AUTH" >> "$GITHUB_ENV"
+          git config --global core.askpass ""
+          git config --global credential.helper ""
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          echo "::add-mask::$MATCH_GIT_BASIC_AUTHORIZATION"
+          echo "MATCH_GIT_BASIC_AUTHORIZATION=$MATCH_GIT_BASIC_AUTHORIZATION" >> "$GITHUB_ENV"
 
       - name: Setup signing certificates and profiles (match)
         env:
+          CI: "true"
+          FASTLANE_SKIP_UPDATE_CHECK: "true"
+          FASTLANE_DISABLE_COLORS: "true"
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
       - name: Build and upload to TestFlight
         env:
           CI: "true"
+          FASTLANE_SKIP_UPDATE_CHECK: "true"
+          FASTLANE_DISABLE_COLORS: "true"
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -163,7 +178,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
@@ -318,6 +333,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           trap 'rc=$?; echo "❌ Firebase distribution failed at line $LINENO: $BASH_COMMAND (rc=$rc)"; exit $rc' ERR
+          DIST_LOG="${RUNNER_TEMP}/firebase-distribute.log"
+          echo "FIREBASE_DISTRIBUTION_LOG=$DIST_LOG" >> "$GITHUB_ENV"
 
           # Validate Firebase project configuration
           echo "🔍 Pre-flight Firebase project verification (project=$FIREBASE_PROJECT_ID)"
@@ -408,6 +425,7 @@ jobs:
 
           while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = false ]; do
             echo "🚀 Firebase distribution attempt $ATTEMPT/$MAX_ATTEMPTS (auth=$AUTH_MODE)"
+            : > "$DIST_LOG"
 
             DIST_CMD=("${BASE_CMD[@]}")
             if [ -n "$TESTERS" ] && [ -n "$DIST_GROUPS" ]; then
@@ -418,7 +436,7 @@ jobs:
               DIST_CMD+=(--groups "$DIST_GROUPS")
             fi
 
-            if "${DIST_CMD[@]}"; then
+            if "${DIST_CMD[@]}" 2>&1 | tee "$DIST_LOG"; then
               SUCCESS=true
               echo "✅ Firebase distribution successful on attempt $ATTEMPT"
             else
@@ -437,7 +455,8 @@ jobs:
                   TOKEN_CMD+=(--groups "$DIST_GROUPS")
                 fi
                 
-                if "${TOKEN_CMD[@]}"; then
+                : > "$DIST_LOG"
+                if "${TOKEN_CMD[@]}" 2>&1 | tee "$DIST_LOG"; then
                   SUCCESS=true
                   echo "✅ Firebase distribution successful via FIREBASE_TOKEN fallback"
                   break
@@ -454,55 +473,39 @@ jobs:
           done
 
       - name: Verify Firebase distribution actually worked
-        env:
-          FIREBASE_APP_ID: ${{ steps.firebase.outputs.app_id }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           set -euo pipefail
 
           echo "🔍 Verifying Firebase distribution delivery"
+          LOG_FILE="${FIREBASE_DISTRIBUTION_LOG:-${RUNNER_TEMP}/firebase-distribute.log}"
 
-          # Get latest release info to verify upload worked
-          RELEASES_JSON=$(firebase appdistribution:releases:list \
-            --app "$FIREBASE_APP_ID" \
-            --project "$FIREBASE_PROJECT_ID" \
-            --format=json || echo "[]")
-          
-          # Handle both top-level array and object with result array
-          RELEASE_INFO=$(echo "$RELEASES_JSON" | jq -r 'if type == "array" then .[0] else (.result[0]? // .releases[0]?) end | select(. != null)')
-
-          if [ -z "$RELEASE_INFO" ] || [ "$RELEASE_INFO" = "null" ]; then
-            echo "❌ Silent failure detected - no releases found in Firebase console for project $FIREBASE_PROJECT_ID"
+          if [ ! -s "$LOG_FILE" ]; then
+            echo "❌ Firebase distribution log not found at $LOG_FILE"
             exit 1
           fi
 
-          RELEASE_ID=$(echo "$RELEASE_INFO" | jq -r '.name // empty')
-          BUILD_VERSION=$(echo "$RELEASE_INFO" | jq -r '.buildVersion // empty')
-
-          if [ -z "$RELEASE_ID" ] || [ "$RELEASE_ID" = "null" ]; then
-            echo "❌ Silent failure detected - release ID not found"
+          if ! grep -q "uploaded new release" "$LOG_FILE"; then
+            echo "❌ Firebase CLI did not report a successful release upload"
+            echo "Distribution log:"
+            cat "$LOG_FILE"
             exit 1
           fi
 
-          echo "📱 Latest release: $RELEASE_ID (build: $BUILD_VERSION)"
+          RELEASE_LINE=$(grep -m1 "uploaded new release" "$LOG_FILE" || true)
+          CONSOLE_URL=$(grep -m1 "View this release in the Firebase console:" "$LOG_FILE" | sed 's/.*View this release in the Firebase console: //' || true)
+          SHARE_URL=$(grep -m1 "Share this release with testers who have access:" "$LOG_FILE" | sed 's/.*Share this release with testers who have access: //' || true)
 
-          # Verify tester configuration
-          TESTERS_JSON=$(firebase appdistribution:testers:list \
-            --app "$FIREBASE_APP_ID" \
-            --project "$FIREBASE_PROJECT_ID" \
-            --format=json || echo "[]")
-          
-          TESTER_COUNT=$(echo "$TESTERS_JSON" | jq 'if type == "array" then length else ((.testers | length)? // (.result | length)? // 0) end')
-
-          if [ "$TESTER_COUNT" -eq 0 ]; then
-            echo "⚠️ WARNING: No testers configured - build uploaded but no email invitations sent"
+          echo "📱 $RELEASE_LINE"
+          if [ -n "$CONSOLE_URL" ]; then
+            echo "🔗 Firebase console: $CONSOLE_URL"
           else
-            echo "📧 Distribution verified: Release $RELEASE_ID sent to $TESTER_COUNT testers"
+            echo "⚠️ Firebase console URL was not present in CLI output"
           fi
-
-          # Get Firebase console URL for manual verification
-          CONSOLE_URL="https://console.firebase.google.com/project/$FIREBASE_PROJECT_ID/appdistribution/app/android:com.openclaw.console"
-          echo "🔗 Firebase console: $CONSOLE_URL"
+          if [ -n "$SHARE_URL" ]; then
+            echo "📧 Tester share URL: $SHARE_URL"
+          else
+            echo "⚠️ Tester share URL was not present in CLI output"
+          fi
 
           echo "✅ Firebase App Distribution verification complete"
 

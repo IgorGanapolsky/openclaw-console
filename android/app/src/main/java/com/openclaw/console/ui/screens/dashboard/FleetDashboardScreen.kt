@@ -1,26 +1,43 @@
 package com.openclaw.console.ui.screens.dashboard
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Badge
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,8 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.Agent
-import com.openclaw.console.data.model.AgentStatus
 import com.openclaw.console.ui.AppViewModel
+import com.openclaw.console.ui.components.EmptyState
+import com.openclaw.console.ui.components.StatusDot
+import com.openclaw.console.ui.components.TimeAgoText
+import com.openclaw.console.ui.theme.LocalOpenClawColors
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +60,7 @@ fun FleetDashboardScreen(
 ) {
     val agentRepository by appViewModel.agentRepository.collectAsStateWithLifecycle()
     val uiState by dashboardViewModel.uiState.collectAsStateWithLifecycle()
+    val colors = LocalOpenClawColors.current
 
     LaunchedEffect(agentRepository) {
         dashboardViewModel.setRepository(agentRepository)
@@ -51,14 +72,31 @@ fun FleetDashboardScreen(
     )
 
     Scaffold(
+        containerColor = colors.appBackground,
         topBar = {
-            TopAppBar(title = { Text("Fleet Dashboard") })
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.appBackground,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Fleet", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "Mobile control plane for your active agents",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
         }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .padding(horizontal = 16.dp)
                 .pullRefresh(pullRefreshState)
         ) {
             if (uiState.agents.isEmpty() && !uiState.isLoading) {
@@ -68,19 +106,17 @@ fun FleetDashboardScreen(
                 )
             } else {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Summary header
                     FleetSummaryHeader(
                         onlineCount = uiState.onlineCount,
                         pendingApprovals = uiState.totalPendingApprovals,
                         activeTasks = uiState.totalActiveTasks,
                         summaryText = uiState.summaryText,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        modifier = Modifier.padding(top = 12.dp, bottom = 12.dp)
                     )
 
-                    // Agent grid
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()
@@ -112,23 +148,30 @@ private fun FleetSummaryHeader(
     summaryText: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    val colors = LocalOpenClawColors.current
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(22.dp),
+        color = colors.elevatedCardBackground,
+        border = BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.7f))
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Text(
+                text = "Live Overview",
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.glowCyan
+            )
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                SummaryPill(value = onlineCount, label = "Online", color = Color(0xFF4CAF50))
-                SummaryPill(value = pendingApprovals, label = "Pending", color = Color(0xFFFF9800))
-                SummaryPill(value = activeTasks, label = "Tasks", color = Color(0xFF2196F3))
+                SummaryPill(value = onlineCount, label = "Online", color = colors.glowGreen)
+                SummaryPill(value = pendingApprovals, label = "Pending", color = MaterialTheme.colorScheme.tertiary)
+                SummaryPill(value = activeTasks, label = "Tasks", color = colors.glowCyan)
             }
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = summaryText,
                 style = MaterialTheme.typography.bodySmall,
@@ -159,23 +202,26 @@ private fun FleetAgentCard(
     agent: Agent,
     onClick: () -> Unit
 ) {
-    Card(
+    val colors = LocalOpenClawColors.current
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        border = if (agent.pendingApprovals > 0) {
-            CardDefaults.outlinedCardBorder().copy(
-                brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFF9800).copy(alpha = 0.6f)),
-                width = 1.5.dp
-            )
-        } else null
+        shape = RoundedCornerShape(20.dp),
+        color = colors.cardBackground,
+        border = BorderStroke(
+            width = if (agent.pendingApprovals > 0) 1.5.dp else 1.dp,
+            color = if (agent.pendingApprovals > 0) {
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+            } else {
+                colors.borderSubtle.copy(alpha = 0.65f)
+            }
+        )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Top row: status dot + name + badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -189,22 +235,20 @@ private fun FleetAgentCard(
                     modifier = Modifier.weight(1f)
                 )
                 if (agent.pendingApprovals > 0) {
-                    Badge(containerColor = Color(0xFFFF9800)) {
+                    Badge(containerColor = MaterialTheme.colorScheme.tertiary) {
                         Text("${agent.pendingApprovals}")
                     }
                 }
             }
 
-            // Description
             Text(
                 text = agent.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Bottom row: tasks + chevron
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -214,40 +258,31 @@ private fun FleetAgentCard(
                         Icons.Default.Checklist,
                         contentDescription = "Active tasks",
                         modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF2196F3)
+                        tint = colors.glowCyan
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${agent.activeTasks}",
+                        text = "${agent.activeTasks} active",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF2196F3)
+                        color = colors.glowCyan
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
+                TimeAgoText(
+                    isoTimestamp = agent.lastActive,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = "View details",
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
         }
     }
-}
-
-@Composable
-private fun StatusDot(status: AgentStatus) {
-    val color = when (status) {
-        AgentStatus.ONLINE -> Color(0xFF4CAF50)
-        AgentStatus.BUSY -> Color(0xFFFF9800)
-        AgentStatus.OFFLINE -> Color(0xFF9E9E9E)
-    }
-    Box(
-        modifier = Modifier
-            .size(10.dp)
-            .clip(CircleShape)
-            .background(color)
-    )
 }
 
 @Composable
@@ -256,17 +291,10 @@ private fun EmptyFleetState(error: String?, modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "No Agents",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = error ?: "Connect a gateway to see your fleet.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        EmptyState(
+            title = "No Agents",
+            subtitle = error ?: "Connect a gateway to see your fleet.",
+            icon = Icons.Default.Checklist
+        )
     }
 }
