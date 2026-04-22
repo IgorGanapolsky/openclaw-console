@@ -1,5 +1,7 @@
 package com.openclaw.console.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
@@ -10,9 +12,9 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -23,8 +25,9 @@ import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.screens.agents.AgentDetailScreen
 import com.openclaw.console.ui.screens.agents.AgentListScreen
 import com.openclaw.console.ui.screens.bridges.BridgeListScreen
+import com.openclaw.console.ui.components.ApprovalBanner
+import com.openclaw.console.ui.components.EmptyState
 import com.openclaw.console.ui.screens.dashboard.FleetDashboardScreen
-import com.openclaw.console.ui.screens.loops.LoopListScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
@@ -90,7 +93,7 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
         BottomNavItem(Screen.Incidents, Icons.Default.BugReport, openIncidentCount),
         BottomNavItem(Screen.Loops, Icons.Default.Autorenew),
         BottomNavItem(Screen.Bridges, Icons.Default.Link),
-        BottomNavItem(Screen.Settings, Icons.Default.Settings, pendingApprovalCount)
+        BottomNavItem(Screen.Settings, Icons.Default.Settings)
     )
 
     Scaffold(
@@ -144,11 +147,15 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Dashboard.route,
-            modifier = Modifier.padding(innerPadding)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Dashboard.route
+            ) {
             // Dashboard
             composable(Screen.Dashboard.route) {
                 FleetDashboardScreen(
@@ -211,11 +218,9 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                 )
             }
 
-            composable(Screen.Loops.route) {
-                LoopListScreen(
-                    appViewModel = appViewModel
-                )
-            }
+                composable(Screen.Loops.route) {
+                    LoopPlaceholderScreen()
+                }
 
             composable(Screen.Bridges.route) {
                 BridgeListScreen(
@@ -271,22 +276,47 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
             }
 
             // Paywall — opened from Settings "Upgrade" CTA and from feature gates
-            composable(
-                route = Screen.Paywall.route,
-                arguments = listOf(
-                    navArgument("feature") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    }
-                )
-            ) { backStackEntry ->
-                val feature = backStackEntry.arguments?.getString("feature")?.ifBlank { null }
-                PaywallScreen(
-                    onClose = { navController.navigateUp() },
-                    requiredFeature = feature
+                composable(
+                    route = Screen.Paywall.route,
+                    arguments = listOf(
+                        navArgument("feature") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val feature = backStackEntry.arguments?.getString("feature")?.ifBlank { null }
+                    PaywallScreen(
+                        onClose = { navController.navigateUp() },
+                        requiredFeature = feature
+                    )
+                }
+            }
+
+            if (pendingApprovalCount > 0) {
+                ApprovalBanner(
+                    count = pendingApprovalCount,
+                    onClick = { navController.navigate(Screen.Settings.route) },
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LoopPlaceholderScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        EmptyState(
+            title = "Loops Temporarily Disabled",
+            subtitle = "This tab is intentionally disabled until the same workflow ships on both iOS and Android.",
+            icon = Icons.Default.Autorenew
+        )
     }
 }

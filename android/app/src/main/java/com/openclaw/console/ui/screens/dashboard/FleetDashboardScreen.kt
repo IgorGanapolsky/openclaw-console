@@ -79,16 +79,7 @@ fun FleetDashboardScreen(
                     containerColor = colors.appBackground,
                     titleContentColor = MaterialTheme.colorScheme.onSurface
                 ),
-                title = {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Fleet", style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            "Mobile control plane for your active agents",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                title = { Text("Fleet", style = MaterialTheme.typography.titleLarge) }
             )
         }
     ) { innerPadding ->
@@ -159,11 +150,6 @@ private fun FleetSummaryHeader(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Live Overview",
-                style = MaterialTheme.typography.labelLarge,
-                color = colors.glowCyan
-            )
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()
