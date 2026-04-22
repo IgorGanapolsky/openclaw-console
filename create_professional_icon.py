@@ -178,8 +178,89 @@ def create_all_icon_sizes(base_icon):
         rgb_icon.save(os.path.join(icon_dir, filename), 'PNG', optimize=True)
         print(f"Created {filename} ({size}x{size})")
 
+def create_android_icons(base_icon):
+    """Export the same iOS master to Android mipmap densities.
+
+    Android launcher icon sizes:
+      mdpi    = 48x48
+      hdpi    = 72x72
+      xhdpi   = 96x96
+      xxhdpi  = 144x144
+      xxxhdpi = 192x192
+    We emit both ic_launcher.png (square) and ic_launcher_round.png
+    (circular mask) so every launcher renders the same artwork as iOS.
+    """
+    import os as _os
+
+    densities = {
+        'mipmap-mdpi': 48,
+        'mipmap-hdpi': 72,
+        'mipmap-xhdpi': 96,
+        'mipmap-xxhdpi': 144,
+        'mipmap-xxxhdpi': 192,
+    }
+    android_res = '/Users/igorganapolsky/workspace/git/igor/openclaw-console/android/app/src/main/res'
+
+    # Adaptive-icon foregrounds (Android 8+) need 108x108dp with 66dp safe zone.
+    # We produce foreground PNGs at 1.5x the ic_launcher size at each density
+    # so the central artwork is not clipped on circular/squircle masks.
+    foreground_scale = 108 / 48  # 2.25x over the base ic_launcher size
+
+    for folder, size in densities.items():
+        target_dir = _os.path.join(android_res, folder)
+        _os.makedirs(target_dir, exist_ok=True)
+
+        # Square launcher (legacy + round variant background)
+        square = base_icon.resize((size, size), Image.LANCZOS).convert('RGBA')
+        square_rgb = Image.new('RGB', (size, size), (26, 26, 46))
+        square_rgb.paste(square, mask=square)
+        square_rgb.save(_os.path.join(target_dir, 'ic_launcher.png'), 'PNG', optimize=True)
+
+        # Round launcher (for legacy devices pre-API 26)
+        round_img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+        mask = Image.new('L', (size, size), 0)
+        ImageDraw.Draw(mask).ellipse([0, 0, size - 1, size - 1], fill=255)
+        round_img.paste(square, (0, 0), mask=mask)
+        round_rgb = Image.new('RGB', (size, size), (26, 26, 46))
+        round_rgb.paste(round_img, mask=round_img)
+        round_rgb.save(_os.path.join(target_dir, 'ic_launcher_round.png'), 'PNG', optimize=True)
+
+        # Adaptive-icon foreground PNG (drawn centered in safe zone)
+        fg_size = int(size * foreground_scale)
+        fg_canvas = Image.new('RGBA', (fg_size, fg_size), (0, 0, 0, 0))
+        inner_size = int(fg_size * 0.66)  # 66dp safe zone in 108dp
+        inner = base_icon.resize((inner_size, inner_size), Image.LANCZOS).convert('RGBA')
+        offset = (fg_size - inner_size) // 2
+        fg_canvas.paste(inner, (offset, offset), mask=inner)
+        fg_canvas.save(_os.path.join(target_dir, 'ic_launcher_foreground.png'), 'PNG', optimize=True)
+
+        print(f"Created {folder}/ic_launcher.png + _round.png + _foreground.png ({size}px)")
+
+    # Adaptive-icon XMLs point at the PNG foreground we just wrote.
+    adaptive_xml = (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+        '    <background android:drawable="@color/ic_launcher_background"/>\n'
+        '    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n'
+        '</adaptive-icon>\n'
+    )
+    anydpi = _os.path.join(android_res, 'mipmap-anydpi-v26')
+    _os.makedirs(anydpi, exist_ok=True)
+    for name in ('ic_launcher.xml', 'ic_launcher_round.xml'):
+        with open(_os.path.join(anydpi, name), 'w') as fh:
+            fh.write(adaptive_xml)
+
+    # Remove stale vector foregrounds so gradle doesn't resolve to them.
+    for folder in densities:
+        stale = _os.path.join(android_res, folder, 'ic_launcher_foreground.xml')
+        if _os.path.exists(stale):
+            _os.remove(stale)
+            print(f"Removed stale vector foreground: {folder}/ic_launcher_foreground.xml")
+
+
 if __name__ == '__main__':
     print("Creating professional OpenClaw Console app icon...")
     icon = create_professional_icon()
     create_all_icon_sizes(icon)
-    print("✅ Professional app icon created successfully!")
+    create_android_icons(icon)
+    print("[OK] Professional app icon created on iOS + Android from a single master.")

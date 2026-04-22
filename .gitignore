@@ -73,6 +73,9 @@ app-release.apk
 firebase-debug.log
 .env.*
 *.png
+# Whitelist app icon assets so both platforms share committed artwork (iOS/Android parity).
+!ios/OpenClawConsole/OpenClawConsole/Assets.xcassets/**/*.png
+!android/app/src/main/res/mipmap-*/ic_launcher*.png
 
 # Large binaries — never track
 *.apk

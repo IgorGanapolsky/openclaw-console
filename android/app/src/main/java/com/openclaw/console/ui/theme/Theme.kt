@@ -95,7 +95,10 @@ val LocalOpenClawColors = staticCompositionLocalOf {
 @Composable
 fun OpenClawTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    // Platform parity: iOS does not use Material You dynamic accents.
+    // Disabled so the OpenClaw brand palette (Primary40 #1756D8 etc.) is
+    // identical on both platforms across all launchers.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
