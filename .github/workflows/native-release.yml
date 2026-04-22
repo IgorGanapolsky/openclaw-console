@@ -40,7 +40,7 @@ jobs:
     runs-on: macos-15
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Fail fast on required iOS release secrets
         env:
@@ -147,6 +147,11 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_CONTACT_EMAIL: ${{ secrets.TESTFLIGHT_CONTACT_EMAIL }}
+          TESTFLIGHT_CONTACT_FIRST_NAME: ${{ secrets.TESTFLIGHT_CONTACT_FIRST_NAME }}
+          TESTFLIGHT_CONTACT_LAST_NAME: ${{ secrets.TESTFLIGHT_CONTACT_LAST_NAME }}
+          TESTFLIGHT_CONTACT_PHONE: ${{ secrets.TESTFLIGHT_CONTACT_PHONE }}
+          TESTFLIGHT_GROUP: ${{ vars.TESTFLIGHT_GROUPS }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -155,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Java
         uses: actions/setup-java@v5
