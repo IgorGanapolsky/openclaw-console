@@ -132,7 +132,7 @@ dependencies {
 
     // Biometric
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
-    implementation("com.google.errorprone:error_prone_annotations:2.28.0")
+    implementation("com.google.errorprone:error_prone_annotations:2.49.0")
 
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.6.0")
