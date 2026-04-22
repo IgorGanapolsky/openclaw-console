@@ -30,6 +30,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.Agent
 import com.openclaw.console.data.model.AgentStatus
 import com.openclaw.console.ui.AppViewModel
+import com.openclaw.console.ui.theme.LocalOpenClawColors
+import com.openclaw.console.ui.theme.SeverityInfo
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -120,13 +122,15 @@ private fun FleetSummaryHeader(
             modifier = Modifier.padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val openClaw = LocalOpenClawColors.current
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                SummaryPill(value = onlineCount, label = "Online", color = Color(0xFF4CAF50))
-                SummaryPill(value = pendingApprovals, label = "Pending", color = Color(0xFFFF9800))
-                SummaryPill(value = activeTasks, label = "Tasks", color = Color(0xFF2196F3))
+                // Theme tokens keep Android identical to iOS SummaryPill colors.
+                SummaryPill(value = onlineCount, label = "Online", color = openClaw.statusOnline)
+                SummaryPill(value = pendingApprovals, label = "Pending", color = openClaw.statusBusy)
+                SummaryPill(value = activeTasks, label = "Tasks", color = SeverityInfo)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -159,6 +163,7 @@ private fun FleetAgentCard(
     agent: Agent,
     onClick: () -> Unit
 ) {
+    val openClaw = LocalOpenClawColors.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,7 +171,7 @@ private fun FleetAgentCard(
         shape = RoundedCornerShape(12.dp),
         border = if (agent.pendingApprovals > 0) {
             CardDefaults.outlinedCardBorder().copy(
-                brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFF9800).copy(alpha = 0.6f)),
+                brush = androidx.compose.ui.graphics.SolidColor(openClaw.statusBusy.copy(alpha = 0.6f)),
                 width = 1.5.dp
             )
         } else null
@@ -189,7 +194,7 @@ private fun FleetAgentCard(
                     modifier = Modifier.weight(1f)
                 )
                 if (agent.pendingApprovals > 0) {
-                    Badge(containerColor = Color(0xFFFF9800)) {
+                    Badge(containerColor = openClaw.statusBusy) {
                         Text("${agent.pendingApprovals}")
                     }
                 }
@@ -214,13 +219,13 @@ private fun FleetAgentCard(
                         Icons.Default.Checklist,
                         contentDescription = "Active tasks",
                         modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF2196F3)
+                        tint = SeverityInfo
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "${agent.activeTasks}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF2196F3)
+                        color = SeverityInfo
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
@@ -237,10 +242,11 @@ private fun FleetAgentCard(
 
 @Composable
 private fun StatusDot(status: AgentStatus) {
+    val openClaw = LocalOpenClawColors.current
     val color = when (status) {
-        AgentStatus.ONLINE -> Color(0xFF4CAF50)
-        AgentStatus.BUSY -> Color(0xFFFF9800)
-        AgentStatus.OFFLINE -> Color(0xFF9E9E9E)
+        AgentStatus.ONLINE -> openClaw.statusOnline
+        AgentStatus.BUSY -> openClaw.statusBusy
+        AgentStatus.OFFLINE -> openClaw.statusOffline
     }
     Box(
         modifier = Modifier
