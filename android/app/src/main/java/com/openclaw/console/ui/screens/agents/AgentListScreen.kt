@@ -40,19 +40,40 @@ fun AgentListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text("Agents", style = MaterialTheme.typography.titleLarge)
-                },
-                actions = {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp).padding(end = 4.dp),
-                            strokeWidth = 2.dp
-                        )
+            Column {
+                TopAppBar(
+                    title = {
+                        Text("Agents", style = MaterialTheme.typography.titleLarge)
+                    },
+                    actions = {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp).padding(end = 4.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
                     }
-                }
-            )
+                )
+                // Search bar in nav bar for iOS parity
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Search agents...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
+                )
+            }
         }
     ) { paddingValues ->
         PullToRefreshBox(
@@ -74,26 +95,6 @@ fun AgentListScreen(
                 ApprovalBanner(
                     count = approvalCount,
                     onClick = { /* navigate to settings for approvals */ }
-                )
-
-                // Search bar
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = viewModel::onSearchQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search agents...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear search")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium
                 )
 
                 // Error state
@@ -146,7 +147,7 @@ fun AgentListScreen(
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 4.dp)
+                            contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
                             items(
                                 items = uiState.filteredAgents,
@@ -272,5 +273,5 @@ private fun AgentListItem(
             }
         }
     )
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    HorizontalDivider(modifier = Modifier.padding(start = 72.dp, end = 16.dp))
 }

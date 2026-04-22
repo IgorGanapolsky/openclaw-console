@@ -225,35 +225,17 @@ fun ApprovalDetailScreen(
                         val isProcessing = uiState.screenState == ApprovalScreenState.PROCESSING ||
                                 uiState.screenState == ApprovalScreenState.BIOMETRIC_PROMPT
 
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
                                 .navigationBarsPadding(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Deny button
-                            OutlinedButton(
-                                onClick = { viewModel.onDecide(ApprovalDecision.DENIED) },
-                                modifier = Modifier.weight(1f).height(52.dp),
-                                enabled = !isProcessing,
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.error
-                                )
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Deny", fontWeight = FontWeight.Medium)
-                            }
-
-                            // Approve button
+                            // Approve button (primary action on top for iOS parity)
                             Button(
                                 onClick = { viewModel.onDecide(ApprovalDecision.APPROVED) },
-                                modifier = Modifier.weight(1f).height(52.dp),
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
                                 enabled = !isProcessing,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary
@@ -274,6 +256,24 @@ fun ApprovalDetailScreen(
                                     Spacer(Modifier.width(8.dp))
                                     Text("Approve", fontWeight = FontWeight.Medium)
                                 }
+                            }
+
+                            // Deny button
+                            OutlinedButton(
+                                onClick = { viewModel.onDecide(ApprovalDecision.DENIED) },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                enabled = !isProcessing,
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Deny", fontWeight = FontWeight.Medium)
                             }
                         }
                         Spacer(modifier = Modifier.height(24.dp))

@@ -148,9 +148,10 @@ fun ApprovalBanner(
     modifier: Modifier = Modifier
 ) {
     if (count <= 0) return
+    val colors = LocalOpenClawColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.errorContainer,
+        color = colors.severityWarningContainer,
         onClick = onClick
     ) {
         Row(
@@ -161,19 +162,19 @@ fun ApprovalBanner(
             Icon(
                 Icons.Default.Warning,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
+                tint = colors.severityWarning,
                 modifier = Modifier.size(20.dp)
             )
             Text(
                 text = "$count approval${if (count > 1) "s" else ""} awaiting your decision",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = colors.severityWarning,
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer
+                tint = colors.severityWarning
             )
         }
     }

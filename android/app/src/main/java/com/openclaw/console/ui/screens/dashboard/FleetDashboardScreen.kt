@@ -116,7 +116,11 @@ private fun FleetSummaryHeader(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+        )
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -169,12 +173,17 @@ private fun FleetAgentCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = if (agent.pendingApprovals > 0) {
             CardDefaults.outlinedCardBorder().copy(
                 brush = androidx.compose.ui.graphics.SolidColor(openClaw.statusBusy.copy(alpha = 0.6f)),
                 width = 1.5.dp
             )
-        } else null
+        } else {
+            CardDefaults.outlinedCardBorder().copy(
+                brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+            )
+        }
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
