@@ -93,16 +93,36 @@ platform :ios do
     )
 
     UI.message("Using build number #{next_build_number} for version #{marketing_version}")
+
+    # Force update build number in ALL possible locations to ensure it sticks
+
+    # Method 1: Fastlane increment_build_number
     increment_build_number(
       xcodeproj: "OpenClawConsole.xcodeproj",
       build_number: next_build_number
     )
 
-    if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"] && api_key
-      # CI environment: use match for certificate and profile management
-      UI.message("CI detected - using match for signing certificates and profiles")
+    # Method 2: Direct agvtool update (low level)
+    sh("cd .. && agvtool new-version -all #{next_build_number}")
 
-      # Setup temporary keychain for CI
+    # Method 3: Update CFBundleVersion in Info.plist directly
+    sh("cd .. && /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion #{next_build_number}' OpenClawConsole/Info.plist")
+
+    # Verify the build number was actually set
+    updated_build_number = get_build_number(xcodeproj: "OpenClawConsole.xcodeproj").to_i
+    UI.message("Verified build number in project: #{updated_build_number}")
+
+    # Also verify via agvtool
+    agvtool_version = sh("cd .. && agvtool what-version -terse", return_stdout: true).strip.to_i
+    UI.message("Verified build number via agvtool: #{agvtool_version}")
+
+    if updated_build_number != next_build_number || agvtool_version != next_build_number
+      UI.user_error!("Build number update failed! Expected #{next_build_number}, fastlane: #{updated_build_number}, agvtool: #{agvtool_version}")
+    end
+
+    if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"] && api_key
+      UI.message("CI detected - using match-managed App Store signing")
+
       create_keychain(
         name: "fastlane_tmp_keychain",
         password: "temp_password",
@@ -112,7 +132,6 @@ platform :ios do
         add_to_search_list: true
       )
 
-      # Download certificates and profiles via match
       match(
         type: "appstore",
         app_identifier: ["com.openclaw.console"],
@@ -122,10 +141,8 @@ platform :ios do
         keychain_password: "temp_password"
       )
 
-      # Get the profile name set by match
       app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
 
-      # Configure manual signing with match-managed certificates
       update_code_signing_settings(
         path: "OpenClawConsole.xcodeproj",
         use_automatic_signing: false,
@@ -135,7 +152,6 @@ platform :ios do
         team_id: ENV["APPLE_TEAM_ID"]
       )
 
-      # Build with manual signing
       build_app(
         scheme: "OpenClawConsole",
         export_method: "app-store",
@@ -147,8 +163,7 @@ platform :ios do
         }
       )
     else
-      # Local development: use automatic signing
-      UI.message("Local development detected - using automatic signing")
+      UI.message("Using automatic signing path for local or non-match environments")
 
       if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
         update_code_signing_settings(
@@ -159,33 +174,26 @@ platform :ios do
         )
       end
 
+      build_args = [
+        "-allowProvisioningUpdates",
+        "-allowProvisioningDeviceRegistration"
+      ]
+
+      if api_key && ENV["APPSTORE_KEY_PATH"]
+        build_args += [
+          "-authenticationKeyID", ENV['APPSTORE_KEY_ID'],
+          "-authenticationKeyIssuerID", ENV['APPSTORE_ISSUER_ID'],
+          "-authenticationKeyPath", ENV['APPSTORE_KEY_PATH']
+        ]
+      end
+
       build_app(
         scheme: "OpenClawConsole",
         export_method: "app-store",
-        xcargs: "-allowProvisioningUpdates"
+        xcargs: build_args.join(" "),
+        skip_profile_detection: true
       )
     end
-
-    # Force certificate creation during build with comprehensive auth
-    build_args = [
-      "-allowProvisioningUpdates",
-      "-allowProvisioningDeviceRegistration"
-    ]
-
-    if api_key && ENV["APPSTORE_KEY_PATH"]
-      build_args += [
-        "-authenticationKeyID", ENV['APPSTORE_KEY_ID'],
-        "-authenticationKeyIssuerID", ENV['APPSTORE_ISSUER_ID'],
-        "-authenticationKeyPath", ENV['APPSTORE_KEY_PATH']
-      ]
-    end
-
-    build_app(
-      scheme: "OpenClawConsole",
-      export_method: "app-store",
-      xcargs: build_args.join(" "),
-      skip_profile_detection: true
-    )
 
     if ENV["TESTFLIGHT_SYNC_TESTERS"] == "true"
       add_testers
@@ -225,10 +233,8 @@ platform :ios do
       api_key = app_store_api_key_from_env
 
       if ENV["CI"] == "true"
-        # CI environment: readonly mode with temporary keychain
-        UI.message("Setting up certificates for CI environment (readonly mode)")
+        UI.message("Setting up certificates for CI environment via match (write mode)")
 
-        # Setup temporary keychain for CI
         create_keychain(
           name: "fastlane_tmp_keychain",
           password: "temp_password",
@@ -241,21 +247,39 @@ platform :ios do
         match(
           type: "appstore",
           app_identifier: ["com.openclaw.console"],
-          readonly: true,
+          readonly: false,
           api_key: api_key,
           keychain_name: "fastlane_tmp_keychain",
           keychain_password: "temp_password"
         )
+
+        UI.message("✅ Ensured App Store certificates and profiles via match")
       else
         # Local development: can generate/update certificates if needed
         UI.message("Setting up certificates for local development")
 
-        match(
-          type: "appstore",
-          app_identifier: ["com.openclaw.console"],
-          readonly: false,
-          api_key: api_key
-        )
+        # Only use match if git repository is available
+        if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
+          UI.message("Using fastlane match for certificate management")
+          match(
+            type: "appstore",
+            app_identifier: ["com.openclaw.console"],
+            readonly: false,
+            api_key: api_key
+          )
+        else
+          UI.message("Skipping match (repository not configured) - configuring automatic signing")
+
+          # Configure automatic signing when match is not available
+          update_code_signing_settings(
+            use_automatic_signing: true,
+            path: "OpenClawConsole.xcodeproj",
+            targets: ["OpenClawConsole"],
+            code_sign_identity: "Apple Development"
+          )
+
+          UI.message("✅ Configured automatic signing for development")
+        end
       end
     else
       UI.message("No MATCH_* secrets configured - skipping match setup and relying on automatic signing.")
