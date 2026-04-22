@@ -7,6 +7,10 @@ DEFAULT_EXTERNAL_TESTERS = [
   { email: "igor.ganapolsky@icloud.com", first_name: "Igor", last_name: "Ganapolsky" }
 ].freeze
 
+def configured_testflight_group
+  ENV["TESTFLIGHT_GROUP"] || ENV["TESTFLIGHT_GROUPS"] || DEFAULT_TESTFLIGHT_GROUP
+end
+
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
@@ -160,14 +164,21 @@ platform :ios do
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com",
-      distribute_external: true,
-      notify_external_testers: true,
-      groups: [ENV["TESTFLIGHT_GROUP"] || DEFAULT_TESTFLIGHT_GROUP],
       changelog: "Latest OpenClaw Console beta build"
     }
 
     beta_review_info = beta_review_info_from_env
-    upload_options[:beta_app_review_info] = beta_review_info if beta_review_info
+    if beta_review_info
+      upload_options[:beta_app_review_info] = beta_review_info
+      upload_options[:distribute_external] = true
+      upload_options[:notify_external_testers] = true
+      upload_options[:groups] = [configured_testflight_group]
+    else
+      UI.important(
+        "Missing TESTFLIGHT_CONTACT_* metadata. Uploading to internal/private TestFlight only; " \
+        "external distribution is disabled for this run."
+      )
+    end
 
     upload_to_testflight(**upload_options)
   end
@@ -260,7 +271,7 @@ platform :ios do
       next
     end
 
-    tester_group = ENV["TESTFLIGHT_GROUP"] || DEFAULT_TESTFLIGHT_GROUP
+    tester_group = configured_testflight_group
 
     UI.message("Adding external TestFlight testers...")
 
