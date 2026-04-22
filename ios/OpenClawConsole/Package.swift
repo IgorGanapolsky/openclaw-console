@@ -15,7 +15,7 @@ let package = Package(
         .executable(name: "OpenClawConsole", targets: ["OpenClawConsole"])
     ],
     dependencies: [
-        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "4.43.2")
+        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.68.0")
     ],
     targets: [
         .executableTarget(
