@@ -1,6 +1,7 @@
 package com.openclaw.console.data.repository
 
 import com.openclaw.console.data.model.Incident
+import com.openclaw.console.data.model.IncidentAction
 import com.openclaw.console.data.model.IncidentStatus
 import com.openclaw.console.data.model.WebSocketEvent
 import com.openclaw.console.data.network.ApiService
@@ -72,6 +73,23 @@ class IncidentRepository(
 
     fun getIncident(incidentId: String): Incident? {
         return _incidents.value.find { it.id == incidentId }
+    }
+
+    suspend fun triggerAction(incident: Incident, action: IncidentAction): Result<Unit> {
+        val message = when (action) {
+            IncidentAction.ASK_ROOT_CAUSE ->
+                "What is the root cause of incident '${incident.title}'?"
+            IncidentAction.PROPOSE_FIX ->
+                "Please propose a fix for incident '${incident.title}'."
+            IncidentAction.ACKNOWLEDGE ->
+                "I acknowledge incident '${incident.title}'."
+        }
+
+        return apiService.sendChatMessage(incident.agentId, message).map {
+            if (action == IncidentAction.ACKNOWLEDGE) {
+                acknowledgeIncidentLocally(incident.id)
+            }
+        }
     }
 
     fun acknowledgeIncidentLocally(incidentId: String) {

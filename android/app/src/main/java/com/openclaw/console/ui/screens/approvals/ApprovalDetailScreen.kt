@@ -3,11 +3,45 @@ package com.openclaw.console.ui.screens.approvals
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Dangerous
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TimerOff
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,23 +49,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.ActionType
 import com.openclaw.console.data.model.ApprovalDecision
+import com.openclaw.console.data.model.ApprovalRequest
 import com.openclaw.console.data.model.RiskLevel
 import com.openclaw.console.service.BiometricHelper
 import com.openclaw.console.service.BiometricResult
 import com.openclaw.console.ui.AppViewModel
-import com.openclaw.console.ui.components.TimeAgoText
-import com.openclaw.console.ui.theme.LocalOpenClawColors
 import com.openclaw.console.ui.theme.MonospaceStyle
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ApprovalDetailScreen(
     approvalId: String,
@@ -41,7 +73,6 @@ fun ApprovalDetailScreen(
 ) {
     val approvalRepo by appViewModel.approvalRepository.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(approvalId, approvalRepo) {
         viewModel.init(approvalId, approvalRepo)
@@ -49,7 +80,6 @@ fun ApprovalDetailScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Biometric trigger
     LaunchedEffect(uiState.screenState) {
         if (uiState.screenState == ApprovalScreenState.BIOMETRIC_PROMPT) {
             val activity = context as? FragmentActivity
@@ -57,12 +87,18 @@ fun ApprovalDetailScreen(
                 viewModel.onBiometricCancelled()
                 return@LaunchedEffect
             }
+
             val decision = uiState.pendingDecision ?: ApprovalDecision.DENIED
-            val title = if (decision == ApprovalDecision.APPROVED) "Confirm Approval" else "Confirm Denial"
-            val subtitle = if (decision == ApprovalDecision.APPROVED)
+            val title = if (decision == ApprovalDecision.APPROVED) {
+                "Confirm Approval"
+            } else {
+                "Confirm Denial"
+            }
+            val subtitle = if (decision == ApprovalDecision.APPROVED) {
                 "Biometric required to approve this action"
-            else
+            } else {
                 "Confirm you want to deny this request"
+            }
 
             when (val result = BiometricHelper.authenticate(activity, title = title, subtitle = subtitle)) {
                 BiometricResult.Success -> viewModel.onBiometricSuccess()
@@ -75,15 +111,11 @@ fun ApprovalDetailScreen(
                     viewModel.onError("Verification failed: ${result.message}")
                     viewModel.onBiometricCancelled()
                 }
-                BiometricResult.NotAvailable -> {
-                    // Fall through - no biometric available, still allow action in beta
-                    viewModel.onBiometricSuccess()
-                }
+                BiometricResult.NotAvailable -> viewModel.onBiometricSuccess()
             }
         }
     }
 
-    // Auto-navigate back on success
     LaunchedEffect(uiState.screenState) {
         if (uiState.screenState == ApprovalScreenState.SUCCESS) {
             delay(1000)
@@ -106,7 +138,9 @@ fun ApprovalDetailScreen(
         when (uiState.screenState) {
             ApprovalScreenState.SUCCESS -> {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -123,164 +157,22 @@ fun ApprovalDetailScreen(
                     }
                 }
             }
+
             else -> {
                 uiState.approval?.let { approval ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        // Risk warning card
-                        RiskWarningCard(riskLevel = approval.context.riskLevel)
-
-                        // Action type chip
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            ActionTypeChip(actionType = approval.actionType)
-                            Text(
-                                text = approval.agentName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // Title + Description
-                        Column(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = approval.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = approval.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Command card
-                        if (approval.command.isNotEmpty()) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "Command",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = MaterialTheme.shapes.medium,
-                                    color = MaterialTheme.colorScheme.surfaceVariant
-                                ) {
-                                    Text(
-                                        text = approval.command,
-                                        modifier = Modifier.padding(12.dp),
-                                        style = MonospaceStyle,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Context info
-                        ContextInfoSection(approval = approval)
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Expiry countdown
-                        ExpiryCountdown(expiresAt = approval.expiresAt)
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Error display
-                        uiState.error?.let { error ->
-                            Card(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-                            ) {
-                                Text(
-                                    text = error,
-                                    modifier = Modifier.padding(12.dp),
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-
-                        // Action buttons
-                        val isProcessing = uiState.screenState == ApprovalScreenState.PROCESSING ||
-                                uiState.screenState == ApprovalScreenState.BIOMETRIC_PROMPT
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .navigationBarsPadding(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Deny button
-                            OutlinedButton(
-                                onClick = { viewModel.onDecide(ApprovalDecision.DENIED) },
-                                modifier = Modifier.weight(1f).height(52.dp),
-                                enabled = !isProcessing,
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.error
-                                )
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Deny", fontWeight = FontWeight.Medium)
-                            }
-
-                            // Approve button
-                            Button(
-                                onClick = { viewModel.onDecide(ApprovalDecision.APPROVED) },
-                                modifier = Modifier.weight(1f).height(52.dp),
-                                enabled = !isProcessing,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                if (isProcessing) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                } else {
-                                    Icon(
-                                        Icons.Default.Fingerprint,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Approve", fontWeight = FontWeight.Medium)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
+                    ApprovalDetailContent(
+                        approval = approval,
+                        error = uiState.error,
+                        screenState = uiState.screenState,
+                        onApprove = { viewModel.onDecide(ApprovalDecision.APPROVED) },
+                        onDeny = { viewModel.onDecide(ApprovalDecision.DENIED) },
+                        modifier = Modifier.padding(paddingValues)
+                    )
                 } ?: run {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(paddingValues),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -296,81 +188,214 @@ fun ApprovalDetailScreen(
 }
 
 @Composable
-private fun RiskWarningCard(riskLevel: RiskLevel) {
-    val (bgColor, icon, label) = when (riskLevel) {
-        RiskLevel.CRITICAL -> Triple(
-            Color(0xFFB3261E), Icons.Default.Dangerous, "CRITICAL RISK"
+private fun ApprovalDetailContent(
+    approval: ApprovalRequest,
+    error: String?,
+    screenState: ApprovalScreenState,
+    onApprove: () -> Unit,
+    onDeny: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isProcessing = screenState == ApprovalScreenState.PROCESSING ||
+        screenState == ApprovalScreenState.BIOMETRIC_PROMPT
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        RiskWarningCard(
+            riskLevel = approval.context.riskLevel,
+            agentName = approval.agentName
         )
-        RiskLevel.HIGH -> Triple(
-            Color(0xFFE97C00), Icons.Default.Warning, "HIGH RISK"
-        )
+
+        ActionTypeBadge(actionType = approval.actionType)
+
+        DetailSection(title = "Description") {
+            Text(
+                text = approval.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            SelectionContainer {
+                Text(
+                    text = approval.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        if (approval.command.isNotEmpty()) {
+            DetailSection(title = "Command to Execute") {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    SelectionContainer {
+                        Text(
+                            text = approval.command,
+                            modifier = Modifier.padding(12.dp),
+                            style = MonospaceStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        ContextInfoSection(approval = approval)
+
+        HorizontalDivider()
+
+        ExpiryCountdown(expiresAt = approval.expiresAt)
+
+        error?.let { message ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = message,
+                    modifier = Modifier.padding(12.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDeny,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                enabled = !isProcessing,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Deny", fontWeight = FontWeight.Medium)
+            }
+
+            Button(
+                onClick = onApprove,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(52.dp),
+                enabled = !isProcessing,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Icon(Icons.Default.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Approve", fontWeight = FontWeight.Medium)
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun RiskWarningCard(riskLevel: RiskLevel, agentName: String) {
+    val (backgroundColor, icon, label) = when (riskLevel) {
+        RiskLevel.CRITICAL -> Triple(Color(0xFFB3261E), Icons.Default.Dangerous, "Critical Risk")
+        RiskLevel.HIGH -> Triple(Color(0xFFE97C00), Icons.Default.Warning, "High Risk")
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = bgColor
+        color = backgroundColor,
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+                Text(
+                    text = "$agentName is requesting authorization",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.92f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionTypeBadge(actionType: ActionType) {
+    val (label, icon) = when (actionType) {
+        ActionType.DEPLOY -> "Deploy" to Icons.Default.PlayArrow
+        ActionType.SHELL_COMMAND -> "Shell Command" to Icons.Default.Code
+        ActionType.CONFIG_CHANGE -> "Config Change" to Icons.Default.Tune
+        ActionType.KEY_ROTATION -> "Key Rotation" to Icons.Default.VpnKey
+        ActionType.TRADE_EXECUTION -> "Trade Execution" to Icons.Default.TrendingUp
+        ActionType.DESTRUCTIVE -> "Destructive" to Icons.Default.DeleteForever
+    }
+    val color = Color(0xFFE97C00)
+
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "Biometric required",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.8f)
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color
             )
         }
     }
 }
 
 @Composable
-private fun ActionTypeChip(actionType: ActionType) {
-    val (label, color) = when (actionType) {
-        ActionType.DEPLOY -> "Deploy" to MaterialTheme.colorScheme.primary
-        ActionType.SHELL_COMMAND -> "Shell Command" to MaterialTheme.colorScheme.error
-        ActionType.CONFIG_CHANGE -> "Config Change" to Color(0xFFE97C00)
-        ActionType.KEY_ROTATION -> "Key Rotation" to Color(0xFF7B1FA2)
-        ActionType.TRADE_EXECUTION -> "Trade Execution" to Color(0xFF1565C0)
-        ActionType.DESTRUCTIVE -> "Destructive" to MaterialTheme.colorScheme.error
-    }
-    SuggestionChip(
-        onClick = {},
-        label = { Text(label, style = MaterialTheme.typography.labelMedium, color = color) }
-    )
-}
-
-@Composable
-private fun ContextInfoSection(approval: com.openclaw.console.data.model.ApprovalRequest) {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text("Context", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (approval.context.service.isNotEmpty()) {
-                    ContextRow("Service", approval.context.service)
-                }
-                if (approval.context.environment.isNotEmpty()) {
-                    ContextRow("Environment", approval.context.environment)
-                }
-                if (approval.context.repository.isNotEmpty()) {
-                    ContextRow("Repository", approval.context.repository)
-                }
+private fun ContextInfoSection(approval: ApprovalRequest) {
+    DetailSection(title = "Context") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (approval.context.service.isNotEmpty()) {
+                ContextRow("Service", approval.context.service)
+            }
+            if (approval.context.environment.isNotEmpty()) {
+                ContextRow("Environment", approval.context.environment)
+            }
+            if (approval.context.repository.isNotEmpty()) {
+                ContextRow("Repository", approval.context.repository)
             }
         }
     }
@@ -380,10 +405,19 @@ private fun ContextInfoSection(approval: com.openclaw.console.data.model.Approva
 private fun ContextRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodySmall)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(90.dp)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -397,7 +431,7 @@ private fun ExpiryCountdown(expiresAt: String) {
                 val expires = Instant.parse(expiresAt)
                 val now = Instant.now()
                 remainingSeconds = Duration.between(now, expires).seconds.coerceAtLeast(0)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 remainingSeconds = 0
             }
             if (remainingSeconds <= 0) break
@@ -414,18 +448,20 @@ private fun ExpiryCountdown(expiresAt: String) {
     }
 
     Row(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            if (isExpired) Icons.Default.TimerOff else Icons.Default.Timer,
+            imageVector = if (isExpired) Icons.Default.TimerOff else Icons.Default.Timer,
             contentDescription = null,
             tint = color,
             modifier = Modifier.size(16.dp)
         )
         Text(
-            text = if (isExpired) "Expired" else {
+            text = if (isExpired) {
+                "Expired"
+            } else {
                 val minutes = remainingSeconds / 60
                 val seconds = remainingSeconds % 60
                 "Expires in ${if (minutes > 0) "${minutes}m " else ""}${seconds}s"
@@ -433,5 +469,20 @@ private fun ExpiryCountdown(expiresAt: String) {
             style = MaterialTheme.typography.bodySmall,
             color = color
         )
+    }
+}
+
+@Composable
+private fun DetailSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        content()
     }
 }
