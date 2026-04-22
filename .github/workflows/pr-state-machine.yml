@@ -85,18 +85,25 @@ jobs:
                 .filter((v) => v.length > 0);
             }
 
+            function mergeContexts(...lists) {
+              return [...new Set(lists.flat().filter((value) => value && value.length > 0))];
+            }
+
             function getRequiredContextsFallback(baseBranch) {
               const normalized = baseBranch.toUpperCase().replace(/[^A-Z0-9]/g, "_");
               const branchEnvName = `REQUIRED_CHECKS_${normalized}`;
+              const workflowDefault = DEFAULT_REQUIRED_CHECKS[baseBranch] || [];
               const branchFallback = parseRequiredChecks(process.env[branchEnvName] || "");
               if (branchFallback.length > 0) {
+                const contexts = mergeContexts(workflowDefault, branchFallback);
                 return {
-                  contexts: branchFallback,
-                  source: `vars.PR_REQUIRED_CHECKS_${normalized}`
+                  contexts,
+                  source: workflowDefault.length > 0
+                    ? `workflow_default:${baseBranch}+vars.PR_REQUIRED_CHECKS_${normalized}`
+                    : `vars.PR_REQUIRED_CHECKS_${normalized}`
                 };
               }
 
-              const workflowDefault = DEFAULT_REQUIRED_CHECKS[baseBranch] || [];
               if (workflowDefault.length > 0) {
                 return {
                   contexts: workflowDefault,
@@ -106,9 +113,12 @@ jobs:
 
               const fallbackFromVar = parseRequiredChecks(process.env.REQUIRED_CHECKS_FROM_VAR || "");
               if (fallbackFromVar.length > 0) {
+                const contexts = mergeContexts(workflowDefault, fallbackFromVar);
                 return {
-                  contexts: fallbackFromVar,
-                  source: "vars.PR_REQUIRED_CHECKS"
+                  contexts,
+                  source: workflowDefault.length > 0
+                    ? `workflow_default:${baseBranch}+vars.PR_REQUIRED_CHECKS`
+                    : "vars.PR_REQUIRED_CHECKS"
                 };
               }
 
