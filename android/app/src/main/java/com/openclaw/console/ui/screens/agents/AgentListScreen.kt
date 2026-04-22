@@ -30,8 +30,6 @@ fun AgentListScreen(
     viewModel: AgentListViewModel = viewModel()
 ) {
     val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
-    val approvalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
-    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
     val colors = LocalOpenClawColors.current
 
     LaunchedEffect(agentRepo) {
@@ -88,17 +86,6 @@ fun AgentListScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ConnectionStatusBanner(state = connectionState)
-                Spacer(modifier = Modifier.height(12.dp))
-
-                ApprovalBanner(
-                    count = approvalCount,
-                    onClick = { /* navigate to settings for approvals */ }
-                )
-                if (approvalCount > 0) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
                 Surface(
                     color = colors.searchField,
                     shape = RoundedCornerShape(20.dp),
