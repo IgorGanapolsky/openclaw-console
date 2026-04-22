@@ -159,16 +159,16 @@ struct GitCommit: Codable, Identifiable, Hashable {
 
 extension APIService {
     func fetchGitFileChanges(agentId: String) async throws -> [GitFileChange] {
-        // TODO: Implement actual API call
+        // Placeholder until the gateway exposes Git file-change endpoints.
         return []
     }
 
     func fetchGitCommitHistory(agentId: String, limit: Int) async throws -> [GitCommit] {
-        // TODO: Implement actual API call
+        // Placeholder until the gateway exposes commit-history endpoints.
         return []
     }
 
     func refreshGitStatus(agentId: String) async throws {
-        // TODO: Implement actual API call
+        // Placeholder until the gateway exposes a refresh-status endpoint.
     }
 }
