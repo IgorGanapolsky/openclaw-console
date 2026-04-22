@@ -8,12 +8,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,13 +35,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
-    val approvalRepo by appViewModel.approvalRepository.collectAsStateWithLifecycle()
-    val pendingApprovals by remember(approvalRepo) {
-        derivedStateOf { approvalRepo?.pendingApprovals?.value ?: emptyList() }
-    }
-    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
-    val lastGatewaySignal by appViewModel.lastGatewaySignal.collectAsStateWithLifecycle()
-    val gatewaySignalSummary by appViewModel.gatewaySignalSummary.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.setRepository(gatewayRepo)
@@ -49,14 +45,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onAddGateway,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Add Gateway") }
+                title = { Text("Gateways") },
+                actions = {
+                    IconButton(onClick = onAddGateway) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Gateway")
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -64,83 +58,26 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 88.dp)
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            // Connection status
-            item {
-                ConnectionStatusBanner(
-                    state = connectionState,
-                    lastSignalAt = lastGatewaySignal,
-                    signalSummary = gatewaySignalSummary
-                )
-            }
-
-            // Upgrade to Pro CTA
-            item {
-                UpgradeToProCard(onClick = onUpgradeClick)
-            }
-
-            // Pending approvals section
-            if (pendingApprovals.isNotEmpty()) {
-                item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Text(
-                            text = "Pending Approvals",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                }
-                items(pendingApprovals, key = { "approval_${it.id}" }) { approval ->
-                    ListItem(
-                        modifier = Modifier.clickable { onApprovalClick(approval.id) },
-                        headlineContent = { Text(approval.title, style = MaterialTheme.typography.bodyMedium) },
-                        supportingContent = {
-                            Text(
-                                text = "${approval.agentName} • ${approval.actionType.name.lowercase().replace('_', ' ')}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        leadingContent = {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        trailingContent = {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null)
-                        },
-                        colors = ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
-                        )
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-            }
-
-            // Gateways section header
-            item {
-                Text(
-                    text = "Gateways",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
-            }
-
             if (uiState.gateways.isEmpty()) {
                 item {
-                    EmptyState(
-                        title = "No gateways",
-                        subtitle = "Tap Add Gateway to connect to an OpenClaw gateway",
-                        icon = Icons.Default.Cloud,
-                        modifier = Modifier.padding(vertical = 32.dp)
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        EmptyState(
+                            title = "No Gateways",
+                            subtitle = "Add a gateway to connect to your OpenClaw instance.",
+                            icon = Icons.Default.Cloud,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Button(onClick = onAddGateway) {
+                            Text("Add Gateway")
+                        }
+                    }
                 }
             } else {
                 items(uiState.gateways, key = { it.id }) { gateway ->
@@ -157,7 +94,6 @@ fun SettingsScreen(
                 }
             }
 
-            // App info section
             item {
                 HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -226,50 +162,6 @@ private fun SwipeToDismissGatewayItem(
             isActive = isActive,
             onSetActive = onSetActive
         )
-    }
-}
-
-@Composable
-private fun UpgradeToProCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Upgrade to OpenClaw Pro",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = "DevOps integrations, advanced analytics, unlimited agents, and more.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
     }
 }
 

@@ -5,7 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -27,7 +31,6 @@ fun IncidentListScreen(
     viewModel: IncidentViewModel = viewModel()
 ) {
     val incidentRepo by appViewModel.incidentRepository.collectAsStateWithLifecycle()
-    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
 
     LaunchedEffect(incidentRepo) {
         viewModel.setRepository(incidentRepo)
@@ -35,8 +38,10 @@ fun IncidentListScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isRefreshing by remember { mutableStateOf(false) }
+    var showFilterMenu by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Incidents") },
@@ -46,6 +51,51 @@ fun IncidentListScreen(
                             modifier = Modifier.size(24.dp).padding(end = 4.dp),
                             strokeWidth = 2.dp
                         )
+                    }
+                    Box {
+                        IconButton(onClick = { showFilterMenu = true }) {
+                            Icon(
+                                imageVector = if (uiState.activeFilter == IncidentFilter.ALL) {
+                                    Icons.Default.FilterList
+                                } else {
+                                    Icons.Default.FilterList
+                                },
+                                contentDescription = "Filter by severity"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showFilterMenu,
+                            onDismissRequest = { showFilterMenu = false }
+                        ) {
+                            IncidentFilter.values().forEach { filter ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            when (filter) {
+                                                IncidentFilter.ALL -> "All"
+                                                IncidentFilter.CRITICAL -> "Critical"
+                                                IncidentFilter.WARNING -> "Warning"
+                                            }
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        if (uiState.activeFilter == filter) {
+                                            Icon(Icons.Default.Check, contentDescription = null)
+                                        } else {
+                                            when (filter) {
+                                                IncidentFilter.ALL -> Unit
+                                                IncidentFilter.CRITICAL -> Icon(Icons.Default.Error, contentDescription = null)
+                                                IncidentFilter.WARNING -> Icon(Icons.Default.Warning, contentDescription = null)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.setFilter(filter)
+                                        showFilterMenu = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             )
@@ -63,45 +113,6 @@ fun IncidentListScreen(
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                ConnectionStatusBanner(state = connectionState)
-
-                // Filter chips
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IncidentFilter.values().forEach { filter ->
-                        FilterChip(
-                            selected = uiState.activeFilter == filter,
-                            onClick = { viewModel.setFilter(filter) },
-                            label = {
-                                val label = when (filter) {
-                                    IncidentFilter.ALL -> {
-                                        val openCount = uiState.incidents.count {
-                                            it.status == IncidentStatus.OPEN
-                                        }
-                                        if (openCount > 0) "All ($openCount)" else "All"
-                                    }
-                                    IncidentFilter.CRITICAL -> "Critical"
-                                    IncidentFilter.WARNING -> "Warning"
-                                }
-                                Text(label)
-                            },
-                            leadingIcon = when (filter) {
-                                IncidentFilter.ALL -> null
-                                IncidentFilter.CRITICAL -> {
-                                    { Icon(Icons.Default.Error, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                }
-                                IncidentFilter.WARNING -> {
-                                    { Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                                }
-                            }
-                        )
-                    }
-                }
-
                 // Error
                 uiState.error?.let { error ->
                     Card(
@@ -126,15 +137,15 @@ fun IncidentListScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         EmptyState(
-                            title = "No incidents",
-                            subtitle = "All clear — no incidents to report",
+                            title = if (uiState.activeFilter == IncidentFilter.ALL) "No Incidents" else "No ${uiState.activeFilter.name.lowercase().replaceFirstChar { it.uppercase() }} Incidents",
+                            subtitle = uiState.error ?: "All clear — no incidents to report.",
                             icon = Icons.Default.CheckCircle
                         )
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 4.dp)
+                        contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         items(
                             items = uiState.filteredIncidents,
@@ -158,7 +169,8 @@ private fun IncidentListItem(incident: Incident, onClick: () -> Unit) {
     ListItem(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
         headlineContent = {
             Text(
                 text = incident.title,
@@ -185,8 +197,6 @@ private fun IncidentListItem(incident: Incident, onClick: () -> Unit) {
         },
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
-                SeverityBadge(severity = incident.severity)
-                Spacer(modifier = Modifier.height(4.dp))
                 if (incident.status != IncidentStatus.OPEN) {
                     Text(
                         text = incident.status.name.lowercase().replaceFirstChar { it.uppercase() },
@@ -195,7 +205,8 @@ private fun IncidentListItem(incident: Incident, onClick: () -> Unit) {
                     )
                 }
             }
-        }
+        },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 }

@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -29,7 +32,6 @@ fun BridgeListScreen(
     viewModel: BridgeViewModel = viewModel()
 ) {
     val bridgeRepo by appViewModel.bridgeRepository.collectAsStateWithLifecycle()
-    val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
 
     LaunchedEffect(bridgeRepo) {
         viewModel.setRepository(bridgeRepo)
@@ -39,6 +41,7 @@ fun BridgeListScreen(
     var isRefreshing by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -67,9 +70,6 @@ fun BridgeListScreen(
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Connection status banner
-                ConnectionStatusBanner(state = connectionState)
-
                 // Error state
                 uiState.error?.let { error ->
                     Card(
@@ -115,12 +115,12 @@ fun BridgeListScreen(
                         }
                     }
                     else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            items(
-                                items = uiState.sessions,
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        items(
+                            items = uiState.sessions,
                                 key = { it.id }
                             ) { session ->
                                 BridgeSessionItem(session = session)
@@ -136,7 +136,9 @@ fun BridgeListScreen(
 @Composable
 private fun BridgeSessionItem(session: BridgeSession) {
     ListItem(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
         headlineContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -184,7 +186,8 @@ private fun BridgeSessionItem(session: BridgeSession) {
                 }
                 TimeAgoText(session.createdAt, style = MaterialTheme.typography.labelSmall)
             }
-        }
+        },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
     )
     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 }
