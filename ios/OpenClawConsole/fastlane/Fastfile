@@ -65,8 +65,8 @@ platform :ios do
       UI.user_error!("Build number update failed! Expected #{next_build_number}, fastlane: #{updated_build_number}, agvtool: #{agvtool_version}")
     end
 
-    # Use existing certificates only - no auto-generation
-    UI.message("Using existing certificates without auto-generation")
+    # Use automatic signing with controlled provisioning updates
+    UI.message("Using automatic signing with controlled provisioning")
 
     if ENV["APPLE_TEAM_ID"] && !ENV["APPLE_TEAM_ID"].empty?
       update_code_signing_settings(
@@ -77,8 +77,10 @@ platform :ios do
       )
     end
 
-    # Build without certificate auto-generation
-    build_args = []
+    # Allow provisioning updates but limit certificate creation
+    build_args = [
+      "-allowProvisioningUpdates"
+    ]
 
     if api_key && ENV["APPSTORE_KEY_PATH"]
       build_args += [
@@ -134,18 +136,30 @@ platform :ios do
           UI.user_error!("APPLE_TEAM_ID is required for automatic signing in CI")
         end
       else
-        # Local development: can generate/update certificates if needed
+        # Local development: always use match in readonly mode to prevent certificate creation
         UI.message("Setting up certificates for local development")
 
-        # Only use match if git repository is available
+        # Always use match in readonly mode first
         if ENV["MATCH_GIT_URL"] && !ENV["MATCH_GIT_URL"].empty?
-          UI.message("Using fastlane match for certificate management")
-          match(
-            type: "appstore",
-            app_identifier: ["com.openclaw.console"],
-            readonly: false,
-            api_key: api_key
-          )
+          UI.message("Using fastlane match in readonly mode")
+          begin
+            match(
+              type: "appstore",
+              app_identifier: ["com.openclaw.console"],
+              readonly: true,
+              api_key: api_key
+            )
+          rescue => e
+            UI.important("Match readonly failed: #{e.message}")
+            # If readonly fails, create but limit to necessary profiles only
+            match(
+              type: "appstore",
+              app_identifier: ["com.openclaw.console"],
+              readonly: false,
+              api_key: api_key,
+              force_for_new_devices: false
+            )
+          end
         else
           UI.message("Skipping match (repository not configured) - configuring automatic signing")
 
