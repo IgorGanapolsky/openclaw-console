@@ -1,5 +1,12 @@
 default_platform(:ios)
 
+APP_IDENTIFIER = "com.openclaw.console"
+DEFAULT_TESTFLIGHT_GROUP = "External Testers"
+DEFAULT_EXTERNAL_TESTERS = [
+  { email: "iganapolsky@gmail.com", first_name: "Igor", last_name: "Ganapolsky" },
+  { email: "igor.ganapolsky@icloud.com", first_name: "Igor", last_name: "Ganapolsky" }
+].freeze
+
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
@@ -14,6 +21,56 @@ def app_store_api_key_from_env
   )
 end
 
+def beta_review_info_from_env
+  contact_email = ENV["TESTFLIGHT_CONTACT_EMAIL"] || ENV["TESTFLIGHT_FEEDBACK_EMAIL"]
+  contact_first_name = ENV["TESTFLIGHT_CONTACT_FIRST_NAME"]
+  contact_last_name = ENV["TESTFLIGHT_CONTACT_LAST_NAME"]
+  contact_phone = ENV["TESTFLIGHT_CONTACT_PHONE"]
+
+  required_values = [contact_email, contact_first_name, contact_last_name, contact_phone]
+  return nil if required_values.any? { |value| value.to_s.strip.empty? }
+
+  {
+    contact_email: contact_email,
+    contact_first_name: contact_first_name,
+    contact_last_name: contact_last_name,
+    contact_phone: contact_phone,
+    demo_account_required: false
+  }
+end
+
+def resolve_next_build_number(api_key:, marketing_version:)
+  local_build_number = get_build_number(
+    xcodeproj: "OpenClawConsole.xcodeproj"
+  ).to_i
+
+  remote_build_number = 0
+  if api_key
+    begin
+      remote_build_number = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: APP_IDENTIFIER,
+        version: marketing_version,
+        initial_build_number: [local_build_number, 1].max
+      ).to_i
+    rescue => e
+      UI.important("Could not fetch latest TestFlight build number for #{marketing_version}: #{e}")
+    end
+  else
+    UI.important("No App Store Connect API key available; using local/timestamp build number fallback.")
+  end
+
+  timestamp_build_number = Time.now.utc.strftime("%y%m%d%H%M%S").to_i
+  next_build_number = [local_build_number + 1, remote_build_number + 1, timestamp_build_number].max
+
+  UI.message(
+    "Resolved next build number #{next_build_number} " \
+    "(local=#{local_build_number}, remote=#{remote_build_number}, timestamp=#{timestamp_build_number})"
+  )
+
+  next_build_number
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -26,24 +83,10 @@ platform :ios do
       xcodeproj: "OpenClawConsole.xcodeproj",
       target: "OpenClawConsole"
     )
-    current_build_number = get_build_number(
-      xcodeproj: "OpenClawConsole.xcodeproj"
-    ).to_i
-    next_build_number = current_build_number + 1
-
-    if api_key
-      begin
-        latest_remote_build_number = latest_testflight_build_number(
-          api_key: api_key,
-          app_identifier: "com.openclaw.console",
-          version: marketing_version,
-          initial_build_number: current_build_number
-        ).to_i
-        next_build_number = [next_build_number, latest_remote_build_number + 1].max
-      rescue => e
-        UI.important("Could not read latest TestFlight build number: #{e}")
-      end
-    end
+    next_build_number = resolve_next_build_number(
+      api_key: api_key,
+      marketing_version: marketing_version
+    )
 
     UI.message("Using build number #{next_build_number} for version #{marketing_version}")
     increment_build_number(
@@ -119,12 +162,48 @@ platform :ios do
       )
     end
 
-    upload_to_testflight(
-      skip_waiting_for_build_processing: true,
+    # Force certificate creation during build with comprehensive auth
+    build_args = [
+      "-allowProvisioningUpdates",
+      "-allowProvisioningDeviceRegistration"
+    ]
+
+    if api_key && ENV["APPSTORE_KEY_PATH"]
+      build_args += [
+        "-authenticationKeyID", ENV['APPSTORE_KEY_ID'],
+        "-authenticationKeyIssuerID", ENV['APPSTORE_ISSUER_ID'],
+        "-authenticationKeyPath", ENV['APPSTORE_KEY_PATH']
+      ]
+    end
+
+    build_app(
+      scheme: "OpenClawConsole",
+      export_method: "app-store",
+      xcargs: build_args.join(" "),
+      skip_profile_detection: true
+    )
+
+    if ENV["TESTFLIGHT_SYNC_TESTERS"] == "true"
+      add_testers
+    else
+      UI.message("Skipping automated tester sync. Set TESTFLIGHT_SYNC_TESTERS=true to enable it.")
+    end
+
+    upload_options = {
+      skip_waiting_for_build_processing: false,
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
-      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com"
-    )
+      beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com",
+      distribute_external: true,
+      notify_external_testers: true,
+      groups: [ENV["TESTFLIGHT_GROUP"] || DEFAULT_TESTFLIGHT_GROUP],
+      changelog: "Latest OpenClaw Console beta build"
+    }
+
+    beta_review_info = beta_review_info_from_env
+    upload_options[:beta_app_review_info] = beta_review_info if beta_review_info
+
+    upload_to_testflight(**upload_options)
   end
 
   desc "Setup certificates and profiles via match"
@@ -188,6 +267,48 @@ platform :ios do
     )
   end
 
+  desc "Add external TestFlight testers"
+  lane :add_testers do
+    api_key = app_store_api_key_from_env
+
+    unless api_key
+      UI.user_error!("App Store Connect API key required for tester management")
+    end
+
+    beta_review_info = beta_review_info_from_env
+    unless beta_review_info
+      UI.important(
+        "Skipping tester sync: set TESTFLIGHT_CONTACT_EMAIL, TESTFLIGHT_CONTACT_FIRST_NAME, " \
+        "TESTFLIGHT_CONTACT_LAST_NAME, and TESTFLIGHT_CONTACT_PHONE to manage external testers."
+      )
+      next
+    end
+
+    tester_group = ENV["TESTFLIGHT_GROUP"] || DEFAULT_TESTFLIGHT_GROUP
+
+    UI.message("Adding external TestFlight testers...")
+
+    DEFAULT_EXTERNAL_TESTERS.each do |tester|
+      begin
+        pilot(
+          api_key: api_key,
+          app_identifier: APP_IDENTIFIER,
+          distribute_only: false,
+          email: tester[:email],
+          first_name: tester[:first_name],
+          last_name: tester[:last_name],
+          groups: [tester_group],
+          distribute_external: true,
+          beta_app_review_info: beta_review_info
+        )
+        UI.success("Ensured tester is assigned: #{tester[:email]}")
+      rescue => e
+        UI.message("Could not sync #{tester[:email]} (may already exist or need manual group setup): #{e}")
+      end
+    end
+
+    UI.success("✅ TestFlight testers configured successfully")
+  end
   desc "Clean up old/expired certificates and provisioning profiles"
   lane :cleanup_certificates do
     api_key = app_store_api_key_from_env

@@ -40,7 +40,7 @@ jobs:
     runs-on: macos-15
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Fail fast on required iOS release secrets
         env:
@@ -155,7 +155,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Java
         uses: actions/setup-java@v5
