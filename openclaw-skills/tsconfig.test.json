@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "dist-tests",
+    "types": ["node", "jest"],
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
