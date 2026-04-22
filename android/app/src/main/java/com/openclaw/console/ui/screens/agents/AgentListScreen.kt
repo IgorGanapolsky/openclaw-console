@@ -1,9 +1,11 @@
 package com.openclaw.console.ui.screens.agents
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,9 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.Agent
-import com.openclaw.console.data.model.AgentStatus
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
+import com.openclaw.console.ui.theme.LocalOpenClawColors
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,6 +32,7 @@ fun AgentListScreen(
     val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
     val approvalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
     val connectionState by appViewModel.connectionState.collectAsStateWithLifecycle()
+    val colors = LocalOpenClawColors.current
 
     LaunchedEffect(agentRepo) {
         viewModel.setRepository(agentRepo)
@@ -37,17 +40,34 @@ fun AgentListScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isRefreshing by remember { mutableStateOf(false) }
+    val onlineCount = remember(uiState.agents) { uiState.agents.count { it.status == com.openclaw.console.data.model.AgentStatus.ONLINE } }
+    val busyCount = remember(uiState.agents) { uiState.agents.count { it.status == com.openclaw.console.data.model.AgentStatus.BUSY } }
+    val offlineCount = remember(uiState.agents) { uiState.agents.count { it.status == com.openclaw.console.data.model.AgentStatus.OFFLINE } }
 
     Scaffold(
+        containerColor = colors.appBackground,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = colors.appBackground,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                ),
                 title = {
-                    Text("Agents", style = MaterialTheme.typography.titleLarge)
+                    Column {
+                        Text("Agents", style = MaterialTheme.typography.titleLarge)
+                        AgentStatusSummary(
+                            onlineCount = onlineCount,
+                            busyCount = busyCount,
+                            offlineCount = offlineCount
+                        )
+                    }
                 },
                 actions = {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp).padding(end = 4.dp),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .padding(end = 4.dp),
                             strokeWidth = 2.dp
                         )
                     }
@@ -65,46 +85,60 @@ fun AgentListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(horizontal = 16.dp)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Connection status banner
                 ConnectionStatusBanner(state = connectionState)
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Approval banner
                 ApprovalBanner(
                     count = approvalCount,
                     onClick = { /* navigate to settings for approvals */ }
                 )
+                if (approvalCount > 0) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
 
-                // Search bar
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = viewModel::onSearchQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search agents...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear search")
+                Surface(
+                    color = colors.searchField,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.7f))
+                ) {
+                    OutlinedTextField(
+                        value = uiState.searchQuery,
+                        onValueChange = viewModel::onSearchQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search agents...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (uiState.searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear search")
+                                }
                             }
-                        }
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium
-                )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            disabledBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            errorBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                            focusedContainerColor = colors.searchField,
+                            unfocusedContainerColor = colors.searchField
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Error state
                 uiState.error?.let { error ->
-                    Card(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
+                            .padding(bottom = 8.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.45f))
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
@@ -129,7 +163,6 @@ fun AgentListScreen(
                     }
                 }
 
-                // Content
                 when {
                     uiState.filteredAgents.isEmpty() && !uiState.isLoading -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -146,7 +179,8 @@ fun AgentListScreen(
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 4.dp)
+                            contentPadding = PaddingValues(bottom = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(
                                 items = uiState.filteredAgents,
@@ -161,8 +195,45 @@ fun AgentListScreen(
                     }
                 }
             }
-
         }
+    }
+}
+
+@Composable
+private fun AgentStatusSummary(
+    onlineCount: Int,
+    busyCount: Int,
+    offlineCount: Int
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (onlineCount > 0) {
+            StatusSummaryChip(count = onlineCount, label = "online", status = com.openclaw.console.data.model.AgentStatus.ONLINE)
+        }
+        if (busyCount > 0) {
+            StatusSummaryChip(count = busyCount, label = "busy", status = com.openclaw.console.data.model.AgentStatus.BUSY)
+        }
+        if (offlineCount > 0) {
+            StatusSummaryChip(count = offlineCount, label = "offline", status = com.openclaw.console.data.model.AgentStatus.OFFLINE)
+        }
+    }
+}
+
+@Composable
+private fun StatusSummaryChip(
+    count: Int,
+    label: String,
+    status: com.openclaw.console.data.model.AgentStatus
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        StatusDot(status = status, size = 8)
+        Text(
+            text = "$count $label",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -171,12 +242,23 @@ private fun AgentListItem(
     agent: Agent,
     onClick: () -> Unit
 ) {
-    ListItem(
+    val colors = LocalOpenClawColors.current
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
-        headlineContent = {
+            .clickable(onClick = onClick),
+        color = colors.cardBackground,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(
+            width = if (agent.pendingApprovals > 0) 1.5.dp else 1.dp,
+            color = if (agent.pendingApprovals > 0) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+            else colors.borderSubtle.copy(alpha = 0.65f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -188,8 +270,6 @@ private fun AgentListItem(
                     fontWeight = FontWeight.Medium
                 )
             }
-        },
-        supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = agent.description,
@@ -228,12 +308,12 @@ private fun AgentListItem(
                                 Icons.Default.Task,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = colors.glowCyan
                             )
                             Text(
                                 text = "${agent.activeTasks} active",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                color = colors.glowCyan
                             )
                         }
                     }
@@ -257,8 +337,6 @@ private fun AgentListItem(
                     }
                 }
             }
-        },
-        trailingContent = {
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -271,6 +349,5 @@ private fun AgentListItem(
                 )
             }
         }
-    )
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+    }
 }

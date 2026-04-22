@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -31,6 +32,7 @@ import com.openclaw.console.ui.screens.settings.AddGatewayScreen
 import com.openclaw.console.ui.screens.settings.SettingsScreen
 import com.openclaw.console.ui.screens.subscription.PaywallScreen
 import com.openclaw.console.ui.screens.tasks.TaskDetailScreen
+import com.openclaw.console.ui.theme.LocalOpenClawColors
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class Screen(val route: String, val label: String) {
@@ -71,6 +73,7 @@ private data class BottomNavItem(
 @Composable
 fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     val navController = rememberNavController()
+    val colors = LocalOpenClawColors.current
 
     val pendingApprovalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
     val incidentRepository by appViewModel.incidentRepository.collectAsStateWithLifecycle()
@@ -91,8 +94,16 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     )
 
     Scaffold(
+        containerColor = colors.appBackground,
         bottomBar = {
-            NavigationBar {
+            Surface(
+                color = colors.chromeBackground,
+                shadowElevation = 0.dp
+            ) {
+                NavigationBar(
+                    containerColor = colors.chromeBackground,
+                    tonalElevation = 0.dp
+                ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
@@ -119,8 +130,16 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                                 Icon(item.icon, contentDescription = item.screen.label)
                             }
                         },
-                        label = { Text(item.screen.label) }
+                        label = { Text(item.screen.label) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = colors.glowCyan,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
+                }
                 }
             }
         }
