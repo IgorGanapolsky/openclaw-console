@@ -17,7 +17,7 @@ jobs:
         working-directory: android
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -51,7 +51,7 @@ jobs:
         working-directory: android
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -66,7 +66,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Android Lint
-        run: ./gradlew lintDebug || echo "::warning::Android Lint crashed (known AGP 8.7.3 bug) — see uploaded report"
+        run: ./gradlew lintDebug || echo "::warning::Android Lint crashed due to a known AGP/Compose tooling issue — see uploaded report"
 
       - name: Upload lint results
         if: always()
