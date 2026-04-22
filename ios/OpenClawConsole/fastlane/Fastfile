@@ -27,8 +27,8 @@ end
 
 def beta_review_info_from_env
   contact_email = ENV["TESTFLIGHT_CONTACT_EMAIL"] || ENV["TESTFLIGHT_FEEDBACK_EMAIL"]
-  contact_first_name = ENV["TESTFLIGHT_CONTACT_FIRST_NAME"]
-  contact_last_name = ENV["TESTFLIGHT_CONTACT_LAST_NAME"]
+  contact_first_name = ENV["TESTFLIGHT_CONTACT_FIRST_NAME"] || "Igor"
+  contact_last_name = ENV["TESTFLIGHT_CONTACT_LAST_NAME"] || "Ganapolsky"
   contact_phone = ENV["TESTFLIGHT_CONTACT_PHONE"]
 
   required_values = [contact_email, contact_first_name, contact_last_name, contact_phone]
