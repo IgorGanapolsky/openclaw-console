@@ -135,6 +135,16 @@ bundle install
 bundle exec fastlane firebase_dev
 ```
 
+#### Firebase thumbnail note
+
+Firebase App Distribution can continue showing an older web thumbnail even after a new Android build has been uploaded successfully. Treat the release artifact and Firebase CLI output as the source of truth first:
+
+- verify the workflow log contains `uploaded new release ... successfully!`
+- verify the workflow log contains a Firebase console URL or share URL for the new release
+- if the icon still looks wrong in Firebase, inspect the shipped APK/AAB resources before assuming the build is wrong
+
+For OpenClaw, Android launcher assets are intentionally derived from the iOS marketing icon so Firebase-distributed Android builds and TestFlight use the same underlying artwork, even if Firebase's web UI lags behind.
+
 ### iOS: TestFlight
 
 ```bash
