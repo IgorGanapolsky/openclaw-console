@@ -156,45 +156,36 @@ fun ApprovalBanner(
     modifier: Modifier = Modifier
 ) {
     if (count <= 0) return
-    val colors = LocalOpenClawColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.92f),
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle.copy(alpha = 0.45f)),
+        color = Color(0xFFE98A15),
+        shape = RoundedCornerShape(12.dp),
         tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+        shadowElevation = 6.dp,
         onClick = onClick
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Surface(
-                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.12f),
-                shape = CircleShape
-            ) {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .size(16.dp)
-                )
-            }
+            Icon(
+                Icons.Default.Warning,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
             Text(
-                text = "$count approval${if (count > 1) "s" else ""} awaiting your decision",
+                text = if (count == 1) "1 Approval Pending" else "$count Approvals Pending",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
+                color = Color.White,
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer
+                tint = Color.White.copy(alpha = 0.8f)
             )
         }
     }
