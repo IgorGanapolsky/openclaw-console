@@ -63,6 +63,7 @@ jobs:
     needs: [gate]
     if: needs.gate.outputs.should_run == 'true'
     runs-on: macos-15
+    timeout-minutes: 45
     environment: production
     steps:
       - uses: actions/checkout@v5
@@ -147,7 +148,34 @@ jobs:
         run: bundle exec fastlane setup
         working-directory: ios/OpenClawConsole
 
-      - name: Build and upload to TestFlight
+      - name: Archive IPA for TestFlight
+        timeout-minutes: 30
+        env:
+          CI: "true"
+          FASTLANE_SKIP_UPDATE_CHECK: "true"
+          FASTLANE_DISABLE_COLORS: "true"
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: "6"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_INTERNAL_GROUPS || secrets.TESTFLIGHT_GROUPS || 'Internal Testers' }}
+          TESTFLIGHT_DISTRIBUTE_EXTERNAL: "false"
+          TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: "false"
+          TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "true"
+          TESTFLIGHT_ARCHIVE_ONLY: "true"
+        run: |
+          set -Eeuo pipefail
+          bundle exec fastlane beta --verbose 2>&1 | tee fastlane-archive.log
+        working-directory: ios/OpenClawConsole
+
+      - name: Upload archived IPA to TestFlight
+        timeout-minutes: 15
         env:
           CI: "true"
           FASTLANE_SKIP_UPDATE_CHECK: "true"
@@ -164,15 +192,42 @@ jobs:
           TESTFLIGHT_DISTRIBUTE_EXTERNAL: "false"
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: "false"
           TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "true"
-        run: bundle exec fastlane beta
+          TESTFLIGHT_UPLOAD_ONLY: "true"
+        run: |
+          set -Eeuo pipefail
+          bundle exec fastlane beta --verbose 2>&1 | tee fastlane-upload.log
         working-directory: ios/OpenClawConsole
 
-      - name: Upload IPA artifact
+      - name: Collect iOS distribution logs
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p ios/OpenClawConsole/build-logs/gym
+          if [ -d "$HOME/Library/Logs/gym" ]; then
+            cp -R "$HOME/Library/Logs/gym/." ios/OpenClawConsole/build-logs/gym/
+          fi
+
+      - name: Show iOS distribution log tail
+        if: failure()
+        run: |
+          set -euo pipefail
+          for log in ios/OpenClawConsole/fastlane-archive.log ios/OpenClawConsole/fastlane-upload.log; do
+            if [ -f "$log" ]; then
+              echo "===== tail $log ====="
+              tail -n 200 "$log"
+            fi
+          done
+
+      - name: Upload iOS distribution artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-ipa-internal
-          path: ios/OpenClawConsole/OpenClawConsole.ipa
+          name: ios-distribution-internal
+          path: |
+            ios/OpenClawConsole/OpenClawConsole.ipa
+            ios/OpenClawConsole/fastlane-archive.log
+            ios/OpenClawConsole/fastlane-upload.log
+            ios/OpenClawConsole/build-logs
           if-no-files-found: warn
 
   android-firebase-internal:
