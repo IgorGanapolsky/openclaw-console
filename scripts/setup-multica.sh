@@ -38,7 +38,7 @@ MULTICA_WEBHOOK_SECRET=${MULTICA_WEBHOOK_SECRET}
 OPENCLAW_DEV_TOKEN=${OPENCLAW_DEV_TOKEN}
 
 # Database credentials (change these for production!)
-POSTGRES_PASSWORD=multica_secure_pwd_$(openssl rand -hex 8)
+POSTGRES_PASSWORD=$(openssl rand -hex 16)
 EOF
 
 echo "📄 Created .env.multica configuration file"
