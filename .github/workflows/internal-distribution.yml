@@ -160,6 +160,10 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_INTERNAL_GROUPS || secrets.TESTFLIGHT_GROUPS || 'Internal Testers' }}
+          TESTFLIGHT_DISTRIBUTE_EXTERNAL: "false"
+          TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: "false"
+          TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "true"
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
