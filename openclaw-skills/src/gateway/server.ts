@@ -42,6 +42,7 @@ export interface GatewayServer {
   tokenManager: TokenManager;
   containerManager: DockerContainerManager;
   mcpManager: McpManager;
+  setMulticaBridge: (bridge: any) => void;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -326,6 +327,91 @@ export function createGatewayServer(
     }
   });
 
+  // ── Multica Integration Webhooks ──────────────────────────────────────────
+
+  // Webhook endpoint for Multica events (HIGH-ROI integration)
+  let multicaBridge: any = null; // Will be injected after server creation
+
+  app.post('/api/webhooks/multica', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    try {
+      if (!multicaBridge) {
+        res.status(503).json({ error: { code: 5030, message: 'Multica bridge not initialized' } });
+        return;
+      }
+
+      // Verify webhook signature if secret is configured
+      const signature = req.headers['x-multica-signature'] as string;
+      const payload = req.body;
+
+      // Basic webhook verification (simplified for MVP)
+      if (config.enableMulticaBridge && signature) {
+        // TODO: Implement proper HMAC signature verification
+        console.debug('[webhook] Multica webhook received with signature:', signature?.substring(0, 10) + '...');
+      }
+
+      const event = JSON.parse(payload.toString());
+      console.info(`[webhook] Multica event: ${event.type} for ${event.data?.id || 'unknown'}`);
+
+      switch (event.type) {
+        case 'issue.updated':
+          await multicaBridge.syncIssueToTask(event.data);
+          break;
+        case 'execution.started':
+        case 'execution.completed':
+        case 'execution.failed':
+          await multicaBridge.handleMulticaExecution(event.data);
+          break;
+        case 'agent.status_changed':
+          // Sync agent status to OpenClaw
+          await state.updateAgentStatus(event.data.id, event.data.status);
+          wsManager.broadcastToSubscribers(event.data.id, 'agent_update', event.data);
+          break;
+        default:
+          console.debug(`[webhook] Unhandled Multica event type: ${event.type}`);
+      }
+
+      res.json({ ok: true, processed: true });
+    } catch (error) {
+      console.error('[webhook] Multica webhook processing failed:', error);
+      res.status(500).json({ error: { code: 5000, message: 'Webhook processing failed' } });
+    }
+  });
+
+  // Multica structured prompting endpoint (HIGH-ROI for mobile apps)
+  app.post('/api/multica/issues', auth, async (req: Request, res: Response) => {
+    try {
+      if (!multicaBridge) {
+        res.status(503).json({ error: { code: 5030, message: 'Multica bridge not initialized' } });
+        return;
+      }
+
+      const issueRequest = req.body;
+      if (!issueRequest.title || !issueRequest.prompt || !issueRequest.agent_id) {
+        res.status(400).json({ error: { code: 4000, message: 'title, prompt, and agent_id are required' } });
+        return;
+      }
+
+      const issue = await multicaBridge.createStructuredPrompt({
+        title: issueRequest.title,
+        prompt: issueRequest.prompt,
+        agent_id: issueRequest.agent_id,
+        priority: issueRequest.priority || 'Medium',
+        schedule: issueRequest.schedule,
+        tags: issueRequest.tags || []
+      });
+
+      res.json({ ok: true, issue });
+    } catch (error) {
+      console.error('[multica] Issue creation failed:', error);
+      res.status(500).json({ error: { code: 5000, message: 'Issue creation failed' } });
+    }
+  });
+
+  // Utility function to inject Multica bridge after server creation
+  function setMulticaBridge(bridge: any) {
+    multicaBridge = bridge;
+  }
+
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
   const httpServer = http.createServer(app);
@@ -362,6 +448,7 @@ export function createGatewayServer(
     tokenManager,
     containerManager,
     mcpManager,
+    setMulticaBridge,
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {

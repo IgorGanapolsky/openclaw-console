@@ -64,16 +64,12 @@ struct MainTabView: View {
                 .badge(incidentListVM?.openCount ?? 0)
                 .tag(Tab.incidents)
 
-                // MARK: Loops Tab
+                // MARK: Prompts Tab (HIGH-ROI Multica Integration)
                 NavigationStack {
-                    // if let vm = loopListVM {
-                    //     LoopListView(viewModel: vm)
-                    // } else {
-                    ProgressView("Loops tab temporarily disabled")
-                    // }
+                    StructuredPromptsListView()
                 }
                 .tabItem {
-                    Label("Loops", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Prompts", systemImage: "doc.text.below.ecg")
                 }
                 .tag(Tab.loops)
 

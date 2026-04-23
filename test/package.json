@@ -1,0 +1,12 @@
+{
+  "name": "mock-multica",
+  "version": "1.0.0",
+  "description": "Mock Multica service for OpenClaw integration testing",
+  "main": "mock-multica.js",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

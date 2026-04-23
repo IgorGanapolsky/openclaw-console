@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package.json if exists, otherwise create minimal one
+COPY test/package.json* ./
+RUN if [ ! -f package.json ]; then \
+  echo '{"name":"mock-multica","version":"1.0.0","dependencies":{"express":"^4.18.0"}}' > package.json; \
+fi
+
+# Install dependencies
+RUN npm install
+
+# Copy mock service
+COPY test/mock-multica.js ./
+
+EXPOSE 8080
+
+CMD ["node", "mock-multica.js"]

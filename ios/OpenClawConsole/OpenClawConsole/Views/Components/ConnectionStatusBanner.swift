@@ -4,6 +4,7 @@
 
 import SwiftUI
 import Foundation
+import os
 
 struct ConnectionStatusBanner: View {
     let status: GatewayConnectionStatus
@@ -143,7 +144,7 @@ struct ConnectionStatusBanner: View {
 
         // You would implement the reconnection logic here
         // For now, this is a placeholder
-        print("Attempting to reconnect to \(gateway.name)...")
+        Logger().info("Attempting to reconnect to \(gateway.name)...")
     }
 }
 

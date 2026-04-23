@@ -1,6 +1,6 @@
 {
-  "historyOffset": 811826,
-  "historySize": 811826,
+  "historyOffset": 858540,
+  "historySize": 858540,
   "processedIds": [
     "claude-history:88bb0d785622435569cabe3ad2b8e32862dcb396809e53b53a1cd0dee194ea14",
     "claude-history:849572a638755ac83f101b3187caa36c3c5fab043e318900223a3eb80d0869ec",
@@ -22,7 +22,8 @@
     "claude-history:dfb91f49d3bd5251a54cc0a7bd37fb734aaf88f05fea7a0823a3af13acb30934",
     "claude-history:42750f66f5f6afa90270e6abe7da195b0cbb33b1276508199c2402165c305510",
     "claude-history:21f5a509c67c6b72e58e1bdb47798146bf32dfe913f3de060898ee378063c1ff",
-    "claude-history:754c499a79f9a49fc506b33d652540ac1bdfa6f5ddee2464132d22784fb0d432"
+    "claude-history:754c499a79f9a49fc506b33d652540ac1bdfa6f5ddee2464132d22784fb0d432",
+    "claude-history:0edcb1ed6c8d5c137a10ad05fec7539685507bad89ae6a8952703762c2bdbf73"
   ],
-  "updatedAt": "2026-04-21T18:50:48.939Z"
+  "updatedAt": "2026-04-23T13:53:07.397Z"
 }

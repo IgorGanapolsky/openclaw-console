@@ -8,16 +8,16 @@
     "warn",
     "deny"
   ],
-  "exampleCount": 35,
+  "exampleCount": 36,
   "labelCounts": {
-    "allow": 9,
+    "allow": 10,
     "recall": 20,
     "verify": 6,
     "warn": 0,
     "deny": 0
   },
   "labelTokenTotals": {
-    "allow": 98,
+    "allow": 103,
     "recall": 140,
     "verify": 157,
     "warn": 0,
@@ -25,9 +25,9 @@
   },
   "labelTokenCounts": {
     "allow": {
-      "kind_feedback": 3,
-      "signal_positive": 3,
-      "tool_unknown": 3,
+      "kind_feedback": 4,
+      "signal_positive": 4,
+      "tool_unknown": 4,
       "skill_nanoclaw_isolation_implementation": 2,
       "cmdtok_implementation": 2,
       "cmdtok_nanoclaw": 2,
@@ -77,7 +77,9 @@
       "tool_unified_context": 2,
       "source_gates-engine": 3,
       "source_tool-latency": 3,
-      "tool_recall": 4
+      "tool_recall": 4,
+      "tag_claude-history-sync": 1,
+      "tag_auto-capture-fallback": 1
     },
     "recall": {
       "kind_feedback": 20,
@@ -206,27 +208,27 @@
   },
   "vocabularySize": 161,
   "metrics": {
-    "trainingAccuracy": 0.4643,
-    "holdoutAccuracy": 1,
+    "trainingAccuracy": 0.4828,
+    "holdoutAccuracy": 0.8571,
     "holdoutSize": 7,
-    "trainingExamples": 28
+    "trainingExamples": 29
   },
   "sourceCounts": {
-    "feedback": 29,
+    "feedback": 30,
     "audit": 6,
     "diagnostic": 0,
     "decision": 0
   },
-  "updatedAt": "2026-04-20T19:40:37.454Z",
+  "updatedAt": "2026-04-22T15:23:55.816Z",
   "labelMetrics": {
     "allow": {
-      "total": 0,
+      "total": 1,
       "correct": 0,
       "accuracy": 0
     },
     "recall": {
-      "total": 7,
-      "correct": 7,
+      "total": 6,
+      "correct": 6,
       "accuracy": 1
     },
     "verify": {
@@ -256,12 +258,12 @@
         "count": 6
       },
       {
-        "token": "tool_recall",
+        "token": "kind_feedback",
         "count": 4
       },
       {
-        "token": "cmdtok_including",
-        "count": 3
+        "token": "signal_positive",
+        "count": 4
       }
     ],
     "recall": [

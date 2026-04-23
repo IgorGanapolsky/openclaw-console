@@ -1,0 +1,7 @@
+🧪 Mock Multica Service running on port 8080
+Available endpoints:
+  GET  /api/health
+  GET  /api/agents
+  POST /api/issues
+  GET  /api/issues
+  And more...

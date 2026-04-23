@@ -15,6 +15,7 @@ import { TradingMonitorSkill } from './skills/trading-monitor.js';
 import { DailyBriefSkill } from './skills/daily-brief.js';
 import { GitClawAgentSkill } from './skills/gitclaw-agent.js';
 import { AGENT_IDS } from './config/agents.js';
+import { MulticaBridge, MulticaClient, createMulticaConfig, validateMulticaConfig } from './bridges/multica/index.js';
 
 async function main(): Promise<void> {
   console.info('='.repeat(60));
@@ -48,6 +49,41 @@ async function main(): Promise<void> {
 
   const gateway = createGatewayServer(DEFAULT_CONFIG, state);
   await gateway.start();
+
+  // ── 3.5. Initialize Multica Bridge (HIGH-ROI Integration) ───────────────
+
+  let multicaBridge: MulticaBridge | null = null;
+  if (DEFAULT_CONFIG.enableMulticaBridge) {
+    try {
+      console.info('[startup] Initializing Multica bridge...');
+
+      const multicaConfig = createMulticaConfig();
+      const configErrors = validateMulticaConfig(multicaConfig);
+
+      if (configErrors.length > 0) {
+        console.warn('[startup] Multica configuration errors:', configErrors);
+        console.warn('[startup] Multica bridge disabled');
+      } else {
+        const multicaClient = new MulticaClient(multicaConfig);
+        const connectionOk = await multicaClient.testConnection();
+
+        if (connectionOk) {
+          multicaBridge = new MulticaBridge(state, multicaConfig);
+          gateway.setMulticaBridge(multicaBridge);
+          console.info('[startup] ✅ Multica bridge connected and ready');
+          console.info(`[startup] Multica API: ${multicaConfig.multica_api_url}`);
+        } else {
+          console.warn('[startup] ❌ Multica connection failed - bridge disabled');
+          console.warn('[startup] Check MULTICA_API_URL and MULTICA_API_TOKEN');
+        }
+      }
+    } catch (error) {
+      console.warn('[startup] Multica bridge initialization failed:', error);
+      console.warn('[startup] Continuing without Multica integration');
+    }
+  } else {
+    console.info('[startup] Multica bridge disabled (ENABLE_MULTICA_BRIDGE=false)');
+  }
 
   // ── 4. MCP Ecosystem Setup ──────────────────────────────────────────────
 

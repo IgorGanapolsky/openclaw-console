@@ -1,0 +1,44 @@
+# Test Docker Compose for OpenClaw + Mock Multica Integration
+# Uses mock services to test the integration without requiring actual Multica
+
+version: '3.8'
+
+services:
+  # Mock Multica Backend (Simple Node.js API)
+  mock-multica:
+    build:
+      context: .
+      dockerfile: test/Dockerfile.mock-multica
+    container_name: mock-multica-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=test
+      - PORT=8080
+    networks:
+      - test-network
+
+  # OpenClaw Gateway with Multica integration
+  openclaw-gateway:
+    build:
+      context: ./openclaw-skills
+      dockerfile: Dockerfile.test
+    container_name: openclaw-gateway-test
+    environment:
+      - NODE_ENV=test
+      - PORT=18789
+      - MULTICA_API_URL=http://mock-multica:8080
+      - MULTICA_API_TOKEN=test-token
+      - ENABLE_MULTICA_BRIDGE=true
+      - LOAD_SEED_DATA=true
+    ports:
+      - "18789:18789"
+    depends_on:
+      - mock-multica
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
+    name: openclaw-test-network

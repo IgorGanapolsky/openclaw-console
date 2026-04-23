@@ -43,6 +43,8 @@ export interface GatewayConfig {
   localModelName: string | null;
   /** Local model status probe timeout in milliseconds */
   localModelTimeoutMs: number;
+  /** Enable Multica bridge integration */
+  enableMulticaBridge: boolean;
 }
 
 const DEFAULT_CONFIG: GatewayConfig = {
@@ -65,6 +67,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
   localModelBaseUrl: process.env['OPENCLAW_LOCAL_MODEL_BASE_URL'] ?? process.env['OPENAI_BASE_URL'] ?? null,
   localModelName: process.env['OPENCLAW_LOCAL_MODEL_NAME'] ?? null,
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
+  enableMulticaBridge: process.env['ENABLE_MULTICA_BRIDGE'] === 'true',
 };
 
 export function isApprovalPolicyPreset(raw: string): raw is ApprovalPolicyPreset {
