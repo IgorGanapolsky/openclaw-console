@@ -85,12 +85,16 @@ def resolve_next_build_number(api_key:, marketing_version:)
   next_build_number
 end
 
+def ios_project_root
+  File.expand_path("..", __dir__)
+end
+
 def configured_ipa_path
-  File.expand_path("OpenClawConsole.ipa", Dir.pwd)
+  File.expand_path("OpenClawConsole.ipa", ios_project_root)
 end
 
 def configured_buildlog_path
-  File.expand_path("build-logs", Dir.pwd)
+  File.expand_path("build-logs", ios_project_root)
 end
 
 def resolve_ci_match_keychain
@@ -199,7 +203,7 @@ platform :ios do
         build_app(
           scheme: "OpenClawConsole",
           export_method: "app-store",
-          output_directory: ".",
+          output_directory: ios_project_root,
           output_name: "OpenClawConsole.ipa",
           buildlog_path: configured_buildlog_path,
           build_timing_summary: true,
@@ -238,7 +242,7 @@ platform :ios do
         build_app(
           scheme: "OpenClawConsole",
           export_method: "app-store",
-          output_directory: ".",
+          output_directory: ios_project_root,
           output_name: "OpenClawConsole.ipa",
           buildlog_path: configured_buildlog_path,
           build_timing_summary: true,
