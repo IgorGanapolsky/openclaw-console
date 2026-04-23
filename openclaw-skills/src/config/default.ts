@@ -45,6 +45,8 @@ export interface GatewayConfig {
   localModelTimeoutMs: number;
   /** Enable Multica bridge integration */
   enableMulticaBridge: boolean;
+  /** Enable Anthropic Managed Agents hybrid execution */
+  enableManagedAgents: boolean;
 }
 
 const DEFAULT_CONFIG: GatewayConfig = {
@@ -68,6 +70,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
   localModelName: process.env['OPENCLAW_LOCAL_MODEL_NAME'] ?? null,
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
   enableMulticaBridge: process.env['ENABLE_MULTICA_BRIDGE'] === 'true',
+  enableManagedAgents: process.env['ENABLE_ANTHROPIC_MANAGED_AGENTS'] === 'true',
 };
 
 export function isApprovalPolicyPreset(raw: string): raw is ApprovalPolicyPreset {

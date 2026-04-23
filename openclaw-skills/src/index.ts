@@ -85,6 +85,47 @@ async function main(): Promise<void> {
     console.info('[startup] Multica bridge disabled (ENABLE_MULTICA_BRIDGE=false)');
   }
 
+  // ── 3.6. Initialize Anthropic Managed Agents (HIGH-ROI Integration) ─────
+
+  let hybridExecutor: any = null;
+  if (process.env.ENABLE_ANTHROPIC_MANAGED_AGENTS === 'true') {
+    try {
+      console.info('[startup] Initializing Anthropic Managed Agents integration...');
+
+      const { createManagedAgentsIntegration, validateManagedAgentsConfig } =
+        await import('./bridges/anthropic-managed/index.js');
+
+      const configValidation = validateManagedAgentsConfig();
+
+      if (!configValidation.valid) {
+        console.error('[startup] Managed agents configuration errors:', configValidation.errors);
+        console.warn('[startup] Managed agents integration disabled');
+      } else {
+        if (configValidation.warnings.length > 0) {
+          console.warn('[startup] Managed agents configuration warnings:', configValidation.warnings);
+        }
+
+        hybridExecutor = createManagedAgentsIntegration(state);
+
+        if (hybridExecutor) {
+          console.info('[startup] ✅ Anthropic Managed Agents integration ready');
+          console.info('[startup] Hybrid execution: Mac Mini + Cloud agents');
+
+          // Log initial metrics
+          const metrics = hybridExecutor.getExecutionMetrics();
+          console.info(`[startup] Daily budget: $${metrics.daily_budget_remaining_cents / 100} remaining`);
+        } else {
+          console.warn('[startup] ❌ Managed agents integration failed to initialize');
+        }
+      }
+    } catch (error) {
+      console.warn('[startup] Managed agents integration error:', error);
+      console.warn('[startup] Continuing with Mac Mini-only execution');
+    }
+  } else {
+    console.info('[startup] Anthropic Managed Agents disabled (ENABLE_ANTHROPIC_MANAGED_AGENTS=false)');
+  }
+
   // ── 4. MCP Ecosystem Setup ──────────────────────────────────────────────
 
   for (const mcpCfg of DEFAULT_CONFIG.mcpServers) {
