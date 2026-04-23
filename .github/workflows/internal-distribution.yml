@@ -149,7 +149,7 @@ jobs:
         working-directory: ios/OpenClawConsole
 
       - name: Archive IPA for TestFlight
-        timeout-minutes: 30
+        timeout-minutes: 60
         env:
           CI: "true"
           FASTLANE_SKIP_UPDATE_CHECK: "true"

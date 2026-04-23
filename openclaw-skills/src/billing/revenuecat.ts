@@ -243,8 +243,6 @@ export function hasProEntitlement(customerInfo: CustomerInfo): boolean {
  * Check premium feature access
  */
 export async function checkPremiumAccess(userId: string, feature: string): Promise<boolean> {
-  const status = await getSubscriptionStatus(userId);
-
   // Free tier features (always allowed)
   const freeTierFeatures = [
     'basic_approvals',
@@ -266,6 +264,7 @@ export async function checkPremiumAccess(userId: string, feature: string): Promi
   ];
 
   if (proFeatures.includes(feature)) {
+    const status = await getSubscriptionStatus(userId);
     return status.isPro && status.hasActiveSubscription;
   }
 

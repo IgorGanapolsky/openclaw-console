@@ -93,18 +93,36 @@ describe('RevenueCat Billing', () => {
 
   describe('checkPremiumAccess', () => {
     it('should allow free tier features without subscription', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn(() => Promise.reject(new Error('fetch should not be called'))) as any;
+
       const hasAccess = await checkPremiumAccess('test-user', 'basic_approvals');
       expect(hasAccess).toBe(true);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      global.fetch = originalFetch;
     });
 
     it('should allow free tier features: agent monitoring', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn(() => Promise.reject(new Error('fetch should not be called'))) as any;
+
       const hasAccess = await checkPremiumAccess('test-user', 'agent_monitoring');
       expect(hasAccess).toBe(true);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      global.fetch = originalFetch;
     });
 
     it('should allow free tier features: simple notifications', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn(() => Promise.reject(new Error('fetch should not be called'))) as any;
+
       const hasAccess = await checkPremiumAccess('test-user', 'simple_notifications');
       expect(hasAccess).toBe(true);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      global.fetch = originalFetch;
     });
 
     it('should deny pro features without subscription', async () => {
@@ -119,8 +137,14 @@ describe('RevenueCat Billing', () => {
     });
 
     it('should allow unknown features (default to free)', async () => {
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn(() => Promise.reject(new Error('fetch should not be called'))) as any;
+
       const hasAccess = await checkPremiumAccess('test-user', 'unknown_feature');
       expect(hasAccess).toBe(true);
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      global.fetch = originalFetch;
     });
   });
 

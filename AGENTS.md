@@ -83,6 +83,14 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 1. `develop` → `release/vX.Y.Z` → TestFlight + Google Play → tag on `main` → merge back to `develop`
 2. Hotfix: `main` → `hotfix/vX.Y.Z` → stores → tag on `main` → merge to `develop`
 
+## Session Directive: PR Management & System Hygiene
+
+1. Inspect all open PRs and report merge readiness with evidence.
+2. Identify orphan branches and classify each one as active, merge candidate, stale, or delete.
+3. Merge only PRs that are verified green and review-ready.
+4. Clean up stale branches, redundant worktrees, and obvious repo hygiene issues.
+5. Verify CI on `develop` and `main` before claiming readiness.
+
 ## Commands
 
 ```bash
