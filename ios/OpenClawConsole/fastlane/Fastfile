@@ -1,4 +1,5 @@
 require "fileutils"
+require "shellwords"
 
 default_platform(:ios)
 
@@ -139,10 +140,12 @@ platform :ios do
 
       if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"] && api_key
         UI.message("CI detected - using match-managed App Store signing")
+        keychain_name = "fastlane_tmp_keychain"
+        keychain_password = "temp_password"
 
         create_keychain(
-          name: "fastlane_tmp_keychain",
-          password: "temp_password",
+          name: keychain_name,
+          password: keychain_password,
           default_keychain: false,
           unlock: true,
           timeout: 3600,
@@ -154,8 +157,16 @@ platform :ios do
           app_identifier: ["com.openclaw.console"],
           readonly: true,
           api_key: api_key,
-          keychain_name: "fastlane_tmp_keychain",
-          keychain_password: "temp_password"
+          keychain_name: keychain_name,
+          keychain_password: keychain_password
+        )
+
+        # codesign can hang on CI when the imported key lacks an updated partition list.
+        sh(
+          "security set-key-partition-list " \
+          "-S apple-tool:,apple:,codesign: -s " \
+          "-k #{keychain_password.shellescape} " \
+          "#{File.expand_path("~/Library/Keychains/#{keychain_name}-db").shellescape}"
         )
 
         app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
