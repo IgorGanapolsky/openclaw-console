@@ -11,7 +11,6 @@ import type { ApprovalRequest, ApprovalResponse, ActionType, RiskLevel, GitOpera
 import type { IStateManager } from '../gateway/state-interface.js';
 import type { GatewayConfig } from '../config/default.js';
 import { evaluateApprovalPolicy } from '../gateway/policy.js';
-import { formatters } from '../utils/message-formatter.js';
 
 export interface DangerousActionOptions {
   agentId: string;

@@ -105,7 +105,7 @@ async function main(): Promise<void> {
           console.warn('[startup] Managed agents configuration warnings:', configValidation.warnings);
         }
 
-        hybridExecutor = createManagedAgentsIntegration(state);
+        hybridExecutor = createManagedAgentsIntegration();
 
         if (hybridExecutor) {
           console.info('[startup] ✅ Anthropic Managed Agents integration ready');

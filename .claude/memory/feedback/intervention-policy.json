@@ -8,17 +8,17 @@
     "warn",
     "deny"
   ],
-  "exampleCount": 36,
+  "exampleCount": 47,
   "labelCounts": {
-    "allow": 10,
-    "recall": 20,
+    "allow": 20,
+    "recall": 21,
     "verify": 6,
     "warn": 0,
     "deny": 0
   },
   "labelTokenTotals": {
-    "allow": 103,
-    "recall": 140,
+    "allow": 143,
+    "recall": 147,
     "verify": 157,
     "warn": 0,
     "deny": 0
@@ -72,23 +72,24 @@
       "text_system": 1,
       "text_self-correction": 1,
       "text_schema": 1,
-      "kind_audit": 6,
-      "decision_allow": 6,
-      "tool_unified_context": 2,
-      "source_gates-engine": 3,
-      "source_tool-latency": 3,
+      "kind_audit": 16,
+      "decision_allow": 16,
+      "tool_unified_context": 4,
+      "source_gates-engine": 8,
+      "source_tool-latency": 8,
       "tool_recall": 4,
       "tag_claude-history-sync": 1,
-      "tag_auto-capture-fallback": 1
+      "tag_auto-capture-fallback": 1,
+      "tool_track_action": 8
     },
     "recall": {
-      "kind_feedback": 20,
-      "signal_negative": 20,
-      "tool_unknown": 20,
-      "cmdtok_down": 20,
-      "tag_claude-history-sync": 20,
-      "tag_auto-capture-fallback": 20,
-      "text_down": 20
+      "kind_feedback": 21,
+      "signal_negative": 21,
+      "tool_unknown": 21,
+      "cmdtok_down": 21,
+      "tag_claude-history-sync": 21,
+      "tag_auto-capture-fallback": 21,
+      "text_down": 21
     },
     "verify": {
       "kind_feedback": 6,
@@ -206,29 +207,29 @@
     "warn": {},
     "deny": {}
   },
-  "vocabularySize": 161,
+  "vocabularySize": 162,
   "metrics": {
-    "trainingAccuracy": 0.4828,
-    "holdoutAccuracy": 0.8571,
-    "holdoutSize": 7,
-    "trainingExamples": 29
+    "trainingAccuracy": 0.5263,
+    "holdoutAccuracy": 0.1111,
+    "holdoutSize": 9,
+    "trainingExamples": 38
   },
   "sourceCounts": {
-    "feedback": 30,
-    "audit": 6,
+    "feedback": 31,
+    "audit": 16,
     "diagnostic": 0,
     "decision": 0
   },
-  "updatedAt": "2026-04-22T15:23:55.816Z",
+  "updatedAt": "2026-04-23T19:16:51.454Z",
   "labelMetrics": {
     "allow": {
-      "total": 1,
+      "total": 8,
       "correct": 0,
       "accuracy": 0
     },
     "recall": {
-      "total": 6,
-      "correct": 6,
+      "total": 1,
+      "correct": 1,
       "accuracy": 1
     },
     "verify": {
@@ -251,37 +252,37 @@
     "allow": [
       {
         "token": "decision_allow",
-        "count": 6
+        "count": 16
       },
       {
         "token": "kind_audit",
-        "count": 6
+        "count": 16
       },
       {
-        "token": "kind_feedback",
-        "count": 4
+        "token": "source_gates-engine",
+        "count": 8
       },
       {
-        "token": "signal_positive",
-        "count": 4
+        "token": "source_tool-latency",
+        "count": 8
       }
     ],
     "recall": [
       {
         "token": "cmdtok_down",
-        "count": 20
+        "count": 21
       },
       {
         "token": "kind_feedback",
-        "count": 20
+        "count": 21
       },
       {
         "token": "signal_negative",
-        "count": 20
+        "count": 21
       },
       {
         "token": "tag_auto-capture-fallback",
-        "count": 20
+        "count": 21
       }
     ],
     "verify": [

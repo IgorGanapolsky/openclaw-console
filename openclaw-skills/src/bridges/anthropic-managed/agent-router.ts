@@ -21,7 +21,6 @@ export interface AgentRoutingDecision {
 export class HybridAgentRouter {
   constructor(
     private macMiniCapacity: { cpu_cores: number; ram_gb: number; current_load: number },
-    private anthropicConfig: { api_key: string; tier: 'standard' | 'enterprise' },
     private costLimits: { daily_budget_cents: number; current_spend_cents: number }
   ) {}
 
@@ -209,7 +208,7 @@ export class ManagedAgentClient {
         throw new Error(`Managed agent request failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result = await response.json() as any;
 
       return {
         success: true,
@@ -255,7 +254,7 @@ export class ManagedAgentClient {
         throw new Error(`Failed to fetch managed agents: ${response.statusText}`);
       }
 
-      return await response.json();
+      return await response.json() as any;
     } catch (error) {
       console.error('[managed-agents] Failed to list available agents:', error);
       return [];

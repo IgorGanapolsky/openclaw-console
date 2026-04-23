@@ -7,14 +7,12 @@ export { HybridAgentRouter, ManagedAgentClient } from './agent-router.js';
 export { HybridExecutionEngine } from './hybrid-executor.js';
 
 import { HybridExecutionEngine, type HybridExecutionConfig } from './hybrid-executor.js';
-import type { StateManager } from '../../gateway/state.js';
 
 /**
  * Factory function to create managed agents integration
  * Integrates seamlessly with existing OpenClaw infrastructure
  */
 export function createManagedAgentsIntegration(
-  state: StateManager,
   config?: Partial<HybridExecutionConfig>
 ): HybridExecutionEngine | null {
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_MANAGED_AGENT_KEY;
@@ -52,7 +50,7 @@ export function createManagedAgentsIntegration(
   };
 
   try {
-    const engine = new HybridExecutionEngine(state, mergedConfig);
+    const engine = new HybridExecutionEngine(mergedConfig);
     console.info('[managed-agents] ✅ Hybrid execution engine initialized');
     console.info(`[managed-agents] Daily budget: $${mergedConfig.cost_management.daily_budget_cents / 100}`);
     console.info(`[managed-agents] Cost mode: ${mergedConfig.routing_preferences.cost_optimization_mode}`);
