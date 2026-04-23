@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageChops, ImageDraw
 except ImportError as exc:
     raise SystemExit(
         "Pillow is required. Install it with `python3 -m pip install pillow`."
@@ -118,6 +118,22 @@ def png_bytes(image: Image.Image) -> bytes:
     return buffer.getvalue()
 
 
+def files_match(generated_path: Path, destination: Path) -> bool:
+    if generated_path.suffix.lower() == ".png":
+        generated_image = Image.open(generated_path).convert("RGBA")
+        destination_image = Image.open(destination).convert("RGBA")
+        if generated_image.size != destination_image.size:
+            return False
+        return ImageChops.difference(generated_image, destination_image).getbbox() is None
+
+    if generated_path.suffix.lower() in {".xml", ".json", ".txt"}:
+        generated_text = generated_path.read_text().replace("\r\n", "\n")
+        destination_text = destination.read_text().replace("\r\n", "\n")
+        return generated_text == destination_text
+
+    return generated_path.read_bytes() == destination.read_bytes()
+
+
 def generate_outputs(target_root: Path) -> list[Path]:
     generated: list[Path] = []
     source = load_source_icon()
@@ -187,7 +203,7 @@ def check_outputs(generated_paths: Iterable[Path], generated_root: Path) -> int:
         if not destination.exists():
             mismatches.append(f"missing {destination.relative_to(ROOT)}")
             continue
-        if generated_path.read_bytes() != destination.read_bytes():
+        if not files_match(generated_path, destination):
             mismatches.append(f"out-of-sync {destination.relative_to(ROOT)}")
 
     if mismatches:
