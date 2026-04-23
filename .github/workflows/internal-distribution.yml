@@ -88,13 +88,16 @@ jobs:
             fi
           done
 
-      - name: Preflight release checks (iOS)
-        run: bash scripts/preflight-release.sh --platform ios --layer 1
-
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+
+      - name: Install Python preflight dependencies
+        run: python3 -m pip install --upgrade pillow
+
+      - name: Preflight release checks (iOS)
+        run: bash scripts/preflight-release.sh --platform ios --layer 1
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -274,6 +277,14 @@ jobs:
           fi
 
           echo "✅ Firebase auth method: $AUTH_METHOD"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Python preflight dependencies
+        run: python3 -m pip install --upgrade pillow
 
       - name: Preflight release checks (Android)
         run: bash scripts/preflight-release.sh --platform android --layer 1
