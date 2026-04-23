@@ -84,24 +84,41 @@ def main():
     certificates = cert_data.get('data', [])
     print(f"📊 Found {len(certificates)} certificates")
 
-    # Filter iOS certificates
+    # Show all certificate types first
+    print("📋 Certificate types found:")
+    cert_types = {}
+    for cert in certificates:
+        cert_type = cert['attributes']['certificateType']
+        cert_name = cert['attributes']['name']
+        if cert_type not in cert_types:
+            cert_types[cert_type] = []
+        cert_types[cert_type].append(cert_name)
+
+    for cert_type, names in cert_types.items():
+        print(f"   {cert_type}: {len(names)} certificates")
+        for name in names[:3]:  # Show first 3 names
+            print(f"     - {name}")
+        if len(names) > 3:
+            print(f"     ... and {len(names) - 3} more")
+
+    # Filter iOS certificates (use the actual certificate types we found)
     ios_certs = []
     for cert in certificates:
         cert_type = cert['attributes']['certificateType']
-        if cert_type in ['IOS_DISTRIBUTION', 'IOS_DEVELOPMENT']:
+        if cert_type in ['DISTRIBUTION', 'DEVELOPMENT']:
             ios_certs.append(cert)
 
     print(f"🎯 Found {len(ios_certs)} iOS certificates")
 
-    if len(ios_certs) <= 3:
+    if len(ios_certs) <= 5:
         print("✅ Certificate count is acceptable, no cleanup needed")
         return True
 
     # Sort by creation date (keep newest)
     ios_certs.sort(key=lambda x: x['attributes']['expirationDate'], reverse=True)
 
-    # Delete oldest certificates (keep 2 newest)
-    certs_to_delete = ios_certs[2:]
+    # Delete oldest certificates (keep 3 newest)
+    certs_to_delete = ios_certs[3:]
 
     deleted_count = 0
     for cert in certs_to_delete:

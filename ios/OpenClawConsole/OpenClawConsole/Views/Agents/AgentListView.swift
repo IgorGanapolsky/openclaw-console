@@ -7,6 +7,9 @@ import SwiftUI
 struct AgentListView: View {
     @Bindable var viewModel: AgentListViewModel
     @EnvironmentObject private var webSocket: WebSocketService
+    @Environment(GatewayManager.self) private var gatewayManager
+    @Environment(ApprovalViewModel.self) private var approvalViewModel
+    @State private var connectionStatus: GatewayConnectionStatus = .unknown
 
     var body: some View {
         Group {
@@ -39,15 +42,33 @@ struct AgentListView: View {
     // MARK: - Agent List
 
     private var agentList: some View {
-        List(viewModel.filteredAgents) { agent in
-            NavigationLink(value: agent) {
-                AgentRow(agent: agent)
+        VStack(spacing: 0) {
+            // Connection status banner
+            ConnectionStatusBanner(status: connectionStatus)
+
+            // Approval banner
+            if approvalViewModel.hasPendingApprovals {
+                ApprovalBannerView()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
             }
-            .frame(minHeight: 44)
+
+            // Agent list
+            List(viewModel.filteredAgents) { agent in
+                NavigationLink(value: agent) {
+                    AgentRow(agent: agent)
+                }
+            }
+            .listStyle(.plain)
+            .navigationDestination(for: Agent.self) { agent in
+                AgentDetailView(agent: agent)
+            }
         }
-        .listStyle(.insetGrouped)
-        .navigationDestination(for: Agent.self) { agent in
-            AgentDetailView(agent: agent)
+        .onAppear {
+            updateConnectionStatus()
+        }
+        .onChange(of: gatewayManager.activeGateway) { _, _ in
+            updateConnectionStatus()
         }
     }
 
@@ -80,23 +101,33 @@ struct AgentListView: View {
                 HStack(spacing: 4) {
                     StatusDot(status: .online)
                     Text("\(viewModel.onlineCount)")
-                        .font(.caption2.weight(.medium))
+                        .font(.openClawLabelSmall)
                 }
             }
             if viewModel.busyCount > 0 {
                 HStack(spacing: 4) {
                     StatusDot(status: .busy)
                     Text("\(viewModel.busyCount)")
-                        .font(.caption2.weight(.medium))
+                        .font(.openClawLabelSmall)
                 }
             }
             if viewModel.offlineCount > 0 {
                 HStack(spacing: 4) {
                     StatusDot(status: .offline)
                     Text("\(viewModel.offlineCount)")
-                        .font(.caption2.weight(.medium))
+                        .font(.openClawLabelSmall)
                 }
             }
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func updateConnectionStatus() {
+        if let gateway = gatewayManager.activeGateway {
+            connectionStatus = gatewayManager.connectionStatus(for: gateway)
+        } else {
+            connectionStatus = .unknown
         }
     }
 }
@@ -107,45 +138,87 @@ private struct AgentRow: View {
     let agent: Agent
 
     var body: some View {
-        HStack(spacing: 12) {
-            StatusDot(status: agent.status, size: 10)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                // Leading: Status dot
+                StatusDot(status: agent.status, size: 10)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(agent.name)
-                        .font(.headline)
-                    if !agent.workspace.isEmpty {
-                        Text(agent.workspace)
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.tertiarySystemBackground), in: Capsule())
+                // Content: Main info
+                VStack(alignment: .leading, spacing: 4) {
+                    // Headline: Agent name with status
+                    HStack(spacing: 8) {
+                        Text(agent.name)
+                            .font(.openClawTitleMedium)
+                            .fontWeight(.medium)
+                    }
+
+                    // Supporting: Description
+                    Text(agent.description)
+                        .font(.openClawBodyMedium)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+
+                    // Supporting: Metadata row with icons
+                    HStack(spacing: 12) {
+                        // Workspace
+                        if !agent.workspace.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "folder")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                                Text(agent.workspace)
+                                    .font(.openClawLabelMedium)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Active tasks
+                        if agent.activeTasks > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.square")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.blue)
+                                Text("\(agent.activeTasks) active")
+                                    .font(.openClawLabelMedium)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+
+                        // Pending approvals
+                        if agent.pendingApprovals > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.severityWarning)
+                                Text("\(agent.pendingApprovals) approval\(agent.pendingApprovals == 1 ? "" : "s")")
+                                    .font(.openClawLabelMedium)
+                                    .foregroundStyle(Color.severityWarning)
+                            }
+                        }
+
+                        Spacer()
                     }
                 }
 
-                Text(agent.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-
-                HStack(spacing: 10) {
-                    if agent.activeTasks > 0 {
-                        Label("\(agent.activeTasks) task\(agent.activeTasks == 1 ? "" : "s")",
-                              systemImage: "checklist")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
-                    }
-                    if agent.pendingApprovals > 0 {
-                        Label("\(agent.pendingApprovals)",
-                              systemImage: "exclamationmark.circle.fill")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.orange)
-                    }
+                // Trailing: Last active time and chevron
+                VStack(alignment: .trailing, spacing: 4) {
                     TimeAgoText(date: agent.lastActive)
+                        .font(.openClawLabelSmall)
+                        .foregroundStyle(.tertiary)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.quaternary)
                 }
             }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+
+            // Divider
+            Divider()
+                .padding(.leading, 44) // Align with content after status dot
         }
-        .padding(.vertical, 4)
+        .background(Color(.systemBackground))
+        .contentShape(Rectangle()) // Make entire row tappable
     }
 }

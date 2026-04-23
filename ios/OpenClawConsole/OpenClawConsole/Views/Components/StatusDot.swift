@@ -12,9 +12,9 @@ struct StatusDot: View {
 
     var color: Color {
         switch status {
-        case .online: return .green
-        case .busy: return .yellow
-        case .offline: return Color(.systemGray3)
+        case .online: return .statusOnline
+        case .busy: return .statusBusy
+        case .offline: return .statusOffline
         }
     }
 
@@ -34,10 +34,10 @@ struct ConnectionStatusDot: View {
 
     var color: Color {
         switch status {
-        case .connected: return .green
-        case .failed: return .red
-        case .checking: return .yellow
-        case .unknown: return Color(.systemGray3)
+        case .connected: return .statusOnline
+        case .failed: return .severityCritical
+        case .checking: return .statusBusy
+        case .unknown: return .statusOffline
         }
     }
 

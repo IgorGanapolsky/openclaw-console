@@ -30,9 +30,9 @@ enum IncidentSeverity: String, Codable, CaseIterable {
 
     var color: Color {
         switch self {
-        case .critical: return .red
-        case .warning: return .orange
-        case .info: return .blue
+        case .critical: return .severityCritical
+        case .warning: return .severityWarning
+        case .info: return .severityInfo
         }
     }
 }

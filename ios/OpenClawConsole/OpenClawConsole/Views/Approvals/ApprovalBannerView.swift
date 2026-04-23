@@ -16,7 +16,7 @@ struct ApprovalBannerView: View {
                     .foregroundStyle(.white)
 
                 Text(bannerText)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.openClawTitleSmall)
                     .foregroundStyle(.white)
 
                 Spacer()
@@ -29,8 +29,8 @@ struct ApprovalBannerView: View {
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.orange)
-                    .shadow(color: .orange.opacity(0.4), radius: 6, y: 3)
+                    .fill(Color.severityWarning)
+                    .shadow(color: Color.severityWarning.opacity(0.4), radius: 6, y: 3)
             )
         }
         .buttonStyle(.plain)
@@ -107,10 +107,10 @@ private struct ApprovalQueueRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(approval.title)
-                    .font(.headline)
+                    .font(.openClawTitleMedium)
                     .lineLimit(1)
                 Text(approval.agentName)
-                    .font(.subheadline)
+                    .font(.openClawBodyMedium)
                     .foregroundStyle(.secondary)
                 HStack {
                     Text(approval.actionType.displayName)

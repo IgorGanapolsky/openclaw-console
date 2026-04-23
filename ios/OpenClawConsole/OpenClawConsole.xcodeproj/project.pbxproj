@@ -22,6 +22,7 @@
 		4A71CA2536F12EF85385EA67 /* WebSocketMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C385C510F80CD1DC99D9FF1C /* WebSocketMessage.swift */; };
 		583576DE1E6079CE1FDF374D /* OpenClawConsoleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */; };
 		59EDA4E49DC3C2BD35B17F7E /* GatewayManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A9BFEF432C2C99D3AB2B64 /* GatewayManager.swift */; };
+		608EC3D05148BA0ADB059723 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD80575CB406AABBD4DAAB96 /* Theme.swift */; };
 		65F61482FA6A22CD31D73941 /* BridgeListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36AB1801F557A7EC7E992815 /* BridgeListViewModel.swift */; };
 		684A6ECC0C43B3C005409108 /* GatewayConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03D60699A05286D032BA41CA /* GatewayConnection.swift */; };
 		71A77654FEDAB4AD34F8C7AD /* Incident.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93CE694F3125DF7DF85A5C1B /* Incident.swift */; };
@@ -29,7 +30,9 @@
 		7B7DEA092D32601645BB358A /* NotificationActionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50027C50EE51DB620A077A06 /* NotificationActionHandler.swift */; };
 		7CD68F82EB8F9F585D8B8323 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 435D4B8D71B99ECDAA94875B /* SubscriptionService.swift */; };
 		834A119174506349F30E0334 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3999F387613A839206EB5B56 /* ContentView.swift */; };
+		85C9B0A833948BD6A658A62C /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CB3162BC876DC8ADF65BBBF /* Typography.swift */; };
 		86E92D78B4590725F53CEF47 /* ApprovalBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE8627C1FD4D7384D0F039D /* ApprovalBannerView.swift */; };
+		875E70E6E75A40C39B0A528C /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0819556C2E4A472E5EC43B2C /* Colors.swift */; };
 		8C36E210614A9D9FE9E414D7 /* IncidentListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F2D4D93012B1AF15CE032EF /* IncidentListViewModel.swift */; };
 		8DD21866F6A167E9B4DA0BBC /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2F9FF3A8CA3A0C5D1395632 /* NotificationService.swift */; };
 		953C3B052F95CC93A8040197 /* IncidentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B37EC455A5F78045FA8EA7A /* IncidentDetailView.swift */; };
@@ -38,6 +41,7 @@
 		A330FCFB0BA37C7C133E62C6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CED7B8B440732222DBF270DB /* Assets.xcassets */; };
 		A493D58690FC2CE687DA91D7 /* IncidentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3E2C6547FC111A0704755D8 /* IncidentListView.swift */; };
 		AC0FFC34FFACB1A930B10B57 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91ED0911899971B33856481 /* KeychainService.swift */; };
+		AD4EBE0459472006E280B8EC /* ConnectionStatusBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A3D76DAD244421EAD5B347A /* ConnectionStatusBanner.swift */; };
 		AFF4755AB8473B8C3FB0CD59 /* TimeAgoText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1974DC28FE46E8DE552AB153 /* TimeAgoText.swift */; };
 		B0C197E39F3BDB8A72EDAA7F /* TaskDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF8869C2C89DE90325B36537 /* TaskDetailViewModel.swift */; };
 		B492807AC771F83C9C5C4B00 /* LoopListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4B4348CD784C780DA154616 /* LoopListView.swift */; };
@@ -59,6 +63,7 @@
 
 /* Begin PBXFileReference section */
 		03D60699A05286D032BA41CA /* GatewayConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatewayConnection.swift; sourceTree = "<group>"; };
+		0819556C2E4A472E5EC43B2C /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		0C9AB1C4AF831D67E0658604 /* AgentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentListView.swift; sourceTree = "<group>"; };
 		0FB2D0C1CA37A1215F789DAE /* AddGatewayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddGatewayView.swift; sourceTree = "<group>"; };
 		16BEA5AD6F77FE5CBD437E1E /* AgentListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentListViewModel.swift; sourceTree = "<group>"; };
@@ -72,12 +77,14 @@
 		55AC5A64A5860DF199AAE16C /* LoopListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopListViewModel.swift; sourceTree = "<group>"; };
 		581A0864C079D5632FA9CC66 /* BridgeListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeListView.swift; sourceTree = "<group>"; };
 		5B37EC455A5F78045FA8EA7A /* IncidentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentDetailView.swift; sourceTree = "<group>"; };
+		5CB3162BC876DC8ADF65BBBF /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		5EE8627C1FD4D7384D0F039D /* ApprovalBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalBannerView.swift; sourceTree = "<group>"; };
 		654A4451670E3B268745438C /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		693C1589C4E7330AE88DCD42 /* TaskListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListViewModel.swift; sourceTree = "<group>"; };
 		6941C49BC9627180A9025CEB /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		6F2D4D93012B1AF15CE032EF /* IncidentListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentListViewModel.swift; sourceTree = "<group>"; };
 		7465BA19A6F55111388C81A8 /* ApprovalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalViewModel.swift; sourceTree = "<group>"; };
+		7A3D76DAD244421EAD5B347A /* ConnectionStatusBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStatusBanner.swift; sourceTree = "<group>"; };
 		7AF605A05582ADBC8D33C238 /* ApprovalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalRequest.swift; sourceTree = "<group>"; };
 		7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenClawConsoleApp.swift; sourceTree = "<group>"; };
 		842FD483A26BED5A85DC4F7C /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
@@ -97,6 +104,7 @@
 		C61E89ABC4C29C3008787294 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		C91ED0911899971B33856481 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		CADA3CC20D4CDDDEBDD0F5E4 /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
+		CD80575CB406AABBD4DAAB96 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		CED7B8B440732222DBF270DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D025F37633CB3007EC40F5FB /* Agent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Agent.swift; sourceTree = "<group>"; };
 		D2F9FF3A8CA3A0C5D1395632 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
@@ -173,6 +181,7 @@
 				7B66EE80BC958A294C6E1C52 /* OpenClawConsoleApp.swift */,
 				F9D50A5D1534369CB96C4286 /* Models */,
 				F845E0B17B0AF7DD02686BF0 /* Services */,
+				E48ED11BB51715C818E6075F /* Theme */,
 				1C7AFD5372E1A34B4B8D5CF0 /* ViewModels */,
 				0316CDEF9ADF932B23A91237 /* Views */,
 			);
@@ -248,6 +257,7 @@
 		A6267BD60FFBC7F3FC6C08AE /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				7A3D76DAD244421EAD5B347A /* ConnectionStatusBanner.swift */,
 				52ACE84DE106112376EC9414 /* ResourceLinkChip.swift */,
 				8A2AD462AAE57779B0DE9F4E /* SeverityBadge.swift */,
 				ADC76505A1ACB7BAEF914F07 /* StatusDot.swift */,
@@ -263,6 +273,16 @@
 				E3E2C6547FC111A0704755D8 /* IncidentListView.swift */,
 			);
 			path = Incidents;
+			sourceTree = "<group>";
+		};
+		E48ED11BB51715C818E6075F /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				0819556C2E4A472E5EC43B2C /* Colors.swift */,
+				CD80575CB406AABBD4DAAB96 /* Theme.swift */,
+				5CB3162BC876DC8ADF65BBBF /* Typography.swift */,
+			);
+			path = Theme;
 			sourceTree = "<group>";
 		};
 		E6769E232CBDC15EDA6FD49C /* Tasks */ = {
@@ -392,6 +412,8 @@
 				65F61482FA6A22CD31D73941 /* BridgeListViewModel.swift in Sources */,
 				9F737B7808C9CD05B42D4B9B /* ChatMessage.swift in Sources */,
 				02411DA368F00CCFB1B17CE1 /* ChatView.swift in Sources */,
+				875E70E6E75A40C39B0A528C /* Colors.swift in Sources */,
+				AD4EBE0459472006E280B8EC /* ConnectionStatusBanner.swift in Sources */,
 				834A119174506349F30E0334 /* ContentView.swift in Sources */,
 				0C1AE32553026B2D6E44BF70 /* FleetDashboardView.swift in Sources */,
 				276EA882F2F1AFAE8C718DBF /* FleetDashboardViewModel.swift in Sources */,
@@ -420,7 +442,9 @@
 				B0C197E39F3BDB8A72EDAA7F /* TaskDetailViewModel.swift in Sources */,
 				0BBA9EA593E3DDAC46089C23 /* TaskListView.swift in Sources */,
 				ED3EE759CA896EAA866F2020 /* TaskListViewModel.swift in Sources */,
+				608EC3D05148BA0ADB059723 /* Theme.swift in Sources */,
 				AFF4755AB8473B8C3FB0CD59 /* TimeAgoText.swift in Sources */,
+				85C9B0A833948BD6A658A62C /* Typography.swift in Sources */,
 				4A71CA2536F12EF85385EA67 /* WebSocketMessage.swift in Sources */,
 				1411E663C8A4209F050783A9 /* WebSocketService.swift in Sources */,
 			);
@@ -433,9 +457,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9GMM26JC5X;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = OpenClawConsole/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -451,9 +473,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 9GMM26JC5X;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = OpenClawConsole/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -500,7 +520,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1776726690;
+				CURRENT_PROJECT_VERSION = 260422134611;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -563,7 +583,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1776726690;
+				CURRENT_PROJECT_VERSION = 260422134611;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
