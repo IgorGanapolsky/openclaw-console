@@ -12,7 +12,6 @@
   ],
   "category": "integration",
   "dependencies": [
-    "@azure/msal-node",
     "@lancedb/lancedb",
     "@anthropic-ai/sdk",
     "@modelcontextprotocol/sdk"

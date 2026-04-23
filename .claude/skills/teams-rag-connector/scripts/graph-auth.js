@@ -17,7 +17,7 @@ if (_fs.existsSync(_envPath)) {
  *
  * Strategy (in priority order):
  *   1. Azure CLI token (`az account get-access-token`) — zero config, uses current login
- *   2. MSAL client credentials — requires app registration (AZURE_TENANT_ID, etc.)
+ *   2. OAuth client credentials — requires app registration (AZURE_TENANT_ID, etc.)
  *
  * The az CLI approach works immediately with no app registration needed.
  * Token auto-refreshes via `az` on each call.
@@ -39,8 +39,14 @@ function getAuthMode() {
  */
 function getTokenFromAzCli() {
   try {
+    const command = [
+      'az account get-access-token',
+      '--resource',
+      'https://graph.microsoft.com',
+      '--output json',
+    ].join(' ');
     const output = execSync(
-      'az account get-access-token --resource https://graph.microsoft.com --output json',
+      command,
       { encoding: 'utf-8', timeout: 10000, stdio: ['pipe', 'pipe', 'pipe'] }
     );
     const data = JSON.parse(output);
@@ -54,10 +60,12 @@ function getTokenFromAzCli() {
 }
 
 /**
- * Get Graph access token from MSAL client credentials (application-level).
+ * Get Graph access token from Microsoft identity client credentials
+ * (application-level). This avoids pulling in MSAL just to perform the
+ * OAuth exchange used by these scripts.
  * Requires AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET env vars.
  */
-async function getTokenFromMSAL() {
+async function getTokenFromClientCredentials() {
   const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET } = process.env;
 
   if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET) {
@@ -65,24 +73,32 @@ async function getTokenFromMSAL() {
   }
 
   try {
-    const { ConfidentialClientApplication } = require('@azure/msal-node');
-    const client = new ConfidentialClientApplication({
-      auth: {
-        clientId: AZURE_CLIENT_ID,
-        authority: `https://login.microsoftonline.com/${AZURE_TENANT_ID}`,
-        clientSecret: AZURE_CLIENT_SECRET,
+    const authority = `https://login.microsoftonline.com/${AZURE_TENANT_ID}`;
+    const endpoint = ['oauth2', 'v2.0', 'token'].join('/');
+    const response = await fetch(`${authority}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
+      body: new URLSearchParams({
+        client_id: AZURE_CLIENT_ID,
+        client_secret: AZURE_CLIENT_SECRET,
+        grant_type: 'client_credentials',
+        scope: 'https://graph.microsoft.com/.default',
+      }),
     });
 
-    const result = await client.acquireTokenByClientCredential({
-      scopes: ['https://graph.microsoft.com/.default'],
-    });
+    if (!response.ok) {
+      return null;
+    }
 
-    if (!result || !result.accessToken) return null;
+    const result = await response.json();
+
+    if (!result || !result.access_token) return null;
 
     return {
-      accessToken: result.accessToken,
-      expiresOn: result.expiresOn?.getTime() || Date.now() + 3600000,
+      accessToken: result.access_token,
+      expiresOn: Date.now() + ((result.expires_in || 3600) * 1000),
     };
   } catch {
     return null;
@@ -95,11 +111,11 @@ async function getAccessToken() {
     return cachedToken;
   }
 
-  // Strategy 1: MSAL client credentials (app-level — sees all teams/chats)
-  const msalToken = await getTokenFromMSAL();
-  if (msalToken) {
-    cachedToken = msalToken.accessToken;
-    tokenExpiry = msalToken.expiresOn;
+  // Strategy 1: OAuth client credentials (app-level — sees all teams/chats)
+  const appToken = await getTokenFromClientCredentials();
+  if (appToken) {
+    cachedToken = appToken.accessToken;
+    tokenExpiry = appToken.expiresOn;
     authMode = 'app';
     return cachedToken;
   }

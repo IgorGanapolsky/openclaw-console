@@ -21,15 +21,19 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "@azure/msal-node": "^2.16.0",
     "@lancedb/lancedb": "^0.14.0",
-    "@microsoft/teams.ai": "^2.0.0",
-    "@microsoft/teams.apps": "^2.0.0",
-    "@microsoft/teams.common": "^2.0.0",
-    "@microsoft/teams.mcpclient": "^2.0.0",
-    "@microsoft/teams.openai": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.6.0",
     "express": "^4.21.0"
+  },
+  "optionalBotDependencies": {
+    "@microsoft/teams.ai": "^2.0.8",
+    "@microsoft/teams.apps": "^2.0.8",
+    "@microsoft/teams.common": "^2.0.8",
+    "@microsoft/teams.mcpclient": "^2.0.8",
+    "@microsoft/teams.openai": "^2.0.8"
+  },
+  "overrides": {
+    "@hono/node-server": "^1.19.14"
   },
   "engines": {
     "node": ">=20.0.0"
