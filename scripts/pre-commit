@@ -29,17 +29,17 @@ STAGED_KT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.kt$' || tr
 STAGED_SWIFT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$' || true)
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js)$' || true)
 STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM || true)
-STAGED_ICON_ASSETS=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)(AppIcon\.appiconset/|mipmap-(anydpi-v26|mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)/|values/ic_launcher_background\.xml$|scripts/sync_app_icons\.py$)' || true)
+STAGED_RELEASE_CONTRACT=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)(AppIcon\.appiconset/|mipmap-(anydpi-v26|mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)/|values/ic_launcher_background\.xml$|android/fastlane/metadata/|ios/OpenClawConsole/fastlane/metadata/|PRIVACY_POLICY\.md$|scripts/sync_app_icons\.py$|scripts/validate_release_contract\.py$|scripts/preflight-release\.sh$|\.github/workflows/(ci|store-listing-parity|native-release|internal-distribution)\.yml$)' || true)
 
 # ═══════════════════════════════════════════════════════════════════
 # OPENCLAW SECURITY PATTERNS
 # ═══════════════════════════════════════════════════════════════════
 
-if [ -n "$STAGED_ICON_ASSETS" ]; then
+if [ -n "$STAGED_RELEASE_CONTRACT" ]; then
   if ! command -v python3 > /dev/null 2>&1; then
-    err "python3 is required to validate app icon parity"
-  elif ! python3 scripts/sync_app_icons.py --check; then
-    err "App icon assets are out of sync with the canonical iOS marketing icon"
+    err "python3 is required to validate the release contract"
+  elif ! python3 scripts/validate_release_contract.py --platform both; then
+    err "Release contract validation failed"
   fi
 fi
 

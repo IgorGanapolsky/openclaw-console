@@ -15,7 +15,7 @@ android {
         targetSdk = 35
         val ciVersionCode = providers.gradleProperty("ciVersionCode").orNull?.toIntOrNull()
         versionCode = ciVersionCode ?: (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

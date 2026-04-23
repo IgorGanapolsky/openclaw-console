@@ -5,8 +5,8 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-echo "==> Checking app icon parity"
-python3 scripts/sync_app_icons.py --check
+echo "==> Checking release contract"
+python3 scripts/validate_release_contract.py --platform both
 
 echo "==> Android unit tests + debug build"
 (
