@@ -93,6 +93,32 @@ def configured_buildlog_path
   File.expand_path("build-logs", Dir.pwd)
 end
 
+def resolve_ci_match_keychain
+  keychain_name = ENV["MATCH_KEYCHAIN_NAME"].to_s.strip
+  keychain_password = ENV.key?("MATCH_KEYCHAIN_PASSWORD") ? ENV["MATCH_KEYCHAIN_PASSWORD"].to_s : ""
+
+  if keychain_name.empty?
+    keychain_name = "fastlane_tmp_keychain"
+
+    create_keychain(
+      name: keychain_name,
+      password: keychain_password,
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      add_to_search_list: true
+    )
+  else
+    UI.message("Reusing CI keychain configured by setup_ci: #{keychain_name}")
+  end
+
+  {
+    name: keychain_name,
+    password: keychain_password,
+    path: File.expand_path("~/Library/Keychains/#{keychain_name}-db")
+  }
+end
+
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
@@ -140,33 +166,23 @@ platform :ios do
 
       if ENV["CI"] == "true" && ENV["MATCH_GIT_URL"] && api_key
         UI.message("CI detected - using match-managed App Store signing")
-        keychain_name = "fastlane_tmp_keychain"
-        keychain_password = "temp_password"
-
-        create_keychain(
-          name: keychain_name,
-          password: keychain_password,
-          default_keychain: false,
-          unlock: true,
-          timeout: 3600,
-          add_to_search_list: true
-        )
+        keychain = resolve_ci_match_keychain
 
         match(
           type: "appstore",
           app_identifier: ["com.openclaw.console"],
           readonly: true,
           api_key: api_key,
-          keychain_name: keychain_name,
-          keychain_password: keychain_password
+          keychain_name: keychain[:name],
+          keychain_password: keychain[:password]
         )
 
         # codesign can hang on CI when the imported key lacks an updated partition list.
         sh(
           "security set-key-partition-list " \
           "-S apple-tool:,apple:,codesign: -s " \
-          "-k #{keychain_password.shellescape} " \
-          "#{File.expand_path("~/Library/Keychains/#{keychain_name}-db").shellescape}"
+          "-k #{keychain[:password].shellescape} " \
+          "#{keychain[:path].shellescape}"
         )
 
         app_profile = ENV["sigh_com.openclaw.console_appstore_profile-name"] || "match AppStore com.openclaw.console"
@@ -282,23 +298,15 @@ platform :ios do
 
       if ENV["CI"] == "true"
         UI.message("Setting up certificates for CI environment via match (write mode)")
-
-        create_keychain(
-          name: "fastlane_tmp_keychain",
-          password: "temp_password",
-          default_keychain: false,
-          unlock: true,
-          timeout: 3600,
-          add_to_search_list: true
-        )
+        keychain = resolve_ci_match_keychain
 
         match(
           type: "appstore",
           app_identifier: ["com.openclaw.console"],
           readonly: false,
           api_key: api_key,
-          keychain_name: "fastlane_tmp_keychain",
-          keychain_password: "temp_password"
+          keychain_name: keychain[:name],
+          keychain_password: keychain[:password]
         )
 
         UI.message("✅ Ensured App Store certificates and profiles via match")
