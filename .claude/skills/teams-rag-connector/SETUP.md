@@ -79,6 +79,7 @@ npm install
 node mcp-server-http.js              # Runs on port 3001
 
 # 2. Start the Teams bot (in another terminal)
+npm install @microsoft/teams.ai@^2.0.8 @microsoft/teams.apps@^2.0.8 @microsoft/teams.common@^2.0.8 @microsoft/teams.mcpclient@^2.0.8 @microsoft/teams.openai@^2.0.8
 OPENAI_API_KEY=sk-... node teams-bot.js  # Runs on port 3978
 
 # Or start both together:
