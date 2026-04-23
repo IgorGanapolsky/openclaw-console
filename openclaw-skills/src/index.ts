@@ -24,7 +24,9 @@ async function main(): Promise<void> {
 
   // ── 1. Initialize state ─────────────────────────────────────────────────
 
-  const state = new StateManager();
+  const state = new StateManager({
+    governanceEventLogPath: DEFAULT_CONFIG.governanceEventLogPath,
+  });
 
   // ── 2. Register configured agents ───────────────────────────────────────
 

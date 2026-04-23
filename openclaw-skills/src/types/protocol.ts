@@ -175,6 +175,86 @@ export interface ApprovalResponse {
   responded_at: string; // ISO8601
 }
 
+// ─── Agent Governance ────────────────────────────────────────────────────────
+
+/** Lifecycle state for a long-running agent plan item. */
+export type AgentPlanStepStatus = 'pending' | 'running' | 'done' | 'blocked' | 'skipped';
+
+/** A durable plan item tracked independently from transient prompt context. */
+export interface AgentPlanStep {
+  id: string;
+  agent_id: string;
+  title: string;
+  details: string;
+  status: AgentPlanStepStatus;
+  owner: string | null;
+  evidence: ResourceLink[];
+  created_at: string; // ISO8601
+  updated_at: string; // ISO8601
+}
+
+/** Snapshot of an external condition the agent relied on. */
+export interface EnvironmentObservation {
+  id: string;
+  agent_id: string;
+  source: string;
+  summary: string;
+  observed_at: string; // ISO8601
+  metadata: Record<string, unknown>;
+}
+
+/** A verified recovery target for a risky agent action. */
+export interface RollbackPoint {
+  id: string;
+  agent_id: string;
+  action_type: ActionType;
+  title: string;
+  description: string;
+  command: string;
+  created_at: string; // ISO8601
+  metadata: Record<string, unknown>;
+}
+
+/** Append-only event categories for audit and replay. */
+export type GovernanceEventType =
+  | 'agent_objective_updated'
+  | 'agent_plan_step_upserted'
+  | 'environment_observed'
+  | 'rollback_point_added'
+  | 'approval_requested'
+  | 'approval_decided'
+  | 'approval_expired'
+  | 'task_state_changed'
+  | 'incident_state_changed';
+
+/** Append-only audit event for long-running agent governance. */
+export interface GovernanceEvent {
+  id: string;
+  agent_id: string;
+  type: GovernanceEventType;
+  title: string;
+  summary: string;
+  created_at: string; // ISO8601
+  actor: 'agent' | 'human' | 'gateway' | 'policy';
+  risk_level?: RiskLevel;
+  approval_id?: string;
+  task_id?: string;
+  incident_id?: string;
+  rollback_point_id?: string;
+  metadata: Record<string, unknown>;
+}
+
+/** Current governable state for a long-running agent. */
+export interface AgentGovernanceState {
+  agent_id: string;
+  current_objective: string | null;
+  objective_updated_at: string | null;
+  plan: AgentPlanStep[];
+  environment: EnvironmentObservation[];
+  rollback_points: RollbackPoint[];
+  events: GovernanceEvent[];
+}
+
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
 /** A chat message between user and agent. */
@@ -249,6 +329,7 @@ export type ServerEventType =
   | 'incident_new'
   | 'incident_update'
   | 'approval_request'
+  | 'governance_event'
   | 'chat_response'
   | 'bridge_session_new'
   | 'bridge_session_update'

@@ -28,6 +28,7 @@ import type {
   ApprovalResponse,
   BridgeSession,
   RecurringTask,
+  GovernanceEvent,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
 import type { StateManager } from './state.js';
@@ -139,6 +140,10 @@ export class WebSocketManager {
 
     this.state.events.on('recurring_task_updated', (task: RecurringTask) => {
       this.broadcastToSubscribers(task.agent_id, 'recurring_task_updated', task);
+    });
+
+    this.state.events.on('governance_event', (event: GovernanceEvent) => {
+      this.broadcastToSubscribers(event.agent_id, 'governance_event', event);
     });
   }
 

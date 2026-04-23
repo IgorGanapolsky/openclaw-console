@@ -14,6 +14,13 @@ import type {
   ApprovalResponse,
   BridgeSession,
   RecurringTask,
+  AgentGovernanceState,
+  AgentPlanStep,
+  AgentPlanStepStatus,
+  EnvironmentObservation,
+  GovernanceEvent,
+  GovernanceEventType,
+  RollbackPoint,
 } from '../types/protocol.js';
 
 /**
@@ -67,4 +74,47 @@ export interface IStateManager {
 
   upsertRecurringTask?(task: RecurringTask): Promise<RecurringTask>;
   listRecurringTasks?(): Promise<RecurringTask[]> | RecurringTask[];
+
+  getAgentGovernance?(agentId: string): Promise<AgentGovernanceState> | AgentGovernanceState;
+  updateAgentObjective?(agentId: string, objective: string, actor?: GovernanceEvent['actor']): Promise<AgentGovernanceState>;
+  upsertAgentPlanStep?(params: {
+    agent_id: string;
+    id?: string;
+    title: string;
+    details?: string;
+    status?: AgentPlanStepStatus;
+    owner?: string | null;
+    evidence?: AgentPlanStep['evidence'];
+    actor?: GovernanceEvent['actor'];
+  }): Promise<AgentPlanStep>;
+  recordEnvironmentObservation?(params: {
+    agent_id: string;
+    source: string;
+    summary: string;
+    metadata?: Record<string, unknown>;
+    actor?: GovernanceEvent['actor'];
+  }): Promise<EnvironmentObservation>;
+  addRollbackPoint?(params: {
+    agent_id: string;
+    action_type: ActionType;
+    title: string;
+    description: string;
+    command: string;
+    metadata?: Record<string, unknown>;
+    actor?: GovernanceEvent['actor'];
+  }): Promise<RollbackPoint>;
+  recordGovernanceEvent?(params: {
+    agent_id: string;
+    type: GovernanceEventType;
+    title: string;
+    summary: string;
+    actor: GovernanceEvent['actor'];
+    risk_level?: GovernanceEvent['risk_level'];
+    approval_id?: string;
+    task_id?: string;
+    incident_id?: string;
+    rollback_point_id?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<GovernanceEvent>;
+  listGovernanceEvents?(agentId?: string, limit?: number): Promise<GovernanceEvent[]> | GovernanceEvent[];
 }

@@ -26,6 +26,9 @@ import type {
   ApprovalResponse,
   RuntimeConfigResponse,
   RuntimeConfigUpdateRequest,
+  ActionType,
+  AgentPlanStepStatus,
+  GovernanceEvent,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
 import { createBillingRouter } from '../billing/revenuecat.js';
@@ -197,6 +200,114 @@ export function createGatewayServer(
       return;
     }
     res.json(task);
+  });
+
+  // ── Agent Governance ─────────────────────────────────────────────────────
+
+  app.get('/api/agents/:id/governance', auth, (req: Request, res: Response) => {
+    const agentId = String(req.params['id'] ?? '');
+    if (!state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    res.json(state.getAgentGovernance(agentId));
+  });
+
+  app.post('/api/agents/:id/governance/objective', auth, async (req: Request, res: Response) => {
+    const agentId = String(req.params['id'] ?? '');
+    if (!state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    const objective = typeof req.body?.objective === 'string' ? req.body.objective.trim() : '';
+    if (!objective) {
+      res.status(400).json({ error: { code: 4000, message: 'objective is required' } });
+      return;
+    }
+    res.json(await state.updateAgentObjective(agentId, objective, parseActor(req.body?.actor)));
+  });
+
+  app.post('/api/agents/:id/governance/plan-steps', auth, async (req: Request, res: Response) => {
+    const agentId = String(req.params['id'] ?? '');
+    if (!state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+    if (!title) {
+      res.status(400).json({ error: { code: 4000, message: 'title is required' } });
+      return;
+    }
+    const status = req.body?.status === undefined
+      ? undefined
+      : isPlanStepStatus(req.body.status) ? req.body.status : null;
+    if (status === null) {
+      res.status(400).json({ error: { code: 4000, message: 'Invalid plan step status' } });
+      return;
+    }
+    const step = await state.upsertAgentPlanStep({
+      agent_id: agentId,
+      id: typeof req.body?.id === 'string' ? req.body.id : undefined,
+      title,
+      details: typeof req.body?.details === 'string' ? req.body.details : undefined,
+      status,
+      owner: typeof req.body?.owner === 'string' ? req.body.owner : null,
+      evidence: Array.isArray(req.body?.evidence) ? req.body.evidence : undefined,
+      actor: parseActor(req.body?.actor),
+    });
+    res.json(step);
+  });
+
+  app.post('/api/agents/:id/governance/environment-observations', auth, async (req: Request, res: Response) => {
+    const agentId = String(req.params['id'] ?? '');
+    if (!state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : '';
+    const summary = typeof req.body?.summary === 'string' ? req.body.summary.trim() : '';
+    if (!source || !summary) {
+      res.status(400).json({ error: { code: 4000, message: 'source and summary are required' } });
+      return;
+    }
+    res.json(await state.recordEnvironmentObservation({
+      agent_id: agentId,
+      source,
+      summary,
+      metadata: typeof req.body?.metadata === 'object' && req.body.metadata !== null ? req.body.metadata : undefined,
+      actor: parseActor(req.body?.actor),
+    }));
+  });
+
+  app.post('/api/agents/:id/governance/rollback-points', auth, async (req: Request, res: Response) => {
+    const agentId = String(req.params['id'] ?? '');
+    if (!state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    const actionType = req.body?.action_type;
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim() : '';
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+    const command = typeof req.body?.command === 'string' ? req.body.command.trim() : '';
+    if (!isActionType(actionType) || !title || !description || !command) {
+      res.status(400).json({ error: { code: 4000, message: 'action_type, title, description, and command are required' } });
+      return;
+    }
+    res.json(await state.addRollbackPoint({
+      agent_id: agentId,
+      action_type: actionType,
+      title,
+      description,
+      command,
+      metadata: typeof req.body?.metadata === 'object' && req.body.metadata !== null ? req.body.metadata : undefined,
+      actor: parseActor(req.body?.actor),
+    }));
+  });
+
+  app.get('/api/governance/events', auth, (req: Request, res: Response) => {
+    const agentId = typeof req.query['agent_id'] === 'string' ? req.query['agent_id'] : undefined;
+    const limitRaw = typeof req.query['limit'] === 'string' ? Number.parseInt(req.query['limit'], 10) : 100;
+    res.json(state.listGovernanceEvents(agentId, Number.isFinite(limitRaw) ? limitRaw : 100));
   });
 
   // ── Incidents ─────────────────────────────────────────────────────────────
@@ -386,6 +497,33 @@ export function createGatewayServer(
           else resolve();
         });
       });
-    },
-  };
-}
+      },
+    };
+  }
+
+  function isActionType(value: unknown): value is ActionType {
+    return typeof value === 'string' && [
+      'deploy',
+      'shell_command',
+      'config_change',
+      'key_rotation',
+      'trade_execution',
+      'destructive',
+      'ask_root_cause',
+      'propose_fix',
+      'acknowledge',
+      'git_commit',
+      'git_merge',
+      'git_push',
+      'agent_skill_install',
+      'agent_rollback',
+    ].includes(value);
+  }
+
+  function isPlanStepStatus(value: unknown): value is AgentPlanStepStatus {
+    return typeof value === 'string' && ['pending', 'running', 'done', 'blocked', 'skipped'].includes(value);
+  }
+
+  function parseActor(value: unknown): GovernanceEvent['actor'] {
+    return value === 'human' || value === 'gateway' || value === 'policy' ? value : 'agent';
+  }

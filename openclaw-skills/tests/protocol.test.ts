@@ -5,6 +5,9 @@
  * and end-to-end flows for approvals, incidents, and tasks.
  */
 
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { jest } from '@jest/globals';
 import { StateManager } from '../src/gateway/state';
 import type {
@@ -247,6 +250,82 @@ describe('Approval flow (request → response)', () => {
       responded_at: new Date().toISOString(),
     });
     expect(result).toBeNull();
+  });
+});
+
+// ── Governance state ────────────────────────────────────────────────────────
+
+describe('Agent governance state', () => {
+  test('tracks objective, plan, environment observations, rollback points, and events', async () => {
+    const state = new StateManager();
+    await state.upsertAgent(makeAgent({ id: 'agent-governance' }));
+
+    await state.updateAgentObjective('agent-governance', 'Investigate failing production deploy', 'human');
+    const step = await state.upsertAgentPlanStep({
+      agent_id: 'agent-governance',
+      title: 'Check rollout status',
+      status: 'running',
+      owner: 'Deploy Manager',
+    });
+    await state.recordEnvironmentObservation({
+      agent_id: 'agent-governance',
+      source: 'kubernetes',
+      summary: 'deployment/api has one unavailable replica',
+      metadata: { unavailable_replicas: 1 },
+    });
+    await state.addRollbackPoint({
+      agent_id: 'agent-governance',
+      action_type: 'deploy',
+      title: 'Rollback API deployment',
+      description: 'Undo the latest rollout',
+      command: 'kubectl rollout undo deployment/api -n production',
+    });
+
+    const governance = state.getAgentGovernance('agent-governance');
+    expect(governance.current_objective).toBe('Investigate failing production deploy');
+    expect(governance.plan[0]?.id).toBe(step.id);
+    expect(governance.environment[0]?.metadata['unavailable_replicas']).toBe(1);
+    expect(governance.rollback_points[0]?.action_type).toBe('deploy');
+    expect(governance.events.map((event) => event.type)).toEqual([
+      'agent_objective_updated',
+      'agent_plan_step_upserted',
+      'environment_observed',
+      'rollback_point_added',
+    ]);
+  });
+
+  test('persists and replays governance events from JSONL', async () => {
+    const logPath = path.join(os.tmpdir(), `openclaw-governance-${Date.now()}-${Math.random().toString(36).slice(2)}.jsonl`);
+    const first = new StateManager({ governanceEventLogPath: logPath });
+    await first.updateAgentObjective('agent-replay', 'Recover production API', 'gateway');
+    const step = await first.upsertAgentPlanStep({
+      agent_id: 'agent-replay',
+      title: 'Confirm rollback command',
+      status: 'done',
+    });
+    await first.recordEnvironmentObservation({
+      agent_id: 'agent-replay',
+      source: 'healthcheck',
+      summary: 'api healthcheck failing',
+    });
+    await first.addRollbackPoint({
+      agent_id: 'agent-replay',
+      action_type: 'deploy',
+      title: 'Rollback API',
+      description: 'Undo latest deploy',
+      command: 'kubectl rollout undo deployment/api -n production',
+    });
+
+    const second = new StateManager({ governanceEventLogPath: logPath });
+    const events = second.listGovernanceEvents('agent-replay');
+    const governance = second.getAgentGovernance('agent-replay');
+    expect(events).toHaveLength(4);
+    expect(governance.current_objective).toBe('Recover production API');
+    expect(governance.plan[0]?.id).toBe(step.id);
+    expect(governance.environment[0]?.summary).toBe('api healthcheck failing');
+    expect(governance.rollback_points[0]?.command).toBe('kubectl rollout undo deployment/api -n production');
+
+    fs.rmSync(logPath, { force: true });
   });
 });
 
