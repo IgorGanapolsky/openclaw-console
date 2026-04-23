@@ -29,6 +29,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".AssistantLaunch"
+            android:exported="true"
+            android:theme="@style/Theme.OpenClawConsole">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name=".service.NotificationActionReceiver"
             android:exported="false">

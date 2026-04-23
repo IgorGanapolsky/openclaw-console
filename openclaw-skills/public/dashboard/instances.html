@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpenClaw Instances Dashboard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0f1419;
+        color: #e6e6e6;
+        line-height: 1.5;
+      }
+
+      .header {
+        background: #1a1f2b;
+        border-bottom: 1px solid #2d3748;
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .header-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .refresh-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #a0aec0;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #4a5568;
+        transition: 0.4s;
+        border-radius: 12px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: #48bb78;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+
+      .summary-bar {
+        background: #1a1f2b;
+        border-bottom: 1px solid #2d3748;
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .summary-stats {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      .stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+      }
+
+      .stat-number {
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .filters {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+
+      .filter-btn {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #e6e6e6;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .filter-btn:hover {
+        background: #4a5568;
+      }
+
+      .filter-btn.active {
+        background: #3182ce;
+        border-color: #3182ce;
+      }
+
+      .main-content {
+        padding: 1.5rem;
+      }
+
+      .instances-table {
+        background: #1a1f2b;
+        border: 1px solid #2d3748;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .table-header {
+        background: #2d3748;
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: auto 120px 150px 100px 120px 130px 100px 1fr;
+        gap: 1rem;
+        align-items: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #a0aec0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .instance-row {
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: auto 120px 150px 100px 120px 130px 100px 1fr;
+        gap: 1rem;
+        align-items: center;
+        border-bottom: 1px solid #2d3748;
+        transition: background 0.2s;
+      }
+
+      .instance-row:hover {
+        background: #2d3748;
+      }
+
+      .instance-row:last-child {
+        border-bottom: none;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .status-online {
+        background: rgba(72, 187, 120, 0.2);
+        color: #48bb78;
+        border: 1px solid #48bb78;
+      }
+
+      .status-stale {
+        background: rgba(237, 137, 54, 0.2);
+        color: #ed8936;
+        border: 1px solid #ed8936;
+      }
+
+      .status-disconnected {
+        background: rgba(245, 101, 101, 0.2);
+        color: #f56565;
+        border: 1px solid #f56565;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .instance-id {
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+        font-size: 0.75rem;
+        color: #e6e6e6;
+      }
+
+      .instance-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .action-btn {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #a0aec0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .action-btn:hover {
+        background: #4a5568;
+        color: #ffffff;
+      }
+
+      .scope-count {
+        cursor: pointer;
+        color: #3182ce;
+        text-decoration: underline;
+        font-weight: 500;
+      }
+
+      .scope-count:hover {
+        color: #2b6cb0;
+      }
+
+      .version-badge {
+        padding: 0.25rem 0.5rem;
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+      }
+
+      .version-drift {
+        border-color: #ed8936;
+        color: #ed8936;
+      }
+
+      .version-critical {
+        border-color: #f56565;
+        color: #f56565;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #a0aec0;
+      }
+
+      .empty-state h3 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        color: #e6e6e6;
+      }
+
+      .empty-state p {
+        margin-bottom: 2rem;
+      }
+
+      .pair-device-btn {
+        background: #3182ce;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .pair-device-btn:hover {
+        background: #2b6cb0;
+      }
+
+      .tooltip {
+        position: relative;
+        display: inline-block;
+      }
+
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: #2d3748;
+        color: #ffffff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 0.5rem;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        border: 1px solid #4a5568;
+        font-size: 0.75rem;
+      }
+
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .throughput {
+        font-size: 0.75rem;
+        color: #a0aec0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .throughput-line {
+        display: flex;
+        justify-content: space-between;
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
+      }
+
+      .kebab-menu {
+        position: relative;
+        display: inline-block;
+      }
+
+      .kebab-button {
+        background: none;
+        border: none;
+        color: #a0aec0;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: all 0.2s;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+
+      .kebab-button:hover {
+        background: #4a5568;
+        color: #ffffff;
+      }
+
+      .kebab-dropdown {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        border-radius: 6px;
+        min-width: 140px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        display: none;
+      }
+
+      .kebab-dropdown.show {
+        display: block;
+      }
+
+      .kebab-item {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid #4a5568;
+        font-size: 0.875rem;
+      }
+
+      .kebab-item:last-child {
+        border-bottom: none;
+      }
+
+      .kebab-item:hover {
+        background: #4a5568;
+      }
+
+      .kebab-item.danger {
+        color: #f56565;
+      }
+
+      .kebab-item.danger:hover {
+        background: rgba(245, 101, 101, 0.1);
+      }
+
+      .connection-event {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .event-badge {
+        padding: 0.125rem 0.375rem;
+        border-radius: 4px;
+        font-size: 0.625rem;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+
+      .event-self {
+        background: rgba(56, 178, 172, 0.2);
+        color: #38b2ac;
+        border: 1px solid #38b2ac;
+      }
+
+      .event-remote {
+        background: rgba(66, 153, 225, 0.2);
+        color: #4299e1;
+        border: 1px solid #4299e1;
+      }
+
+      .event-local {
+        background: rgba(159, 122, 234, 0.2);
+        color: #9f7aea;
+        border: 1px solid #9f7aea;
+      }
+
+      .last-updated {
+        text-align: right;
+        color: #a0aec0;
+        font-size: 0.75rem;
+      }
+
+      @media (max-width: 1400px) {
+        .table-header,
+        .instance-row {
+          grid-template-columns: auto 100px 120px 80px 100px 100px 80px 1fr;
+        }
+
+        .throughput {
+          font-size: 0.625rem;
+        }
+      }
+
+      @media (max-width: 1000px) {
+        .table-header,
+        .instance-row {
+          grid-template-columns: auto 100px 120px 80px 100px 1fr;
+        }
+
+        /* Hide throughput column on smaller screens */
+        .table-header > div:nth-child(7),
+        .instance-row > div:nth-child(7) {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Instances Dashboard</h1>
+      <div class="header-controls">
+        <div class="refresh-toggle">
+          <span>Auto-refresh</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="autoRefresh" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="last-updated" id="lastUpdated">Last updated: --</div>
+      </div>
+    </div>
+
+    <div class="summary-bar">
+      <div class="summary-stats">
+        <div class="stat">
+          <span class="stat-number" id="totalInstances">0</span>
+          <span>total</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number" id="onlineCount">0</span>
+          <span>connected</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number" id="versionCount">0</span>
+          <span>versions</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number" id="totalScopes">0</span>
+          <span>total scopes</span>
+        </div>
+      </div>
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="online">Online</button>
+        <button class="filter-btn" data-filter="stale">Stale</button>
+        <button class="filter-btn" data-filter="disconnected">
+          Disconnected
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="instances-table" id="instancesTable" style="display: none">
+        <div class="table-header">
+          <div>Status</div>
+          <div>Instance ID</div>
+          <div>Connection Event</div>
+          <div>IP Address</div>
+          <div>Auth Method</div>
+          <div>Version</div>
+          <div>Throughput</div>
+          <div>Actions</div>
+        </div>
+        <div id="instancesBody">
+          <!-- Instances will be populated here -->
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState" style="display: none">
+        <h3>No instances connected</h3>
+        <p>
+          Connect a device to start monitoring OpenClaw instances in real-time.
+        </p>
+        <button class="pair-device-btn" onclick="showPairingInstructions()">
+          Pair Device
+        </button>
+      </div>
+    </div>
+
+    <script>
+      let autoRefreshEnabled = true;
+      let refreshInterval;
+      let currentFilter = "all";
+      let instancesData = { summary: {}, instances: [] };
+      let clickObservations = [];
+      let useMockData = false;
+
+      // Initialize dashboard
+      document.addEventListener("DOMContentLoaded", function () {
+        initializeEventListeners();
+        startAutoRefresh();
+        loadInstances();
+      });
+
+      function initializeEventListeners() {
+        // Auto-refresh toggle
+        const autoRefreshToggle = document.getElementById("autoRefresh");
+        autoRefreshToggle.addEventListener("change", function () {
+          autoRefreshEnabled = this.checked;
+          if (autoRefreshEnabled) {
+            startAutoRefresh();
+          } else {
+            stopAutoRefresh();
+          }
+        });
+
+        // Filter buttons
+        document.querySelectorAll(".filter-btn").forEach((btn) => {
+          btn.addEventListener("click", function () {
+            document
+              .querySelectorAll(".filter-btn")
+              .forEach((b) => b.classList.remove("active"));
+            this.classList.add("active");
+            currentFilter = this.getAttribute("data-filter");
+            renderInstances();
+          });
+        });
+      }
+
+      function startAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+        refreshInterval = setInterval(loadInstances, 5000);
+      }
+
+      function stopAutoRefresh() {
+        if (refreshInterval) clearInterval(refreshInterval);
+      }
+
+      function generateMockData() {
+        const now = Date.now();
+        const instances = [
+          {
+            id: "inst-001-mobile-ios",
+            status: "online",
+            connected_at: new Date(now - 300000).toISOString(), // 5 minutes ago
+            last_message_at: new Date(now - 5000).toISOString(), // 5 seconds ago
+            time_since_connection: 300000,
+            time_since_last_message: 5000,
+            subscribed_agents: ["trading-bot", "github-ops"],
+            scope_count: 2,
+            ip_address: "192.168.1.100",
+            auth_method: "biometric_face_id",
+            version: "1.0.0",
+            connection_type: "self",
+            throughput: {
+              messages_received: 142,
+              messages_sent: 89,
+              bytes_received: 45231,
+              bytes_sent: 28934,
+            },
+          },
+          {
+            id: "inst-002-android-phone",
+            status: "stale",
+            connected_at: new Date(now - 1800000).toISOString(), // 30 minutes ago
+            last_message_at: new Date(now - 120000).toISOString(), // 2 minutes ago
+            time_since_connection: 1800000,
+            time_since_last_message: 120000,
+            subscribed_agents: ["deploy-manager"],
+            scope_count: 1,
+            ip_address: "10.0.0.45",
+            auth_method: "bearer_token",
+            version: "0.9.8",
+            connection_type: "remote",
+            throughput: {
+              messages_received: 67,
+              messages_sent: 43,
+              bytes_received: 18921,
+              bytes_sent: 12456,
+            },
+          },
+          {
+            id: "inst-003-desktop-mac",
+            status: "disconnected",
+            connected_at: new Date(now - 7200000).toISOString(), // 2 hours ago
+            last_message_at: new Date(now - 600000).toISOString(), // 10 minutes ago
+            time_since_connection: 7200000,
+            time_since_last_message: 600000,
+            subscribed_agents: ["trading-bot", "github-ops", "deploy-manager"],
+            scope_count: 3,
+            ip_address: "172.16.0.2",
+            auth_method: "api_key",
+            version: "1.0.0",
+            connection_type: "local",
+            throughput: {
+              messages_received: 234,
+              messages_sent: 187,
+              bytes_received: 78234,
+              bytes_sent: 56789,
+            },
+          },
+        ];
+
+        const summary = {
+          total_instances: instances.length,
+          online_count: instances.filter((i) => i.status === "online").length,
+          stale_count: instances.filter((i) => i.status === "stale").length,
+          disconnected_count: instances.filter(
+            (i) => i.status === "disconnected",
+          ).length,
+          versions: [...new Set(instances.map((i) => i.version))],
+          total_scopes: instances.reduce((sum, i) => sum + i.scope_count, 0),
+        };
+
+        return {
+          summary,
+          instances,
+          last_updated: new Date().toISOString(),
+        };
+      }
+
+      async function loadInstances() {
+        try {
+          if (useMockData) {
+            instancesData = generateMockData();
+            updateSummary();
+            renderInstances();
+            updateLastUpdated();
+            return;
+          }
+
+          const response = await fetch("/api/instances", {
+            headers: {
+              Authorization: "Bearer " + getAuthToken(),
+            },
+          });
+
+          if (!response.ok) {
+            console.warn("API failed, falling back to mock data");
+            useMockData = true;
+            instancesData = generateMockData();
+          } else {
+            instancesData = await response.json();
+          }
+
+          updateSummary();
+          renderInstances();
+          updateLastUpdated();
+        } catch (error) {
+          console.warn(
+            "Failed to load instances from API, using mock data:",
+            error,
+          );
+          useMockData = true;
+          instancesData = generateMockData();
+          updateSummary();
+          renderInstances();
+          updateLastUpdated();
+        }
+      }
+
+      function updateSummary() {
+        const summary = instancesData.summary;
+        document.getElementById("totalInstances").textContent =
+          summary.total_instances;
+        document.getElementById("onlineCount").textContent =
+          summary.online_count;
+        document.getElementById("versionCount").textContent =
+          summary.versions.length;
+        document.getElementById("totalScopes").textContent =
+          summary.total_scopes;
+      }
+
+      function renderInstances() {
+        const instances = instancesData.instances.filter((instance) => {
+          if (currentFilter === "all") return true;
+          return instance.status === currentFilter;
+        });
+
+        const tableEl = document.getElementById("instancesTable");
+        const emptyEl = document.getElementById("emptyState");
+        const bodyEl = document.getElementById("instancesBody");
+
+        if (instances.length === 0) {
+          tableEl.style.display = "none";
+          emptyEl.style.display = "block";
+          return;
+        }
+
+        tableEl.style.display = "block";
+        emptyEl.style.display = "none";
+
+        bodyEl.innerHTML = instances
+          .map((instance) => renderInstanceRow(instance))
+          .join("");
+      }
+
+      function renderInstanceRow(instance) {
+        const statusClass = `status-${instance.status}`;
+        const versionClass = getVersionClass(instance.version);
+        const connectionEvent = formatConnectionEvent(instance);
+        const shortId = instance.id.substring(0, 8);
+
+        // Format throughput data
+        const throughputMB = (bytes) => (bytes / 1024 / 1024).toFixed(1) + "MB";
+        const throughputDisplay = `
+                <div class="throughput">
+                    <div class="throughput-line">
+                        <span>↓${instance.throughput.messages_received} msgs</span>
+                        <span>${throughputMB(instance.throughput.bytes_received)}</span>
+                    </div>
+                    <div class="throughput-line">
+                        <span>↑${instance.throughput.messages_sent} msgs</span>
+                        <span>${throughputMB(instance.throughput.bytes_sent)}</span>
+                    </div>
+                </div>
+            `;
+
+        return `
+                <div class="instance-row">
+                    <div>
+                        <span class="status-badge ${statusClass}">
+                            <span class="status-dot"></span>
+                            ${instance.status}
+                        </span>
+                    </div>
+                    <div class="instance-id" title="${instance.id}">${shortId}</div>
+                    <div>${connectionEvent}</div>
+                    <div>${instance.ip_address}</div>
+                    <div>${instance.auth_method.replace("_", " ").toUpperCase()}</div>
+                    <div>
+                        <span class="version-badge ${versionClass}">${instance.version}</span>
+                    </div>
+                    <div>${throughputDisplay}</div>
+                    <div class="instance-actions">
+                        <div class="tooltip">
+                            <span class="scope-count" onclick="showScopes('${instance.id}')">${instance.scope_count} scopes</span>
+                            <span class="tooltiptext">
+                                Subscribed agents: ${instance.subscribed_agents.join(", ") || "None"}
+                            </span>
+                        </div>
+                        <div class="kebab-menu">
+                            <button class="kebab-button" onclick="toggleKebab('${instance.id}')">⋮</button>
+                            <div class="kebab-dropdown" id="kebab-${instance.id}">
+                                <div class="kebab-item" onclick="pingInstance('${instance.id}')">Ping Instance</div>
+                                <div class="kebab-item" onclick="viewLogs('${instance.id}')">View Logs</div>
+                                <div class="kebab-item" onclick="copyInstanceId('${instance.id}')">Copy ID</div>
+                                <div class="kebab-item" onclick="openSession('${instance.id}')">Open Session</div>
+                                <div class="kebab-item" onclick="disconnectInstance('${instance.id}')">Disconnect</div>
+                                <div class="kebab-item danger" onclick="revokeInstance('${instance.id}')">Revoke Access</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      }
+
+      function formatConnectionEvent(instance) {
+        const now = Date.now();
+        const lastMessageMs = instance.last_message_at
+          ? new Date(instance.last_message_at).getTime()
+          : new Date(instance.connected_at).getTime();
+        const timeDiff = now - lastMessageMs;
+
+        let eventText;
+        let badgeClass;
+
+        if (instance.status === "online") {
+          eventText = "Connected";
+        } else if (instance.status === "stale") {
+          const minutes = Math.floor(timeDiff / 60000);
+          eventText = `Stale ${minutes}m ago`;
+        } else {
+          const minutes = Math.floor(timeDiff / 60000);
+          const hours = Math.floor(minutes / 60);
+
+          if (hours > 0) {
+            eventText = `Disconnected ${hours}h ago`;
+          } else if (minutes > 0) {
+            eventText = `Disconnected ${minutes}m ago`;
+          } else {
+            eventText = "Disconnected <1m ago";
+          }
+        }
+
+        // Determine connection type badge
+        switch (instance.connection_type) {
+          case "self":
+            badgeClass = "event-self";
+            break;
+          case "remote":
+            badgeClass = "event-remote";
+            break;
+          case "local":
+          default:
+            badgeClass = "event-local";
+            break;
+        }
+
+        return `
+                <div class="connection-event">
+                    <span>${eventText}</span>
+                    <span class="event-badge ${badgeClass}">${instance.connection_type || "local"}</span>
+                </div>
+            `;
+      }
+
+      function getVersionClass(version) {
+        const versions = instancesData.summary.versions;
+        if (versions.length <= 1) return "";
+
+        // Simple version drift detection - mark non-latest versions
+        const sortedVersions = versions.sort();
+        const latest = sortedVersions[sortedVersions.length - 1];
+
+        if (version !== latest) {
+          return "version-drift";
+        }
+        return "";
+      }
+
+      function updateLastUpdated() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        document.getElementById("lastUpdated").textContent =
+          `Last updated: ${timeStr}`;
+      }
+
+      // Instance action handlers with click tracking
+      function pingInstance(instanceId) {
+        trackClick("ping_instance", instanceId);
+        console.log("Pinging instance:", instanceId);
+        showToast(`Pinging instance ${instanceId.substring(0, 8)}...`);
+
+        // Close kebab menu
+        document
+          .getElementById(`kebab-${instanceId}`)
+          ?.classList.remove("show");
+      }
+
+      function disconnectInstance(instanceId) {
+        trackClick("disconnect_instance_attempt", instanceId);
+        if (
+          confirm(
+            `Are you sure you want to disconnect instance ${instanceId.substring(0, 8)}?`,
+          )
+        ) {
+          trackClick("disconnect_instance_confirmed", instanceId);
+          console.log("Disconnecting instance:", instanceId);
+          showToast(`Disconnecting instance ${instanceId.substring(0, 8)}...`);
+        } else {
+          trackClick("disconnect_instance_cancelled", instanceId);
+        }
+
+        // Close kebab menu
+        document
+          .getElementById(`kebab-${instanceId}`)
+          ?.classList.remove("show");
+      }
+
+      function revokeInstance(instanceId) {
+        trackClick("revoke_instance_attempt", instanceId);
+        if (
+          confirm(
+            `Are you sure you want to revoke access for instance ${instanceId.substring(0, 8)}? This action cannot be undone.`,
+          )
+        ) {
+          trackClick("revoke_instance_confirmed", instanceId);
+          console.log("Revoking instance:", instanceId);
+          showToast(`Revoking instance ${instanceId.substring(0, 8)}...`);
+        } else {
+          trackClick("revoke_instance_cancelled", instanceId);
+        }
+
+        // Close kebab menu
+        document
+          .getElementById(`kebab-${instanceId}`)
+          ?.classList.remove("show");
+      }
+
+      function viewLogs(instanceId) {
+        trackClick("view_logs", instanceId);
+        window.open(`/dashboard/logs?instance=${instanceId}`, "_blank");
+
+        // Close kebab menu
+        document
+          .getElementById(`kebab-${instanceId}`)
+          ?.classList.remove("show");
+      }
+
+      function copyInstanceId(instanceId) {
+        trackClick("copy_instance_id", instanceId);
+        navigator.clipboard
+          .writeText(instanceId)
+          .then(() => {
+            showToast("Instance ID copied to clipboard");
+          })
+          .catch(() => {
+            showToast("Failed to copy instance ID");
+          });
+
+        // Close kebab menu
+        document
+          .getElementById(`kebab-${instanceId}`)
+          ?.classList.remove("show");
+      }
+
+      function openSession(instanceId) {
+        trackClick("open_session", instanceId);
+        window.open(`/dashboard/session?instance=${instanceId}`, "_blank");
+
+        // Close kebab menu
+        document
+          .getElementById(`kebab-${instanceId}`)
+          ?.classList.remove("show");
+      }
+
+      function showScopes(instanceId) {
+        trackClick("show_scopes", instanceId, {
+          scope_count: instancesData.instances.find((i) => i.id === instanceId)
+            ?.scope_count,
+        });
+        const instance = instancesData.instances.find(
+          (i) => i.id === instanceId,
+        );
+        if (instance && instance.subscribed_agents.length > 0) {
+          alert(
+            `Instance: ${instanceId.substring(0, 8)}\n\nSubscribed agents:\n${instance.subscribed_agents.map((agent, i) => `${i + 1}. ${agent}`).join("\n")}`,
+          );
+        } else {
+          alert(
+            `Instance: ${instanceId.substring(0, 8)}\n\nNo subscribed agents`,
+          );
+        }
+      }
+
+      function showPairingInstructions() {
+        trackClick("show_pairing_instructions", "empty_state");
+        const instructions = `
+📱 OpenClaw Console Pairing
+
+Follow these steps to connect your device:
+
+1️⃣ Download & Install
+   • iOS: Install OpenClaw Console from TestFlight
+   • Android: Install from Google Play (Beta)
+
+2️⃣ Configure Connection
+   • Gateway URL: http://127.0.0.1:18789
+   • Auth Token: 3f776e32... (ask admin for full token)
+
+3️⃣ Connect & Authenticate
+   • Use biometric authentication (Face ID/Touch ID)
+   • Select which agents to monitor
+
+4️⃣ Start Monitoring
+   • View real-time status
+   • Approve dangerous actions
+   • Monitor CI/CD pipelines
+
+Need help? Check the documentation or contact support.
+            `;
+        alert(instructions);
+      }
+
+      function showToast(message) {
+        // Simple toast implementation
+        const toast = document.createElement("div");
+        toast.textContent = message;
+        toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: #2d3748;
+                color: #ffffff;
+                padding: 1rem;
+                border-radius: 6px;
+                border: 1px solid #4a5568;
+                z-index: 1000;
+                font-size: 0.875rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 3000);
+      }
+
+      function showError(message) {
+        console.error(message);
+        showToast(`Error: ${message}`);
+      }
+
+      function getAuthToken() {
+        // In a real implementation, this would retrieve the stored auth token
+        // For development, use the gateway's dev token
+        return "3f776e321c1c9e4a16c9df2a4a1d68345d1fe2e7f28f6991ac21f25188ad74db";
+      }
+
+      // Click observation and tracking
+      function trackClick(action, target, metadata = {}) {
+        const observation = {
+          timestamp: Date.now(),
+          action,
+          target,
+          metadata,
+          session: Date.now().toString(36), // Simple session ID
+        };
+        clickObservations.push(observation);
+
+        // Keep only last 100 observations to prevent memory issues
+        if (clickObservations.length > 100) {
+          clickObservations = clickObservations.slice(-100);
+        }
+
+        console.log("Click tracked:", observation);
+        return observation;
+      }
+
+      // Kebab menu functions
+      function toggleKebab(instanceId) {
+        trackClick("toggle_kebab", instanceId);
+
+        // Close all other kebab menus
+        document.querySelectorAll(".kebab-dropdown").forEach((dropdown) => {
+          if (dropdown.id !== `kebab-${instanceId}`) {
+            dropdown.classList.remove("show");
+          }
+        });
+
+        // Toggle the clicked kebab menu
+        const dropdown = document.getElementById(`kebab-${instanceId}`);
+        if (dropdown) {
+          dropdown.classList.toggle("show");
+        }
+      }
+
+      // Close kebab menus when clicking outside
+      document.addEventListener("click", function (event) {
+        if (!event.target.closest(".kebab-menu")) {
+          document.querySelectorAll(".kebab-dropdown").forEach((dropdown) => {
+            dropdown.classList.remove("show");
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

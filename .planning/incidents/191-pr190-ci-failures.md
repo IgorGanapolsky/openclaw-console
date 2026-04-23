@@ -8,10 +8,13 @@ on 2026-04-15 due to multiple required CI check failures.
 ## Root Causes
 
 ### 1. Android Build Failure (+ CodeQL java-kotlin)
+
 `android/app/build.gradle.kts` contained unresolved git merge conflict markers at line 67:
+
 ```
 <<<<<<< HEAD
 ```
+
 This caused Kotlin DSL script compilation errors, failing both the Android Build Check and
 CodeQL Analysis (java-kotlin) jobs.
 
@@ -19,11 +22,13 @@ CodeQL Analysis (java-kotlin) jobs.
 blocks from `develop` were retained.
 
 ### 2. Skills Tests + Dependency Audit
+
 `openclaw-skills/package-lock.json` was incomplete after the dependabot sync. The PR deleted
 2,895 lines from the lock file, leaving many packages (e.g., `@modelcontextprotocol/sdk`,
 `firebase-admin`, `@slack/web-api`, `redis`) missing from the lockfile.
 
 `npm ci` requires exact lockfile–package.json parity and failed with:
+
 ```
 npm error `npm ci` can only install packages when your package.json and package-lock.json
 are in sync.
@@ -33,6 +38,7 @@ are in sync.
 `package.json` dependency versions.
 
 ### 3. iOS Build Failure
+
 Missing Swift types `BridgeListViewModel` and `SubscriptionService` caused compiler errors.
 These types were removed/displaced during the conflict resolution in PR #190.
 

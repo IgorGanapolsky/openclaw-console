@@ -1,0 +1,380 @@
+/**
+ * Channel provider schemas and configuration definitions
+ */
+
+import type { ChannelSchema } from "./types.js";
+
+export function getChannelSchemas(): ChannelSchema[] {
+  return [
+    {
+      provider: "telegram",
+      name: "Telegram Bot",
+      description:
+        "Send messages through Telegram bot API with webhook support",
+      configSchema: {
+        botToken: {
+          type: "string",
+          required: true,
+          label: "Bot Token",
+          placeholder: "bot123456789:XXXXXXXXXXXXXXXXXXXXXXXXX",
+          sensitive: true,
+          validation: {
+            pattern: "^bot[0-9]+:[a-zA-Z0-9_-]+",
+          },
+        },
+        chatId: {
+          type: "string",
+          required: true,
+          label: "Chat ID",
+          placeholder: "-1001234567890 or @username",
+        },
+        webhookUrl: {
+          type: "string",
+          required: false,
+          label: "Webhook URL",
+          placeholder: "https://yourdomain.com/telegram/webhook",
+        },
+      },
+      setupInstructions: [
+        "Create a new bot with @BotFather on Telegram",
+        "Get your bot token from @BotFather",
+        "Add the bot to your chat/channel",
+        "Get the chat ID by messaging your bot and using the getUpdates API",
+        "Optionally set up a webhook URL for real-time message handling",
+      ],
+      capabilities: [
+        "Send text messages",
+        "Send media (photos, documents)",
+        "Interactive keyboards",
+        "Message formatting (Markdown/HTML)",
+        "File uploads up to 50MB",
+        "Webhook support for real-time messages",
+      ],
+    },
+    {
+      provider: "discord",
+      name: "Discord Bot",
+      description: "Send messages to Discord channels via bot API",
+      configSchema: {
+        botToken: {
+          type: "string",
+          required: true,
+          label: "Bot Token",
+          placeholder:
+            "MTIzNDU2Nzg5MDEyMzQ1Njc4.XXXXXXXXX.XXXXXXXXXXXXXXXXXXXXXXX",
+          sensitive: true,
+        },
+        guildId: {
+          type: "string",
+          required: true,
+          label: "Guild (Server) ID",
+          placeholder: "123456789012345678",
+        },
+        channelId: {
+          type: "string",
+          required: true,
+          label: "Channel ID",
+          placeholder: "987654321098765432",
+        },
+        intents: {
+          type: "multiselect",
+          required: false,
+          label: "Bot Intents",
+          options: [
+            "GUILDS",
+            "GUILD_MESSAGES",
+            "GUILD_MESSAGE_REACTIONS",
+            "DIRECT_MESSAGES",
+            "MESSAGE_CONTENT",
+          ],
+        },
+      },
+      setupInstructions: [
+        "Go to Discord Developer Portal and create a new application",
+        "Create a bot user and get the bot token",
+        "Enable necessary intents in the bot settings",
+        "Generate an invite URL and add the bot to your server",
+        "Get your Guild ID and Channel ID (enable Developer Mode)",
+        "Grant the bot permissions to send messages in the target channel",
+      ],
+      capabilities: [
+        "Send text messages",
+        "Send embeds with rich formatting",
+        "Send files and attachments",
+        "React to messages",
+        "Create threads",
+        "Slash commands",
+        "Interactive components (buttons, select menus)",
+      ],
+    },
+    {
+      provider: "whatsapp",
+      name: "WhatsApp Business",
+      description: "Send messages via WhatsApp Business API",
+      configSchema: {
+        phoneNumber: {
+          type: "string",
+          required: true,
+          label: "Phone Number",
+          placeholder: "+1234567890",
+          validation: {
+            pattern: "^\\+[1-9]\\d{1,14}$",
+          },
+        },
+        apiKey: {
+          type: "string",
+          required: true,
+          label: "API Key",
+          placeholder: "wa_XXXXXXXXXXXXXXXXXXXXXXX",
+          sensitive: true,
+        },
+        webhookSecret: {
+          type: "string",
+          required: false,
+          label: "Webhook Secret",
+          placeholder: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          sensitive: true,
+        },
+      },
+      setupInstructions: [
+        "Sign up for WhatsApp Business API access",
+        "Verify your business phone number",
+        "Get your API key from the provider dashboard",
+        "Set up webhook endpoint for message delivery confirmation",
+        "Configure webhook secret for security",
+      ],
+      capabilities: [
+        "Send text messages",
+        "Send media (images, documents)",
+        "Message templates",
+        "Read receipts",
+        "Message status tracking",
+        "Quick replies",
+        "Interactive buttons and lists",
+      ],
+    },
+    {
+      provider: "signal",
+      name: "Signal Messenger",
+      description: "Send encrypted messages via Signal",
+      configSchema: {
+        phoneNumber: {
+          type: "string",
+          required: true,
+          label: "Phone Number",
+          placeholder: "+1234567890",
+          validation: {
+            pattern: "^\\+[1-9]\\d{1,14}$",
+          },
+        },
+        signalToken: {
+          type: "string",
+          required: false,
+          label: "Signal Token",
+          sensitive: true,
+        },
+        pairingQrCode: {
+          type: "textarea",
+          required: false,
+          label: "Pairing QR Code Data",
+          placeholder: "Paste QR code data for device pairing",
+        },
+      },
+      setupInstructions: [
+        "Install Signal on your device and register your phone number",
+        "Set up Signal CLI or use Signal API service",
+        "Complete device pairing using QR code or linking",
+        "Verify that your Signal account can send/receive messages",
+        "Configure appropriate security settings",
+      ],
+      capabilities: [
+        "End-to-end encrypted messages",
+        "Send text messages",
+        "Send media files",
+        "Group messaging",
+        "Disappearing messages",
+        "Read receipts",
+        "High security and privacy",
+      ],
+    },
+    {
+      provider: "google-chat",
+      name: "Google Chat",
+      description: "Send messages to Google Chat spaces",
+      configSchema: {
+        serviceAccountKey: {
+          type: "textarea",
+          required: true,
+          label: "Service Account Key (JSON)",
+          placeholder: '{"type": "service_account", ...}',
+          sensitive: true,
+        },
+        spaces: {
+          type: "multiselect",
+          required: true,
+          label: "Chat Spaces",
+          options: [],
+        },
+      },
+      setupInstructions: [
+        "Create a Google Cloud project and enable the Chat API",
+        "Create a service account and download the JSON key",
+        "Grant the service account access to your Chat spaces",
+        "Add the bot to your Google Chat spaces",
+        "Configure space permissions for the bot",
+      ],
+      capabilities: [
+        "Send text messages",
+        "Send cards with interactive elements",
+        "Thread messages",
+        "Mention users",
+        "File attachments",
+        "Rich formatting",
+        "Integration with Google Workspace",
+      ],
+    },
+    {
+      provider: "slack",
+      name: "Slack",
+      description: "Send messages to Slack channels",
+      configSchema: {
+        workspaceId: {
+          type: "string",
+          required: true,
+          label: "Workspace ID",
+          placeholder: "T1234567890",
+        },
+        accessToken: {
+          type: "string",
+          required: true,
+          label: "Bot Access Token",
+          placeholder: "xoxb-YOUR-SLACK-BOT-TOKEN-HERE",
+          sensitive: true,
+        },
+        channelId: {
+          type: "string",
+          required: true,
+          label: "Channel ID",
+          placeholder: "C1234567890",
+        },
+      },
+      setupInstructions: [
+        "Create a Slack app in your workspace",
+        "Add Bot Token Scopes (chat:write, channels:read)",
+        "Install the app to your workspace",
+        "Copy the Bot User OAuth Token",
+        "Add the bot to your target channel",
+        "Get the channel ID from the Slack API or URL",
+      ],
+      capabilities: [
+        "Send text messages",
+        "Send rich message blocks",
+        "Interactive components (buttons, menus)",
+        "File uploads",
+        "Message threading",
+        "User mentions",
+        "Emoji reactions",
+        "Slash commands",
+      ],
+    },
+    {
+      provider: "teams",
+      name: "Microsoft Teams",
+      description: "Send messages to Microsoft Teams channels",
+      configSchema: {
+        tenantId: {
+          type: "string",
+          required: true,
+          label: "Tenant ID",
+          placeholder: "12345678-1234-1234-1234-123456789012",
+        },
+        clientId: {
+          type: "string",
+          required: true,
+          label: "Client ID",
+          placeholder: "87654321-4321-4321-4321-210987654321",
+        },
+        clientSecret: {
+          type: "string",
+          required: true,
+          label: "Client Secret",
+          sensitive: true,
+        },
+        teamId: {
+          type: "string",
+          required: true,
+          label: "Team ID",
+          placeholder: "19:12345678901234567890123456789012@thread.tacv2",
+        },
+      },
+      setupInstructions: [
+        "Register an application in Azure Active Directory",
+        "Grant Microsoft Graph permissions for Teams",
+        "Get your tenant ID, client ID, and client secret",
+        "Add the app to your Teams workspace",
+        "Get the team and channel IDs",
+        "Configure appropriate API permissions",
+      ],
+      capabilities: [
+        "Send text messages",
+        "Send adaptive cards",
+        "File attachments",
+        "Message threading",
+        "User mentions",
+        "@channel notifications",
+        "Rich formatting",
+        "Integration with Microsoft 365",
+      ],
+    },
+    {
+      provider: "webhook",
+      name: "Generic Webhook",
+      description: "Send HTTP requests to custom endpoints",
+      configSchema: {
+        url: {
+          type: "string",
+          required: true,
+          label: "Webhook URL",
+          placeholder: "https://your-api.com/webhook",
+        },
+        method: {
+          type: "select",
+          required: true,
+          label: "HTTP Method",
+          options: ["POST", "PUT", "GET"],
+        },
+        headers: {
+          type: "textarea",
+          required: false,
+          label: "Custom Headers (JSON)",
+          placeholder:
+            '{"Authorization": "Bearer token", "Content-Type": "application/json"}',
+        },
+        secret: {
+          type: "string",
+          required: false,
+          label: "Webhook Secret",
+          placeholder: "For signature verification",
+          sensitive: true,
+        },
+      },
+      setupInstructions: [
+        "Set up your webhook endpoint to receive HTTP requests",
+        "Configure authentication if required",
+        "Set up proper request/response handling",
+        "Test your endpoint with sample data",
+        "Configure any required headers or signatures",
+      ],
+      capabilities: [
+        "Custom HTTP requests",
+        "Flexible payload formatting",
+        "Custom headers and authentication",
+        "Signature verification",
+        "GET/POST/PUT methods",
+        "JSON and form data support",
+        "Retry logic",
+        "Custom timeouts",
+      ],
+    },
+  ];
+}

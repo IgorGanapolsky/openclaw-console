@@ -6,19 +6,19 @@
  * handles routing, serialisation, and auth middleware.
  */
 
-import http from 'node:http';
-import express from 'express';
-import { WebSocketServer } from 'ws';
-import type { Request, Response } from 'express';
-import { bearerAuthMiddleware, TokenManager } from './auth.js';
-import type { StateManager } from './state.js';
-import type { WebSocketManager } from './websocket.js';
-import { createWebSocketManager } from './websocket.js';
-import type { GatewayConfig } from '../config/default.js';
-import { DockerContainerManager } from './container-manager.js';
-import { registerRemoteApi } from './remote-api.js';
-import { SkillGenerator } from './skill-generator.js';
-import { McpManager } from './mcp-manager.js';
+import http from "node:http";
+import express from "express";
+import { WebSocketServer } from "ws";
+import type { Request, Response } from "express";
+import { bearerAuthMiddleware, TokenManager } from "./auth.js";
+import type { StateManager } from "./state.js";
+import type { WebSocketManager } from "./websocket.js";
+import { createWebSocketManager } from "./websocket.js";
+import type { GatewayConfig } from "../config/default.js";
+import { DockerContainerManager } from "./container-manager.js";
+import { registerRemoteApi } from "./remote-api.js";
+import { SkillGenerator } from "./skill-generator.js";
+import { McpManager } from "./mcp-manager.js";
 import type {
   ChatRequest,
   ApprovalRespondRequest,
@@ -26,14 +26,18 @@ import type {
   ApprovalResponse,
   RuntimeConfigResponse,
   RuntimeConfigUpdateRequest,
-} from '../types/protocol.js';
-import { ERROR_CODES } from '../types/protocol.js';
-import { createBillingRouter } from '../billing/revenuecat.js';
-import { createAnalyticsRouter } from '../analytics/events.js';
-import { createIntegrationsRouter } from '../integrations/devops-hub.js';
-import { getConfiguredLocalModel, probeLocalModelProvider } from './model-provider.js';
-import { isApprovalPolicyPreset } from '../config/default.js';
-import { normalizeProjectBridgeSession } from './project-session.js';
+} from "../types/protocol.js";
+import { ERROR_CODES } from "../types/protocol.js";
+import { createBillingRouter } from "../billing/revenuecat.js";
+import { createAnalyticsRouter } from "../analytics/events.js";
+import { createIntegrationsRouter } from "../integrations/devops-hub.js";
+import { createChannelsRouter } from "../channels/router.js";
+import {
+  getConfiguredLocalModel,
+  probeLocalModelProvider,
+} from "./model-provider.js";
+import { isApprovalPolicyPreset } from "../config/default.js";
+import { normalizeProjectBridgeSession } from "./project-session.js";
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -58,18 +62,36 @@ export function createGatewayServer(
   const auth = bearerAuthMiddleware(tokenManager);
   const containerManager = new DockerContainerManager(config);
   const mcpManager = new McpManager();
-  const skillGenerator = new SkillGenerator(containerManager, mcpManager, state);
+  const skillGenerator = new SkillGenerator(
+    containerManager,
+    mcpManager,
+    state,
+  );
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
   app.use(express.json());
-  
+
+  // Serve static dashboard files
+  app.use("/dashboard", express.static("public/dashboard"));
+
+  // Test route to debug routing issues
+  app.get("/api/test", (req: Request, res: Response) => {
+    res.json({
+      message: "Test route works",
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // Register Remote API for isolated skills
   registerRemoteApi(app, state);
   app.use((_req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', config.corsOrigins);
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader("Access-Control-Allow-Origin", config.corsOrigins);
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Authorization, Content-Type",
+    );
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     next();
   });
   // app.options('/*', (_req, res) => { res.sendStatus(204); }); // Disabled due to Express 5 path-to-regexp issue
@@ -79,18 +101,21 @@ export function createGatewayServer(
   const startedAt = Date.now();
   const startedAtIso = new Date(startedAt).toISOString();
 
-  app.get('/api/health', (_req: Request, res: Response) => {
+  app.get("/api/health", (_req: Request, res: Response) => {
     const tasks = state.listAllTasks();
     const wsSnapshot = wsManager.getRuntimeSnapshot();
     const body: HealthResponse = {
-      status: 'ok',
+      status: "ok",
       version: config.version,
       started_at: startedAtIso,
       checked_at: new Date().toISOString(),
       uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
       agent_count: state.listAgents().length,
-      active_tasks: tasks.filter((t) => t.status === 'running' || t.status === 'queued').length,
-      open_incidents: state.listIncidents().filter((i) => i.status === 'open').length,
+      active_tasks: tasks.filter(
+        (t) => t.status === "running" || t.status === "queued",
+      ).length,
+      open_incidents: state.listIncidents().filter((i) => i.status === "open")
+        .length,
       pending_approvals: state.listPendingApprovals().length,
       websocket_clients: wsSnapshot.connected_clients,
       last_inbound_ws_at: wsSnapshot.last_inbound_at,
@@ -101,11 +126,11 @@ export function createGatewayServer(
     res.json(body);
   });
 
-  app.get('/api/runtime/status', auth, (_req: Request, res: Response) => {
+  app.get("/api/runtime/status", auth, (_req: Request, res: Response) => {
     res.json({
       checked_at: new Date().toISOString(),
       gateway: {
-        status: 'ok',
+        status: "ok",
         version: config.version,
         started_at: startedAtIso,
         uptime_seconds: Math.floor((Date.now() - startedAt) / 1000),
@@ -119,7 +144,7 @@ export function createGatewayServer(
     });
   });
 
-  app.get('/api/model/status', auth, async (_req: Request, res: Response) => {
+  app.get("/api/model/status", auth, async (_req: Request, res: Response) => {
     res.json(await probeLocalModelProvider(config));
   });
 
@@ -132,24 +157,36 @@ export function createGatewayServer(
     };
   }
 
-  app.get('/api/config/runtime', auth, (_req: Request, res: Response) => {
+  app.get("/api/config/runtime", auth, (_req: Request, res: Response) => {
     res.json(runtimeConfigResponse());
   });
 
-  app.patch('/api/config/runtime', auth, (req: Request, res: Response) => {
+  app.patch("/api/config/runtime", auth, (req: Request, res: Response) => {
     const body = req.body as RuntimeConfigUpdateRequest;
 
     if (body.approval_policy_preset !== undefined) {
       if (!isApprovalPolicyPreset(body.approval_policy_preset)) {
-        res.status(400).json({ error: { code: 4000, message: 'Invalid approval_policy_preset' } });
+        res.status(400).json({
+          error: { code: 4000, message: "Invalid approval_policy_preset" },
+        });
         return;
       }
       config.approvalPolicyPreset = body.approval_policy_preset;
     }
 
     if (body.heartbeat_interval_ms !== undefined) {
-      if (!Number.isInteger(body.heartbeat_interval_ms) || body.heartbeat_interval_ms < 1_000 || body.heartbeat_interval_ms > 60_000) {
-        res.status(400).json({ error: { code: 4000, message: 'heartbeat_interval_ms must be an integer from 1000 to 60000' } });
+      if (
+        !Number.isInteger(body.heartbeat_interval_ms) ||
+        body.heartbeat_interval_ms < 1_000 ||
+        body.heartbeat_interval_ms > 60_000
+      ) {
+        res.status(400).json({
+          error: {
+            code: 4000,
+            message:
+              "heartbeat_interval_ms must be an integer from 1000 to 60000",
+          },
+        });
         return;
       }
       wsManager.updateHeartbeatInterval(body.heartbeat_interval_ms);
@@ -160,14 +197,19 @@ export function createGatewayServer(
 
   // ── Agents ───────────────────────────────────────────────────────────────
 
-  app.get('/api/agents', auth, (_req: Request, res: Response) => {
+  app.get("/api/agents", auth, (_req: Request, res: Response) => {
     res.json(state.listAgents());
   });
 
-  app.get('/api/agents/:id', auth, (req: Request, res: Response) => {
-    const agent = state.getAgent(String(req.params['id'] ?? ''));
+  app.get("/api/agents/:id", auth, (req: Request, res: Response) => {
+    const agent = state.getAgent(String(req.params["id"] ?? ""));
     if (!agent) {
-      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      res.status(404).json({
+        error: {
+          code: ERROR_CODES.AGENT_NOT_FOUND,
+          message: "Agent not found",
+        },
+      });
       return;
     }
     res.json(agent);
@@ -175,101 +217,142 @@ export function createGatewayServer(
 
   // ── Tasks ─────────────────────────────────────────────────────────────────
 
-  app.get('/api/agents/:id/tasks', auth, (req: Request, res: Response) => {
-    const agentId = String(req.params['id'] ?? '');
+  app.get("/api/agents/:id/tasks", auth, (req: Request, res: Response) => {
+    const agentId = String(req.params["id"] ?? "");
     if (!state.getAgent(agentId)) {
-      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      res.status(404).json({
+        error: {
+          code: ERROR_CODES.AGENT_NOT_FOUND,
+          message: "Agent not found",
+        },
+      });
       return;
     }
     res.json(state.listTasksForAgent(agentId));
   });
 
-  app.get('/api/agents/:id/tasks/:taskId', auth, (req: Request, res: Response) => {
-    const agentId = String(req.params['id'] ?? '');
-    const taskId = String(req.params['taskId'] ?? '');
-    if (!state.getAgent(agentId)) {
-      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
-      return;
-    }
-    const task = state.getTask(taskId);
-    if (!task || task.agent_id !== agentId) {
-      res.status(404).json({ error: { code: 4040, message: 'Task not found' } });
-      return;
-    }
-    res.json(task);
-  });
+  app.get(
+    "/api/agents/:id/tasks/:taskId",
+    auth,
+    (req: Request, res: Response) => {
+      const agentId = String(req.params["id"] ?? "");
+      const taskId = String(req.params["taskId"] ?? "");
+      if (!state.getAgent(agentId)) {
+        res.status(404).json({
+          error: {
+            code: ERROR_CODES.AGENT_NOT_FOUND,
+            message: "Agent not found",
+          },
+        });
+        return;
+      }
+      const task = state.getTask(taskId);
+      if (!task || task.agent_id !== agentId) {
+        res
+          .status(404)
+          .json({ error: { code: 4040, message: "Task not found" } });
+        return;
+      }
+      res.json(task);
+    },
+  );
 
   // ── Incidents ─────────────────────────────────────────────────────────────
 
-  app.get('/api/incidents', auth, (_req: Request, res: Response) => {
+  app.get("/api/incidents", auth, (_req: Request, res: Response) => {
     res.json(state.listIncidents());
   });
 
   // ── Approvals ─────────────────────────────────────────────────────────────
 
-  app.get('/api/approvals/pending', auth, (_req: Request, res: Response) => {
+  app.get("/api/approvals/pending", auth, (_req: Request, res: Response) => {
     res.json(state.listPendingApprovals());
   });
 
   // ── Bridge Sessions ───────────────────────────────────────────────────────
 
-  app.get('/api/bridges', auth, (_req: Request, res: Response) => {
+  app.get("/api/bridges", auth, (_req: Request, res: Response) => {
     res.json(state.listBridgeSessions());
   });
 
-  app.post('/api/bridges/upsert', auth, async (req: Request, res: Response) => {
-    const session = await state.upsertBridgeSession(normalizeProjectBridgeSession(req.body));
+  app.post("/api/bridges/upsert", auth, async (req: Request, res: Response) => {
+    const session = await state.upsertBridgeSession(
+      normalizeProjectBridgeSession(req.body),
+    );
     res.json(session);
   });
 
   // ── Recurring Tasks (Loops) ───────────────────────────────────────────────
 
-  app.get('/api/loops', auth, (_req: Request, res: Response) => {
+  app.get("/api/loops", auth, (_req: Request, res: Response) => {
     res.json(state.listRecurringTasks());
   });
 
-  app.post('/api/approvals/:id/respond', auth, (req: Request, res: Response) => {
-    const approvalId = String(req.params['id'] ?? '');
-    const pending = state.getPendingApproval(approvalId);
-    if (!pending) {
-      res.status(404).json({ error: { code: ERROR_CODES.APPROVAL_EXPIRED, message: 'Approval not found or expired' } });
-      return;
-    }
+  app.post(
+    "/api/approvals/:id/respond",
+    auth,
+    (req: Request, res: Response) => {
+      const approvalId = String(req.params["id"] ?? "");
+      const pending = state.getPendingApproval(approvalId);
+      if (!pending) {
+        res.status(404).json({
+          error: {
+            code: ERROR_CODES.APPROVAL_EXPIRED,
+            message: "Approval not found or expired",
+          },
+        });
+        return;
+      }
 
-    const body = req.body as ApprovalRespondRequest;
-    if (!body.decision || !['approved', 'denied'].includes(body.decision)) {
-      res.status(400).json({ error: { code: 4000, message: 'Invalid decision value' } });
-      return;
-    }
+      const body = req.body as ApprovalRespondRequest;
+      if (!body.decision || !["approved", "denied"].includes(body.decision)) {
+        res
+          .status(400)
+          .json({ error: { code: 4000, message: "Invalid decision value" } });
+        return;
+      }
 
-    const response: ApprovalResponse = {
-      approval_id: approvalId,
-      decision: body.decision,
-      biometric_verified: body.biometric_verified ?? false,
-      responded_at: new Date().toISOString(),
-    };
+      const response: ApprovalResponse = {
+        approval_id: approvalId,
+        decision: body.decision,
+        biometric_verified: body.biometric_verified ?? false,
+        responded_at: new Date().toISOString(),
+      };
 
-    const request = state.respondToApproval(response);
-    if (!request) {
-      res.status(409).json({ error: { code: ERROR_CODES.APPROVAL_ALREADY_RESPONDED, message: 'Already responded' } });
-      return;
-    }
+      const request = state.respondToApproval(response);
+      if (!request) {
+        res.status(409).json({
+          error: {
+            code: ERROR_CODES.APPROVAL_ALREADY_RESPONDED,
+            message: "Already responded",
+          },
+        });
+        return;
+      }
 
-    res.json({ ok: true, response });
-  });
+      res.json({ ok: true, response });
+    },
+  );
 
   // ── Chat ──────────────────────────────────────────────────────────────────
 
-  app.post('/api/agents/:id/chat', auth, (req: Request, res: Response) => {
-    const agentId = String(req.params['id'] ?? '');
+  app.post("/api/agents/:id/chat", auth, (req: Request, res: Response) => {
+    const agentId = String(req.params["id"] ?? "");
     const agent = state.getAgent(agentId);
     if (!agent) {
-      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      res.status(404).json({
+        error: {
+          code: ERROR_CODES.AGENT_NOT_FOUND,
+          message: "Agent not found",
+        },
+      });
       return;
     }
     const body = req.body as ChatRequest;
-    if (!body.message || typeof body.message !== 'string') {
-      res.status(400).json({ error: { code: 4000, message: 'message is required' } });
+    if (!body.message || typeof body.message !== "string") {
+      res
+        .status(400)
+        .json({ error: { code: 4000, message: "message is required" } });
       return;
     }
 
@@ -278,53 +361,62 @@ export function createGatewayServer(
       id: crypto.randomUUID(),
       agent_id: agentId,
       task_id: body.task_id ?? null,
-      role: 'agent',
+      role: "agent",
       content: `[${agent.name}] Acknowledged: "${body.message}"`,
       timestamp: new Date().toISOString(),
     });
   });
 
-  app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
+  app.post("/api/remote-control", auth, (_req: Request, res: Response) => {
     const devToken = tokenManager.getDefaultDevToken();
     // Development-only URL with temporary access token for mobile testing
     const baseUrl = `http://${config.host}:${config.port}/api/health`;
     const sessionUrl = `${baseUrl}?tkn=${devToken}`;
-    console.info('\n' + '='.repeat(40));
-    console.info('📱 REMOTE CONTROL ACTIVE');
-    console.info('Scan to access from mobile:');
+    console.info("\n" + "=".repeat(40));
+    console.info("📱 REMOTE CONTROL ACTIVE");
+    console.info("Scan to access from mobile:");
     console.info(`URL: ${sessionUrl}`);
-    console.info('='.repeat(40) + '\n');
+    console.info("=".repeat(40) + "\n");
     res.json({ url: sessionUrl, expires_in: 600 });
   });
 
   // ── Revenue Infrastructure ────────────────────────────────────────────────
 
   // Mount billing endpoints (RevenueCat integration)
-  app.use('/api/billing', createBillingRouter());
+  app.use("/api/billing", createBillingRouter());
 
   // Mount analytics endpoints (conversion tracking)
-  app.use('/api/analytics', createAnalyticsRouter());
+  app.use("/api/analytics", createAnalyticsRouter());
 
   // Mount integrations endpoints (DevOps hub)
-  app.use('/api/integrations', createIntegrationsRouter());
+  app.use("/api/integrations", createIntegrationsRouter());
+
+  // Mount channels endpoints (Communication channels)
+  app.use("/api/channels", createChannelsRouter());
 
   // ── Git Operations ────────────────────────────────────────────────────────
   // Note: gitApiHandler is initialized after wsManager is created below
 
   // ── Skill Generation ──────────────────────────────────────────────────────
 
-  app.post('/api/skills/generate', auth, async (req: Request, res: Response) => {
-    try {
-      const response = await skillGenerator.generateAndDeploy(req.body);
-      if (response.success) {
-        res.json(response);
-      } else {
-        res.status(500).json({ error: response.error });
+  app.post(
+    "/api/skills/generate",
+    auth,
+    async (req: Request, res: Response) => {
+      try {
+        const response = await skillGenerator.generateAndDeploy(req.body);
+        if (response.success) {
+          res.json(response);
+        } else {
+          res.status(500).json({ error: response.error });
+        }
+      } catch (err: unknown) {
+        res
+          .status(500)
+          .json({ error: err instanceof Error ? err.message : String(err) });
       }
-    } catch (err: unknown) {
-      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
-    }
-  });
+    },
+  );
 
   // ── HTTP + WS Server ──────────────────────────────────────────────────────
 
@@ -333,25 +425,97 @@ export function createGatewayServer(
   const wsManager = createWebSocketManager(wss, state, config);
 
   // Upgrade HTTP connections to WebSocket with token auth
-  httpServer.on('upgrade', (request, socket, head) => {
+  httpServer.on("upgrade", (request, socket, head) => {
     let tokenStr: string | null = null;
     try {
-      const url = new URL(request.url ?? '', `http://${request.headers.host || 'localhost'}`);
-      tokenStr = url.searchParams.get('token');
+      const url = new URL(
+        request.url ?? "",
+        `http://${request.headers.host || "localhost"}`,
+      );
+      tokenStr = url.searchParams.get("token");
     } catch {
       // Ignore URL parse errors
     }
 
-    const token = tokenStr ? tokenManager.validate(tokenStr) ? tokenStr : null : null;
+    const token = tokenStr
+      ? tokenManager.validate(tokenStr)
+        ? tokenStr
+        : null
+      : null;
 
     if (!token) {
-      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
       socket.destroy();
       return;
     }
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       wsManager.acceptConnection(ws);
+    });
+  });
+
+  // ── Instances ─────────────────────────────────────────────────────────────
+
+  app.get("/api/instances", auth, (req: Request, res: Response) => {
+    const wsSnapshot = wsManager.getRuntimeSnapshot();
+    const now = Date.now();
+
+    const instances = wsSnapshot.sessions.map((session) => {
+      const connectedMs = new Date(session.connected_at).getTime();
+      const lastMessageMs = session.last_message_at
+        ? new Date(session.last_message_at).getTime()
+        : connectedMs;
+      const timeSinceLastMessage = now - lastMessageMs;
+      const timeSinceConnection = now - connectedMs;
+
+      // Determine connection status based on activity
+      let status: "online" | "stale" | "disconnected";
+      if (timeSinceLastMessage < 30000) {
+        // Active within last 30s
+        status = "online";
+      } else if (timeSinceLastMessage < 300000) {
+        // Active within last 5 minutes
+        status = "stale";
+      } else {
+        status = "disconnected";
+      }
+
+      return {
+        id: session.id,
+        status,
+        connected_at: session.connected_at,
+        last_message_at: session.last_message_at,
+        time_since_connection: timeSinceConnection,
+        time_since_last_message: timeSinceLastMessage,
+        subscribed_agents: session.subscribed_agents,
+        scope_count: session.subscribed_agents.length,
+        // Note: IP address and auth method would need additional tracking in WebSocketManager
+        ip_address: "127.0.0.1", // Placeholder - would need req.ip from connection
+        auth_method: "bearer_token", // Placeholder - would need to track auth method
+        version: config.version,
+        throughput: {
+          messages_received: 0, // Would need message counting in WebSocketManager
+          messages_sent: 0,
+          bytes_received: 0,
+          bytes_sent: 0,
+        },
+      };
+    });
+
+    const summary = {
+      total_instances: instances.length,
+      online_count: instances.filter((i) => i.status === "online").length,
+      stale_count: instances.filter((i) => i.status === "stale").length,
+      disconnected_count: instances.filter((i) => i.status === "disconnected")
+        .length,
+      versions: [...new Set(instances.map((i) => i.version))],
+      total_scopes: instances.reduce((sum, i) => sum + i.scope_count, 0),
+    };
+
+    res.json({
+      summary,
+      instances,
+      last_updated: new Date().toISOString(),
     });
   });
 
@@ -365,13 +529,19 @@ export function createGatewayServer(
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {
-          console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
+          console.info(
+            `[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`,
+          ); // local-dev-only
           // Dev hint: connect via WebSocket using your dev auth bearer credential
           const wsEndpoint = `ws://${config.host}:${config.port}/ws`; // local-dev-only
-          console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          console.info(
+            `[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`,
+          ); // local-dev-only
           const devToken = tokenManager.getDefaultDevToken();
           if (devToken) {
-            console.info(`[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`);
+            console.info(
+              `[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`,
+            );
           }
           resolve();
         });
