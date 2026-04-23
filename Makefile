@@ -131,7 +131,8 @@ clean-skills:
 
 clean-all: clean-android clean-ios clean-skills
 	@echo "==> Cleaning git hooks and caches"
-	@rm -f .git/hooks/pre-commit
+	@HOOKS_DIR=$$(git rev-parse --git-path hooks); \
+	rm -f "$$HOOKS_DIR/pre-commit" "$$HOOKS_DIR/pre-push"
 	@echo "==> All build artifacts cleaned"
 
 # Pre-release validation
@@ -163,6 +164,4 @@ bootstrap: setup-dev
 
 # Install git hooks
 install-hooks:
-	@cp scripts/pre-commit .git/hooks/pre-commit 2>/dev/null || echo "No pre-commit script found"
-	@chmod +x .git/hooks/pre-commit 2>/dev/null || true
-	@echo "Pre-commit hook installed"
+	@./scripts/install-git-hooks.sh

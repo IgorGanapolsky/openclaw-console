@@ -28,6 +28,7 @@ import com.openclaw.console.ui.screens.bridges.BridgeListScreen
 import com.openclaw.console.ui.components.ApprovalBanner
 import com.openclaw.console.ui.components.EmptyState
 import com.openclaw.console.ui.screens.dashboard.FleetDashboardScreen
+import com.openclaw.console.ui.screens.onboarding.WelcomeOnboardingScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
@@ -39,6 +40,8 @@ import com.openclaw.console.ui.theme.LocalOpenClawColors
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class Screen(val route: String, val label: String) {
+    object Welcome : Screen("welcome", "Welcome")
+
     // Bottom nav roots
     object Dashboard : Screen("dashboard", "Dashboard")
     object Agents : Screen("agents", "Agents")
@@ -77,6 +80,8 @@ private data class BottomNavItem(
 fun NavGraph(appViewModel: AppViewModel = viewModel()) {
     val navController = rememberNavController()
     val colors = LocalOpenClawColors.current
+    val savedGateways by appViewModel.gatewayRepository.gateways.collectAsStateWithLifecycle()
+    val hasConfiguredGateway = savedGateways.isNotEmpty()
 
     val pendingApprovalCount by appViewModel.pendingApprovalCount.collectAsStateWithLifecycle()
     val incidentRepository by appViewModel.incidentRepository.collectAsStateWithLifecycle()
@@ -95,54 +100,80 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
         BottomNavItem(Screen.Bridges, Icons.Default.Link),
         BottomNavItem(Screen.Settings, Icons.Default.Settings)
     )
+    val topLevelRoutes = remember(bottomItems) { bottomItems.map { it.screen.route }.toSet() }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val currentRoute = currentDestination?.route
+    val shouldShowBottomBar = hasConfiguredGateway &&
+        currentDestination?.hierarchy?.any { destination -> destination.route in topLevelRoutes } == true
+
+    LaunchedEffect(hasConfiguredGateway, currentRoute) {
+        if (!hasConfiguredGateway && currentRoute != Screen.Welcome.route && currentRoute != Screen.AddGateway.route) {
+            navController.navigate(Screen.Welcome.route) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+        }
+
+        if (hasConfiguredGateway && currentRoute == Screen.Welcome.route) {
+            navController.navigate(Screen.Dashboard.route) {
+                popUpTo(Screen.Welcome.route) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+        }
+    }
 
     Scaffold(
         containerColor = colors.appBackground,
         bottomBar = {
-            Surface(
-                color = colors.chromeBackground,
-                shadowElevation = 0.dp
-            ) {
-                NavigationBar(
-                    containerColor = colors.chromeBackground,
-                    tonalElevation = 0.dp
+            if (shouldShowBottomBar) {
+                Surface(
+                    color = colors.chromeBackground,
+                    shadowElevation = 0.dp
                 ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-
-                bottomItems.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true,
-                        onClick = {
-                            navController.navigate(item.screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            if (item.badge > 0) {
-                                BadgedBox(badge = {
-                                    Badge { Text(item.badge.toString()) }
-                                }) {
-                                    Icon(item.icon, contentDescription = item.screen.label)
-                                }
-                            } else {
-                                Icon(item.icon, contentDescription = item.screen.label)
-                            }
-                        },
-                        label = { Text(item.screen.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = colors.glowCyan,
-                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
+                    NavigationBar(
+                        containerColor = colors.chromeBackground,
+                        tonalElevation = 0.dp
+                    ) {
+                        bottomItems.forEach { item ->
+                            NavigationBarItem(
+                                selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true,
+                                onClick = {
+                                    navController.navigate(item.screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = {
+                                    if (item.badge > 0) {
+                                        BadgedBox(badge = {
+                                            Badge { Text(item.badge.toString()) }
+                                        }) {
+                                            Icon(item.icon, contentDescription = item.screen.label)
+                                        }
+                                    } else {
+                                        Icon(item.icon, contentDescription = item.screen.label)
+                                    }
+                                },
+                                label = { Text(item.screen.label) },
+                                alwaysShowLabel = false,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = colors.glowCyan,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -154,17 +185,23 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = Screen.Dashboard.route
+                startDestination = if (hasConfiguredGateway) Screen.Dashboard.route else Screen.Welcome.route
             ) {
-            // Dashboard
-            composable(Screen.Dashboard.route) {
-                FleetDashboardScreen(
-                    appViewModel = appViewModel,
-                    onAgentClick = { agentId ->
-                        navController.navigate(Screen.AgentDetail.route(agentId))
-                    }
-                )
-            }
+                composable(Screen.Welcome.route) {
+                    WelcomeOnboardingScreen(
+                        onAddGateway = { navController.navigate(Screen.AddGateway.route) }
+                    )
+                }
+
+                // Dashboard
+                composable(Screen.Dashboard.route) {
+                    FleetDashboardScreen(
+                        appViewModel = appViewModel,
+                        onAgentClick = { agentId ->
+                            navController.navigate(Screen.AgentDetail.route(agentId))
+                        }
+                    )
+                }
 
             // Agents
             composable(Screen.Agents.route) {
