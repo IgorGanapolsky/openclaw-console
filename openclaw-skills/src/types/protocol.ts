@@ -253,6 +253,7 @@ export type ServerEventType =
   | 'bridge_session_new'
   | 'bridge_session_update'
   | 'recurring_task_updated'
+  | 'deployment_update'
   | 'git_state_update'
   | 'git_conflict'
   | 'git_operation_complete'
@@ -392,6 +393,68 @@ export interface HealthResponse {
   };
 }
 
+// ─── Deployment ──────────────────────────────────────────────────────────────
+
+/** Target environment for deployments. */
+export type DeploymentEnvironment = 'staging' | 'production' | 'development';
+
+/** Platform to deploy to. */
+export type DeploymentPlatform = 'ios' | 'android' | 'both';
+
+/** Deployment lifecycle status. */
+export type DeploymentStatus = 'pending' | 'running' | 'success' | 'failure' | 'cancelled';
+
+/** A deployment request payload. */
+export interface DeploymentRequest {
+  title: string;
+  environment: DeploymentEnvironment;
+  platform: DeploymentPlatform;
+  version?: string;
+  ref?: string;
+  options?: {
+    skipTests?: boolean;
+    force?: boolean;
+    distributionGroups?: string[];
+  };
+}
+
+/** Response from creating a deployment. */
+export interface DeploymentResponse {
+  id: string;
+  task_id: string;
+  status: DeploymentStatus;
+  started_at: string;
+}
+
+/** Deployment status update payload for WebSocket events. */
+export interface DeploymentUpdatePayload {
+  id: string;
+  status: DeploymentStatus;
+  task_id: string;
+  updated_at: string;
+  workflow_runs?: Array<{
+    id: number;
+    name: string;
+    status: string;
+    conclusion: string | null;
+    html_url: string;
+  }>;
+  error?: string;
+}
+
+/** List deployments response. */
+export interface DeploymentsListResponse {
+  deployments: Array<{
+    id: string;
+    task_id: string;
+    request: DeploymentRequest;
+    status: DeploymentStatus;
+    started_at: string;
+    completed_at?: string;
+    error?: string;
+  }>;
+}
+
 // ─── Error Codes ─────────────────────────────────────────────────────────────
 
 export const ERROR_CODES = {
@@ -401,6 +464,8 @@ export const ERROR_CODES = {
   APPROVAL_ALREADY_RESPONDED: 1004,
   RATE_LIMITED: 1005,
   GATEWAY_UNAVAILABLE: 1006,
+  DEPLOYMENT_NOT_FOUND: 1007,
+  DEPLOYMENT_ALREADY_RUNNING: 1008,
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

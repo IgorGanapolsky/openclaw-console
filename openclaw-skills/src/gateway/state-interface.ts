@@ -14,6 +14,7 @@ import type {
   ApprovalResponse,
   BridgeSession,
   RecurringTask,
+  DeploymentUpdatePayload,
 } from '../types/protocol.js';
 
 /**
@@ -67,4 +68,7 @@ export interface IStateManager {
 
   upsertRecurringTask?(task: RecurringTask): Promise<RecurringTask>;
   listRecurringTasks?(): Promise<RecurringTask[]> | RecurringTask[];
+
+  // Deployment events
+  emitDeploymentUpdate?(agentId: string, payload: DeploymentUpdatePayload): Promise<void> | void;
 }

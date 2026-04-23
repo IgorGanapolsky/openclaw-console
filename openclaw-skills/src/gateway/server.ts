@@ -43,6 +43,7 @@ export interface GatewayServer {
   containerManager: DockerContainerManager;
   mcpManager: McpManager;
   setMulticaBridge: (bridge: any) => void;
+  setDeploymentManager: (manager: any) => void;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -327,6 +328,123 @@ export function createGatewayServer(
     }
   });
 
+  // ── Deployment Management ────────────────────────────────────────────────
+
+  // Placeholder for deployment manager - will be injected after server creation
+  let deploymentManager: any = null;
+
+  app.post('/api/deployments', auth, async (req: Request, res: Response) => {
+    try {
+      if (!deploymentManager) {
+        res.status(503).json({ error: { code: 5030, message: 'Deployment manager not initialized' } });
+        return;
+      }
+
+      const request = req.body as import('../types/protocol.js').DeploymentRequest;
+
+      // Validate required fields
+      if (!request.title || !request.environment || !request.platform) {
+        res.status(400).json({ error: { code: 4000, message: 'title, environment, and platform are required' } });
+        return;
+      }
+
+      const deployment = await deploymentManager.deploy(request);
+
+      const response: import('../types/protocol.js').DeploymentResponse = {
+        id: deployment.id,
+        task_id: deployment.taskId,
+        status: deployment.status,
+        started_at: deployment.startedAt,
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('[deployments] Deployment creation failed:', error);
+      res.status(500).json({ error: { code: 5000, message: 'Deployment creation failed' } });
+    }
+  });
+
+  app.get('/api/deployments', auth, async (_req: Request, res: Response) => {
+    try {
+      if (!deploymentManager) {
+        res.status(503).json({ error: { code: 5030, message: 'Deployment manager not initialized' } });
+        return;
+      }
+
+      const deployments = deploymentManager.listActiveDeployments();
+
+      const response: import('../types/protocol.js').DeploymentsListResponse = {
+        deployments: deployments.map((d: any) => ({
+          id: d.id,
+          task_id: d.taskId,
+          request: d.request,
+          status: d.status,
+          started_at: d.startedAt,
+          completed_at: d.completedAt,
+          error: d.error,
+        })),
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('[deployments] Failed to list deployments:', error);
+      res.status(500).json({ error: { code: 5000, message: 'Failed to list deployments' } });
+    }
+  });
+
+  app.get('/api/deployments/:id', auth, async (req: Request, res: Response) => {
+    try {
+      if (!deploymentManager) {
+        res.status(503).json({ error: { code: 5030, message: 'Deployment manager not initialized' } });
+        return;
+      }
+
+      const deploymentId = String(req.params['id'] ?? '');
+      const deployment = deploymentManager.getDeploymentStatus(deploymentId);
+
+      if (!deployment) {
+        res.status(404).json({ error: { code: ERROR_CODES.DEPLOYMENT_NOT_FOUND, message: 'Deployment not found' } });
+        return;
+      }
+
+      res.json({
+        id: deployment.id,
+        task_id: deployment.taskId,
+        request: deployment.request,
+        status: deployment.status,
+        started_at: deployment.startedAt,
+        completed_at: deployment.completedAt,
+        workflow_runs: deployment.workflowRuns,
+        error: deployment.error,
+      });
+    } catch (error) {
+      console.error('[deployments] Failed to get deployment:', error);
+      res.status(500).json({ error: { code: 5000, message: 'Failed to get deployment' } });
+    }
+  });
+
+  app.post('/api/deployments/:id/cancel', auth, async (req: Request, res: Response) => {
+    try {
+      if (!deploymentManager) {
+        res.status(503).json({ error: { code: 5030, message: 'Deployment manager not initialized' } });
+        return;
+      }
+
+      const deploymentId = String(req.params['id'] ?? '');
+      const cancelled = await deploymentManager.cancelDeployment(deploymentId);
+
+      if (!cancelled) {
+        res.status(404).json({ error: { code: ERROR_CODES.DEPLOYMENT_NOT_FOUND, message: 'Deployment not found or cannot be cancelled' } });
+        return;
+      }
+
+      res.json({ ok: true, cancelled: true });
+    } catch (error) {
+      console.error('[deployments] Failed to cancel deployment:', error);
+      res.status(500).json({ error: { code: 5000, message: 'Failed to cancel deployment' } });
+    }
+  });
+
   // ── Multica Integration Webhooks ──────────────────────────────────────────
 
   // Webhook endpoint for Multica events (HIGH-ROI integration)
@@ -449,6 +567,9 @@ export function createGatewayServer(
     containerManager,
     mcpManager,
     setMulticaBridge,
+    setDeploymentManager(manager: any) {
+      deploymentManager = manager;
+    },
     start(): Promise<void> {
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {

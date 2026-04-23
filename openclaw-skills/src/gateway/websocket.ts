@@ -140,6 +140,10 @@ export class WebSocketManager {
     this.state.events.on('recurring_task_updated', (task: RecurringTask) => {
       this.broadcastToSubscribers(task.agent_id, 'recurring_task_updated', task);
     });
+
+    this.state.events.on('deployment_updated', (agentId: string, payload: import('../types/protocol.js').DeploymentUpdatePayload) => {
+      this.broadcastToSubscribers(agentId, 'deployment_update', payload);
+    });
   }
 
   // ── Connection handling ───────────────────────────────────────────────────

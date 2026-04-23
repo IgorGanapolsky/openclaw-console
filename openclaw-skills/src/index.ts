@@ -14,6 +14,7 @@ import { CiMonitorSkill } from './skills/ci-monitor.js';
 import { TradingMonitorSkill } from './skills/trading-monitor.js';
 import { DailyBriefSkill } from './skills/daily-brief.js';
 import { GitClawAgentSkill } from './skills/gitclaw-agent.js';
+import { DeploymentManagerSkill } from './skills/deployment-manager.js';
 import { AGENT_IDS } from './config/agents.js';
 import { MulticaBridge, MulticaClient, createMulticaConfig, validateMulticaConfig } from './bridges/multica/index.js';
 
@@ -209,8 +210,25 @@ async function main(): Promise<void> {
     await state.updateAgentStatus(AGENT_IDS.TRADING_BOT, 'busy');
   }
 
-  // Mark Deploy Manager as online
-  await state.updateAgentStatus(AGENT_IDS.DEPLOY_MANAGER, 'online');
+  // --- Deployment Manager ---
+  if (process.env.GITHUB_TOKEN) {
+    const deploymentManager = new DeploymentManagerSkill(state, {
+      agentId: AGENT_IDS.DEPLOY_MANAGER,
+      agentName: 'Deploy Manager',
+      repository: process.env.GITHUB_REPOSITORY || 'openclaw/console',
+      githubToken: process.env.GITHUB_TOKEN,
+    });
+
+    deploymentManager.start();
+    gateway.setDeploymentManager(deploymentManager);
+    console.info('[startup] Deployment Manager skill started');
+
+    // Mark Deploy Manager as online
+    await state.updateAgentStatus(AGENT_IDS.DEPLOY_MANAGER, 'online');
+  } else {
+    console.warn('[startup] GITHUB_TOKEN not configured - Deployment Manager disabled');
+    await state.updateAgentStatus(AGENT_IDS.DEPLOY_MANAGER, 'offline');
+  }
 
   // --- GitClaw Agent ---
   if (enabledSkills.has('gitclaw-agent')) {

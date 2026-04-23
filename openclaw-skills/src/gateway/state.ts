@@ -42,6 +42,7 @@ export interface StateEvents {
   bridge_session_new: [session: BridgeSession];
   bridge_session_update: [session: BridgeSession];
   recurring_task_updated: [task: RecurringTask];
+  deployment_updated: [agentId: string, payload: import('../types/protocol.js').DeploymentUpdatePayload];
 }
 
 export type StateEventName = keyof StateEvents;
@@ -296,6 +297,11 @@ export class StateManager implements IStateManager {
 
   public listRecurringTasks(): RecurringTask[] {
     return Array.from(this.recurringTasks.values());
+  }
+
+  /** Emit deployment update event for WebSocket broadcasting */
+  public emitDeploymentUpdate(agentId: string, payload: import('../types/protocol.js').DeploymentUpdatePayload): void {
+    this.events.emit('deployment_updated', agentId, payload);
   }
 
   // ── Approval ──────────────────────────────────────────────────────────────
