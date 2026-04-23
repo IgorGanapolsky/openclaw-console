@@ -11,6 +11,13 @@ def configured_testflight_group
   ENV["TESTFLIGHT_GROUP"] || ENV["TESTFLIGHT_GROUPS"] || DEFAULT_TESTFLIGHT_GROUP
 end
 
+def truthy_env?(name, default: false)
+  value = ENV[name]
+  return default if value.nil? || value.to_s.strip.empty?
+
+  ["1", "true", "yes"].include?(value.to_s.strip.downcase)
+end
+
 def app_store_api_key_from_env
   return nil unless ENV["APPSTORE_KEY_ID"] && ENV["APPSTORE_ISSUER_ID"] && ENV["APPSTORE_PRIVATE_KEY"]
 
@@ -202,7 +209,7 @@ platform :ios do
     end
 
     upload_options = {
-      skip_waiting_for_build_processing: false,
+      skip_waiting_for_build_processing: truthy_env?("TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING", default: true),
       api_key: api_key,
       beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com",
@@ -210,16 +217,21 @@ platform :ios do
     }
 
     beta_review_info = beta_review_info_from_env
-    if beta_review_info
+    distribute_external = truthy_env?("TESTFLIGHT_DISTRIBUTE_EXTERNAL", default: true)
+    notify_external_testers = truthy_env?("TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS", default: distribute_external)
+
+    if distribute_external && beta_review_info
       upload_options[:beta_app_review_info] = beta_review_info
       upload_options[:distribute_external] = true
-      upload_options[:notify_external_testers] = true
+      upload_options[:notify_external_testers] = notify_external_testers
       upload_options[:groups] = [configured_testflight_group]
-    else
+    elsif distribute_external
       UI.important(
         "Missing TESTFLIGHT_CONTACT_* metadata. Uploading to internal/private TestFlight only; " \
         "external distribution is disabled for this run."
       )
+    else
+      UI.message("TESTFLIGHT_DISTRIBUTE_EXTERNAL=false; uploading internal/private TestFlight build only.")
     end
 
     upload_to_testflight(**upload_options)
