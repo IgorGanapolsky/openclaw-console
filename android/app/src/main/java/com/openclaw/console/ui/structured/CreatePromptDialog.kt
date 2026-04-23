@@ -14,8 +14,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.openclaw.console.R
-import com.openclaw.console.data.models.Agent
-import com.openclaw.console.ui.components.AgentStatusDot
+import com.openclaw.console.data.model.Agent
+import com.openclaw.console.ui.components.StatusDot
 
 /**
  * HIGH-ROI: Create Prompt Dialog for Multica Integration
@@ -129,7 +129,7 @@ fun CreatePromptDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                AgentStatusDot(status = agent.status)
+                                StatusDot(status = agent.status)
 
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(

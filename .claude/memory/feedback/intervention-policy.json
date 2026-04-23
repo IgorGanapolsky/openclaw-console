@@ -8,16 +8,16 @@
     "warn",
     "deny"
   ],
-  "exampleCount": 47,
+  "exampleCount": 51,
   "labelCounts": {
-    "allow": 20,
+    "allow": 24,
     "recall": 21,
     "verify": 6,
     "warn": 0,
     "deny": 0
   },
   "labelTokenTotals": {
-    "allow": 143,
+    "allow": 159,
     "recall": 147,
     "verify": 157,
     "warn": 0,
@@ -72,15 +72,15 @@
       "text_system": 1,
       "text_self-correction": 1,
       "text_schema": 1,
-      "kind_audit": 16,
-      "decision_allow": 16,
+      "kind_audit": 20,
+      "decision_allow": 20,
       "tool_unified_context": 4,
-      "source_gates-engine": 8,
-      "source_tool-latency": 8,
+      "source_gates-engine": 10,
+      "source_tool-latency": 10,
       "tool_recall": 4,
       "tag_claude-history-sync": 1,
       "tag_auto-capture-fallback": 1,
-      "tool_track_action": 8
+      "tool_track_action": 12
     },
     "recall": {
       "kind_feedback": 21,
@@ -209,28 +209,28 @@
   },
   "vocabularySize": 162,
   "metrics": {
-    "trainingAccuracy": 0.5263,
-    "holdoutAccuracy": 0.1111,
-    "holdoutSize": 9,
-    "trainingExamples": 38
+    "trainingAccuracy": 0.5122,
+    "holdoutAccuracy": 0,
+    "holdoutSize": 10,
+    "trainingExamples": 41
   },
   "sourceCounts": {
     "feedback": 31,
-    "audit": 16,
+    "audit": 20,
     "diagnostic": 0,
     "decision": 0
   },
-  "updatedAt": "2026-04-23T19:16:51.454Z",
+  "updatedAt": "2026-04-23T20:06:55.386Z",
   "labelMetrics": {
     "allow": {
-      "total": 8,
+      "total": 10,
       "correct": 0,
       "accuracy": 0
     },
     "recall": {
-      "total": 1,
-      "correct": 1,
-      "accuracy": 1
+      "total": 0,
+      "correct": 0,
+      "accuracy": 0
     },
     "verify": {
       "total": 0,
@@ -252,19 +252,19 @@
     "allow": [
       {
         "token": "decision_allow",
-        "count": 16
+        "count": 20
       },
       {
         "token": "kind_audit",
-        "count": 16
+        "count": 20
+      },
+      {
+        "token": "tool_track_action",
+        "count": 12
       },
       {
         "token": "source_gates-engine",
-        "count": 8
-      },
-      {
-        "token": "source_tool-latency",
-        "count": 8
+        "count": 10
       }
     ],
     "recall": [
