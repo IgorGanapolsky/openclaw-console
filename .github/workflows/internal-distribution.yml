@@ -2,7 +2,7 @@ name: Internal Distribution
 
 on:
   workflow_run:
-    workflows: ["iOS CI", "Android CI"]
+    workflows: ["CI"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -32,6 +32,7 @@ jobs:
           WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WORKFLOW_BRANCH: ${{ github.event.workflow_run.head_branch }}
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+          ALLOWED_BRANCHES: "develop main"
           INPUT_REF: ${{ inputs.ref }}
         run: |
           set -euo pipefail
@@ -46,6 +47,16 @@ jobs:
             SHOULD_RUN="true"
             REASON="manual_dispatch"
           elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" ]]; then
+            if [[ " $ALLOWED_BRANCHES " != *" $WORKFLOW_BRANCH "* ]]; then
+              REASON="branch_not_eligible_${WORKFLOW_BRANCH}"
+              echo "gate: skipping internal distribution for branch=$WORKFLOW_BRANCH"
+              echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+              echo "ref=$REF" >> "$GITHUB_OUTPUT"
+              echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+              echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
             REF="$WORKFLOW_SHA"
             SHA="$WORKFLOW_SHA"
             SHOULD_RUN="true"
@@ -222,7 +233,7 @@ jobs:
           done
 
       - name: Upload iOS distribution artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ios-distribution-internal
@@ -580,7 +591,7 @@ jobs:
           echo "✅ Firebase App Distribution verification complete"
 
       - name: Upload Android APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: android-apk-internal
