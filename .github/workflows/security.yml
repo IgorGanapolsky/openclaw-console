@@ -10,8 +10,11 @@ on:
     paths:
       - "openclaw-skills/package.json"
       - "openclaw-skills/package-lock.json"
+      - ".claude/skills/teams-rag-connector/scripts/package.json"
+      - ".claude/skills/teams-rag-connector/scripts/package-lock.json"
       - "android/app/build.gradle.kts"
       - "android/build.gradle.kts"
+      - ".github/workflows/security.yml"
 
 permissions:
   contents: read
@@ -32,11 +35,17 @@ jobs:
           cache: "npm"
           cache-dependency-path: "openclaw-skills/package-lock.json"
 
-      - name: npm audit (skills)
+      - name: npm audit (OpenClaw skills)
         working-directory: openclaw-skills
         run: |
           npm ci
-          npm audit --audit-level=high || true
+          npm audit --audit-level=high
+
+      - name: npm audit (Teams RAG connector)
+        working-directory: .claude/skills/teams-rag-connector/scripts
+        run: |
+          npm ci
+          npm audit --audit-level=high
 
   codeql:
     name: CodeQL Analysis (${{ matrix.language }})
