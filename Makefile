@@ -1,4 +1,4 @@
-.PHONY: verify verify-android verify-ios verify-skills
+.PHONY: verify verify-android verify-ios verify-skills verify-release-contract
 .PHONY: run-android-device run-android-emulator run-ios-device run-ios-sim fix-ios-device
 .PHONY: maestro-android maestro-ios
 .PHONY: clean clean-android clean-ios clean-skills clean-all
@@ -12,7 +12,11 @@ ANDROID_PACKAGE := com.openclaw.console
 IOS_SCHEME := OpenClawConsole
 
 # Verify (unit tests + builds)
-verify: verify-android verify-ios verify-skills
+verify: verify-release-contract verify-android verify-ios verify-skills
+
+verify-release-contract:
+	@echo "==> Release contract: icons + metadata + release inputs"
+	@python3 scripts/validate_release_contract.py --platform both
 
 verify-android:
 	@echo "==> Android: unit tests + debug build"

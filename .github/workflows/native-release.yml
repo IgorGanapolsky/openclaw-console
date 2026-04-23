@@ -42,6 +42,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Pillow
+        run: python3 -m pip install pillow
+
       - name: Fail fast on required iOS release secrets
         env:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
@@ -62,11 +70,6 @@ jobs:
 
       - name: Preflight release checks (iOS)
         run: bash scripts/preflight-release.sh --platform ios --layer 1
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -161,6 +164,17 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Pillow
+        run: python3 -m pip install pillow
+
+      - name: Preflight release checks (Android)
+        run: bash scripts/preflight-release.sh --platform android --layer 1
 
       - name: Setup Java
         uses: actions/setup-java@v5

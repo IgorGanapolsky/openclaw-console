@@ -33,6 +33,23 @@ jobs:
       - name: Verify canonical icon sync
         run: python3 scripts/sync_app_icons.py --check
 
+  release-contract:
+    name: Release Contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Pillow
+        run: python3 -m pip install pillow
+
+      - name: Validate release contract
+        run: python3 scripts/validate_release_contract.py --platform both
+
   lint-kotlin:
     name: Architecture Lint (Kotlin)
     runs-on: ubuntu-latest

@@ -70,6 +70,14 @@ jobs:
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Pillow
+        run: python3 -m pip install pillow
+
       - name: Fail fast on required iOS distribution secrets
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
@@ -90,11 +98,6 @@ jobs:
 
       - name: Preflight release checks (iOS)
         run: bash scripts/preflight-release.sh --platform ios --layer 1
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -240,6 +243,14 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ needs.gate.outputs.ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Pillow
+        run: python3 -m pip install pillow
 
       - name: Fail fast on Android distribution auth inputs
         env:
