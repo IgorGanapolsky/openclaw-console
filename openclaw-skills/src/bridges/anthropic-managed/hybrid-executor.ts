@@ -4,6 +4,7 @@
  */
 
 import { HybridAgentRouter, ManagedAgentClient } from './agent-router.js';
+import os from 'os';
 
 export interface HybridExecutionConfig {
   anthropic: {
@@ -41,8 +42,8 @@ export class HybridExecutionEngine {
   ) {
     // Initialize system capacity monitoring
     const macMiniCapacity = {
-      cpu_cores: require('os').cpus().length,
-      ram_gb: Math.round(require('os').totalmem() / (1024 * 1024 * 1024)),
+      cpu_cores: os.cpus().length,
+      ram_gb: Math.round(os.totalmem() / (1024 * 1024 * 1024)),
       current_load: 0.0 // Will be updated via monitoring
     };
 
@@ -143,8 +144,8 @@ export class HybridExecutionEngine {
   private startCapacityMonitoring(): void {
     // Monitor Mac Mini capacity every 30 seconds
     setInterval(() => {
-      const loadAvg = require('os').loadavg()[0]; // 1-minute average
-      const cpuCount = require('os').cpus().length;
+      const loadAvg = os.loadavg()[0]; // 1-minute average
+      const cpuCount = os.cpus().length;
       this.router['macMiniCapacity'].current_load = loadAvg / cpuCount;
     }, 30000);
   }
