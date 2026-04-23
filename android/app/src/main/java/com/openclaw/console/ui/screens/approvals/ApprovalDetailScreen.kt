@@ -359,6 +359,14 @@ private fun ActionTypeBadge(actionType: ActionType) {
         ActionType.KEY_ROTATION -> "Key Rotation" to Icons.Default.VpnKey
         ActionType.TRADE_EXECUTION -> "Trade Execution" to Icons.Default.TrendingUp
         ActionType.DESTRUCTIVE -> "Destructive" to Icons.Default.DeleteForever
+        ActionType.ASK_ROOT_CAUSE -> "Root Cause" to Icons.Default.Warning
+        ActionType.PROPOSE_FIX -> "Propose Fix" to Icons.Default.Build
+        ActionType.ACKNOWLEDGE -> "Acknowledge" to Icons.Default.CheckCircle
+        ActionType.GIT_COMMIT -> "Git Commit" to Icons.Default.Code
+        ActionType.GIT_MERGE -> "Git Merge" to Icons.Default.Code
+        ActionType.GIT_PUSH -> "Git Push" to Icons.Default.Code
+        ActionType.AGENT_SKILL_INSTALL -> "Install Skill" to Icons.Default.Build
+        ActionType.AGENT_ROLLBACK -> "Agent Rollback" to Icons.Default.Dangerous
     }
     val color = Color(0xFFE97C00)
 

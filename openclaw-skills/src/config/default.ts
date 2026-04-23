@@ -43,6 +43,8 @@ export interface GatewayConfig {
   localModelName: string | null;
   /** Local model status probe timeout in milliseconds */
   localModelTimeoutMs: number;
+  /** Append-only JSONL path for governance/audit events */
+  governanceEventLogPath: string;
 }
 
 const DEFAULT_CONFIG: GatewayConfig = {
@@ -65,6 +67,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
   localModelBaseUrl: process.env['OPENCLAW_LOCAL_MODEL_BASE_URL'] ?? process.env['OPENAI_BASE_URL'] ?? null,
   localModelName: process.env['OPENCLAW_LOCAL_MODEL_NAME'] ?? null,
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
+  governanceEventLogPath: process.env['OPENCLAW_GOVERNANCE_EVENT_LOG'] ?? './data/governance-events.jsonl',
 };
 
 export function isApprovalPolicyPreset(raw: string): raw is ApprovalPolicyPreset {

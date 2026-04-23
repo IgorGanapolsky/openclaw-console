@@ -29,6 +29,13 @@ export interface DangerousActionOptions {
   };
   /** Timeout override in milliseconds (falls back to config default) */
   timeoutMs?: number;
+  /** Optional recovery command shown and stored before/after risky work */
+  rollback?: {
+    title: string;
+    description: string;
+    command: string;
+    metadata?: Record<string, unknown>;
+  };
 }
 
 export interface ApprovalGateResult {
@@ -136,6 +143,22 @@ export class ApprovalGateSkill {
         autoApproved: true,
         policyReason: policy.reason,
       });
+      await this.state.recordGovernanceEvent?.({
+        agent_id: request.agent_id,
+        type: 'approval_decided',
+        title: request.title,
+        summary: `Auto-approved by ${policy.preset}: ${policy.reason}`,
+        actor: 'policy',
+        risk_level: request.context.risk_level,
+        approval_id: request.id,
+        metadata: {
+          action_type: request.action_type,
+          command: request.command,
+          policy_preset: policy.preset,
+          policy_reason: policy.reason,
+        },
+      });
+      await this.storeRollbackPoint(request, options.rollback);
       console.info(`[approval-gate] Auto-approved ${request.id} via ${policy.preset}: ${policy.reason}`);
       return { approved: true, response, timedOut: false };
     }
@@ -157,6 +180,9 @@ export class ApprovalGateSkill {
         console.warn(`[approval-gate] Approval ${request.id} approved but biometric NOT verified — rejecting`);
       }
 
+      if (approved) {
+        await this.storeRollbackPoint(request, options.rollback);
+      }
       console.info(`[approval-gate] Approval ${request.id}: ${approved ? 'APPROVED' : 'DENIED'}`);
       return { approved, response, timedOut: false };
     } catch {
@@ -173,6 +199,25 @@ export class ApprovalGateSkill {
    */
   public getDecisionLog(): ApprovalLogEntry[] {
     return [...this.decisionLog];
+  }
+
+  private async storeRollbackPoint(
+    request: ApprovalRequest,
+    rollback: DangerousActionOptions['rollback'],
+  ): Promise<void> {
+    if (!rollback) return;
+    await this.state.addRollbackPoint?.({
+      agent_id: request.agent_id,
+      action_type: request.action_type,
+      title: rollback.title,
+      description: rollback.description,
+      command: rollback.command,
+      metadata: {
+        approval_id: request.id,
+        ...rollback.metadata,
+      },
+      actor: 'agent',
+    });
   }
 
   /**
@@ -227,7 +272,13 @@ export class ApprovalGateSkill {
         repository,
         riskLevel: environment === 'production' ? 'critical' : 'high',
       },
-    }); // Type cast due to small differences in options naming in protocol
+      rollback: {
+        title: `Rollback ${service} deployment in ${environment}`,
+        description: `Restore ${service} to the previous image or release if version ${version} causes an incident.`,
+        command: `kubectl rollout undo deployment/${service} -n ${environment}`,
+        metadata: { service, version, environment, repository },
+      },
+    });
     return result.approved;
   }
 
@@ -291,6 +342,12 @@ export class ApprovalGateSkill {
           diff_summary: diffSummary,
         },
       },
+      rollback: {
+        title: `Undo commit in ${repository}`,
+        description: `Create a revert commit if "${commitMessage}" needs to be backed out.`,
+        command: 'git revert HEAD',
+        metadata: { repository, commit_message: commitMessage, file_changes: fileChanges },
+      },
     });
     return result.approved;
   }
@@ -330,6 +387,12 @@ export class ApprovalGateSkill {
           diff_summary: diffSummary,
         },
       },
+      rollback: {
+        title: `Rollback merge to ${toBranch}`,
+        description: `Revert the merge from ${fromBranch} into ${toBranch} if validation fails.`,
+        command: 'git revert -m 1 HEAD',
+        metadata: { repository, from_branch: fromBranch, to_branch: toBranch, file_changes: fileChanges },
+      },
     });
     return result.approved;
   }
@@ -366,6 +429,12 @@ export class ApprovalGateSkill {
           file_changes: fileChanges,
           diff_summary: diffSummary,
         },
+      },
+      rollback: {
+        title: `Rollback push to ${branch}`,
+        description: `Revert the pushed change through a follow-up commit instead of rewriting shared history.`,
+        command: 'git revert HEAD && git push origin HEAD',
+        metadata: { repository, branch, file_changes: fileChanges },
       },
     });
     return result.approved;

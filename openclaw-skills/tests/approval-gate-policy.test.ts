@@ -85,4 +85,49 @@ describe('ApprovalGateSkill policy presets', () => {
     expect(result.approved).toBe(true);
     expect(gate.getDecisionLog()[0]?.autoApproved).toBe(false);
   });
+
+  test('approved dangerous action records rollback point and audit events', async () => {
+    const state = new StateManager();
+    await state.upsertAgent(makeAgent());
+    const gate = new ApprovalGateSkill(state, {
+      ...DEFAULT_CONFIG,
+      approvalPolicyPreset: 'manual',
+    });
+
+    const promise = gate.requestApproval({
+      agentId: 'agent-policy',
+      agentName: 'Policy Agent',
+      actionType: 'deploy',
+      title: 'Deploy API',
+      description: 'Deploy API to production',
+      command: 'kubectl set image deployment/api api=api:v2 -n production',
+      timeoutMs: 10_000,
+      context: {
+        service: 'api',
+        environment: 'production',
+        repository: 'IgorGanapolsky/openclaw-console',
+        riskLevel: 'critical',
+      },
+      rollback: {
+        title: 'Rollback API deployment',
+        description: 'Undo the latest API rollout',
+        command: 'kubectl rollout undo deployment/api -n production',
+      },
+    });
+
+    const pending = state.listPendingApprovals();
+    state.respondToApproval({
+      approval_id: pending[0]!.id,
+      decision: 'approved',
+      biometric_verified: true,
+      responded_at: new Date().toISOString(),
+    });
+
+    await promise;
+    const governance = state.getAgentGovernance('agent-policy');
+    expect(governance.rollback_points[0]?.command).toBe('kubectl rollout undo deployment/api -n production');
+    expect(governance.events.map((event) => event.type)).toContain('approval_requested');
+    expect(governance.events.map((event) => event.type)).toContain('approval_decided');
+    expect(governance.events.map((event) => event.type)).toContain('rollback_point_added');
+  });
 });

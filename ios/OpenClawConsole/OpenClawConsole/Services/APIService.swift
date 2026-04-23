@@ -144,6 +144,23 @@ final class APIService {
         try await request(path: "/api/agents/\(agentId)/tasks/\(taskId)")
     }
 
+    // MARK: - Governance
+
+    func fetchGovernance(for agentId: String) async throws -> AgentGovernanceState {
+        try await request(path: "/api/agents/\(agentId)/governance")
+    }
+
+    func fetchGovernanceEvents(agentId: String? = nil, limit: Int = 100) async throws -> [GovernanceEvent] {
+        var components = URLComponents()
+        components.path = "/api/governance/events"
+        var queryItems = [URLQueryItem(name: "limit", value: String(limit))]
+        if let agentId {
+            queryItems.append(URLQueryItem(name: "agent_id", value: agentId))
+        }
+        components.queryItems = queryItems
+        return try await request(path: components.string ?? "/api/governance/events")
+    }
+
     // MARK: - Incidents
 
     func fetchIncidents() async throws -> [Incident] {

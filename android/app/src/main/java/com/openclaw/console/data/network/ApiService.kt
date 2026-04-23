@@ -105,6 +105,27 @@ class ApiService(
         }
     }
 
+    suspend fun getAgentGovernance(agentId: String): Result<AgentGovernanceState> {
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/agents/$agentId/governance")
+            .get()
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<AgentGovernanceState>(body)
+        }
+    }
+
+    suspend fun getGovernanceEvents(agentId: String? = null, limit: Int = 100): Result<List<GovernanceEvent>> {
+        val agentQuery = agentId?.let { "&agent_id=$it" } ?: ""
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/governance/events?limit=$limit$agentQuery")
+            .get()
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<List<GovernanceEvent>>(body)
+        }
+    }
+
     suspend fun getIncidents(): Result<List<Incident>> {
         val request = Request.Builder()
             .url("${normalizedBase()}/api/incidents")

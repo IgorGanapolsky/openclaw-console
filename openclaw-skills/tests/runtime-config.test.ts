@@ -27,8 +27,11 @@ function tempConfig(overrides: Partial<GatewayConfig> = {}): GatewayConfig {
   };
 }
 
-async function start(config: GatewayConfig): Promise<{ server: GatewayServer; baseUrl: string; token: string }> {
-  const server = createGatewayServer(config, new StateManager());
+async function start(
+  config: GatewayConfig,
+  state: StateManager = new StateManager(),
+): Promise<{ server: GatewayServer; baseUrl: string; token: string; state: StateManager }> {
+  const server = createGatewayServer(config, state);
   servers.push(server);
   await server.start();
   const address = server.httpServer.address();
@@ -43,6 +46,7 @@ async function start(config: GatewayConfig): Promise<{ server: GatewayServer; ba
     server,
     baseUrl: `http://127.0.0.1:${address.port}`,
     token,
+    state,
   };
 }
 
@@ -88,6 +92,35 @@ describe('runtime config API', () => {
 
     expect(response.status).toBe(400);
     expect(config.approvalPolicyPreset).toBe(DEFAULT_CONFIG.approvalPolicyPreset);
+
+    fs.rmSync(config.tokenStorePath, { force: true });
+  });
+
+  test('returns authenticated governance state for an agent', async () => {
+    const config = tempConfig();
+    const state = new StateManager();
+    await state.upsertAgent({
+      id: 'agent-http-governance',
+      name: 'HTTP Governance Agent',
+      description: 'Test agent',
+      status: 'online',
+      workspace: 'test',
+      tags: ['test'],
+      last_active: new Date().toISOString(),
+      active_tasks: 0,
+      pending_approvals: 0,
+    });
+    await state.updateAgentObjective('agent-http-governance', 'Verify governance endpoint', 'gateway');
+    const { baseUrl, token } = await start(config, state);
+
+    const response = await fetch(`${baseUrl}/api/agents/agent-http-governance/governance`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as Record<string, unknown>;
+    expect(body['current_objective']).toBe('Verify governance endpoint');
+    expect(Array.isArray(body['events'])).toBe(true);
 
     fs.rmSync(config.tokenStorePath, { force: true });
   });
