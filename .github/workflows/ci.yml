@@ -16,6 +16,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  icon-parity:
+    name: App Icon Parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Pillow
+        run: python3 -m pip install pillow
+
+      - name: Verify canonical icon sync
+        run: python3 scripts/sync_app_icons.py --check
+
   lint-kotlin:
     name: Architecture Lint (Kotlin)
     runs-on: ubuntu-latest
@@ -114,7 +131,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew testDebugUnitTest assembleDebug --no-daemon
 
   ios-build:
     name: iOS Build Check

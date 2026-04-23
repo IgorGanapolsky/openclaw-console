@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Pre-push gate for OpenClaw Console: icon parity + platform verification
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "==> Checking app icon parity"
+python3 scripts/sync_app_icons.py --check
+
+echo "==> Android unit tests + debug build"
+(
+  cd android
+  ./gradlew testDebugUnitTest assembleDebug --no-daemon
+)
+
+echo "==> iOS simulator build + tests"
+(
+  cd ios/OpenClawConsole
+  xcodebuild -scheme OpenClawConsole \
+    -destination 'platform=iOS Simulator,name=iPhone 16' \
+    -configuration Debug \
+    test \
+    CODE_SIGNING_ALLOWED=NO
+)
+
+echo "==> Skills tests"
+(
+  cd openclaw-skills
+  if [ ! -d node_modules ]; then
+    npm ci
+  fi
+  npm test
+)
+
+echo "Pre-push verification passed"

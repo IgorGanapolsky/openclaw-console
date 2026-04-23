@@ -29,10 +29,19 @@ STAGED_KT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.kt$' || tr
 STAGED_SWIFT=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$' || true)
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js)$' || true)
 STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM || true)
+STAGED_ICON_ASSETS=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)(AppIcon\.appiconset/|mipmap-(anydpi-v26|mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)/|values/ic_launcher_background\.xml$|scripts/sync_app_icons\.py$)' || true)
 
 # ═══════════════════════════════════════════════════════════════════
 # OPENCLAW SECURITY PATTERNS
 # ═══════════════════════════════════════════════════════════════════
+
+if [ -n "$STAGED_ICON_ASSETS" ]; then
+  if ! command -v python3 > /dev/null 2>&1; then
+    err "python3 is required to validate app icon parity"
+  elif ! python3 scripts/sync_app_icons.py --check; then
+    err "App icon assets are out of sync with the canonical iOS marketing icon"
+  fi
+fi
 
 # ── Biometric Authentication Requirements ──────────────────────────
 if [ -n "$STAGED_KT" ]; then
