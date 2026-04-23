@@ -95,7 +95,7 @@ end
 platform :ios do
   desc "Push a new beta build to TestFlight"
   lane :beta do
-    setup_ci if ENV["CI"] == "true"
+    setup_ci(timeout: 0) if ENV["CI"] == "true"
 
     # Use App Store Connect API key if available
     api_key = app_store_api_key_from_env
@@ -264,7 +264,7 @@ platform :ios do
 
   desc "Setup certificates and profiles via match"
   lane :setup do
-    setup_ci if ENV["CI"] == "true"
+    setup_ci(timeout: 0) if ENV["CI"] == "true"
 
     if ENV["MATCH_GIT_URL"] && ENV["MATCH_PASSWORD"]
       api_key = app_store_api_key_from_env
