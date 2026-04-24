@@ -15,10 +15,11 @@ struct MainTabView: View {
     @State private var agentListVM: AgentListViewModel?
     @State private var incidentListVM: IncidentListViewModel?
     @State private var bridgeListVM: BridgeListViewModel?
+    @State private var deploymentListVM: DeploymentListViewModel?
     // @State private var loopListVM: LoopListViewModel?
 
     enum Tab: Int {
-        case dashboard, agents, incidents, loops, bridges, settings
+        case dashboard, agents, incidents, deployments, loops, bridges, settings
     }
 
     var body: some View {
@@ -63,6 +64,19 @@ struct MainTabView: View {
                 }
                 .badge(incidentListVM?.openCount ?? 0)
                 .tag(Tab.incidents)
+
+                // MARK: Deployments Tab
+                NavigationStack {
+                    if let vm = deploymentListVM {
+                        DeploymentView(viewModel: vm)
+                    } else {
+                        ProgressView()
+                    }
+                }
+                .tabItem {
+                    Label("Deployments", systemImage: "app.badge.checkmark")
+                }
+                .tag(Tab.deployments)
 
                 // MARK: Prompts Tab (HIGH-ROI Multica Integration)
                 NavigationStack {
@@ -122,12 +136,14 @@ struct MainTabView: View {
         let agentVM = AgentListViewModel(webSocket: webSocket)
         let incidentVM = IncidentListViewModel(webSocket: webSocket)
         let bridgeVM = BridgeListViewModel(webSocket: webSocket)
+        let deploymentVM = DeploymentListViewModel(webSocket: webSocket)
         // let loopVM = LoopListViewModel(webSocket: webSocket)
 
         fleetDashboardVM = dashboardVM
         agentListVM = agentVM
         incidentListVM = incidentVM
         bridgeListVM = bridgeVM
+        deploymentListVM = deploymentVM
         // loopListVM = loopVM
 
         // Connect WebSocket
@@ -139,6 +155,7 @@ struct MainTabView: View {
             await agentVM.fetchAgents()
             await incidentVM.fetchIncidents()
             await bridgeVM.fetchBridges()
+            await deploymentVM.fetchDeployments()
             // await loopVM.fetchLoops()
             await approvalViewModel.fetchPendingApprovals()
         }

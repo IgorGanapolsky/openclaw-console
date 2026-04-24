@@ -1,9 +1,6 @@
 package com.openclaw.console.data.repository
 
-import com.openclaw.console.data.model.ApprovalDecision
-import com.openclaw.console.data.model.ApprovalRequest
-import com.openclaw.console.data.model.ApprovalResponse
-import com.openclaw.console.data.model.WebSocketEvent
+import com.openclaw.console.data.model.*
 import com.openclaw.console.data.network.ApiService
 import com.openclaw.console.data.network.WebSocketClient
 import com.openclaw.console.service.NotificationService
@@ -113,6 +110,41 @@ open class ApprovalRepository(
 
     open fun getApproval(approvalId: String): ApprovalRequest? {
         return _pendingApprovals.value.find { it.id == approvalId }
+    }
+
+    suspend fun requestDeploymentApproval(request: DeploymentRequest) {
+        // Only create approval for production deployments
+        if (request.environment != DeploymentEnvironment.PRODUCTION) {
+            return // Staging deployments don't require approval
+        }
+
+        val approvalRequest = ApprovalRequest(
+            id = java.util.UUID.randomUUID().toString(),
+            agentId = "", // Will be filled by the gateway
+            agentName = "Deployment System",
+            actionType = ApprovalActionType.DEPLOY,
+            title = "Production Deployment: ${request.platform.displayName}",
+            description = request.description
+                ?: "Deploy ${request.platform.displayName} to production from branch ${request.branch}",
+            command = "deploy --environment=${request.environment.value} --platform=${request.platform.value} --branch=${request.branch}",
+            context = ApprovalContext(
+                service = "deployment-system",
+                environment = request.environment.value,
+                repository = "openclaw-console",
+                riskLevel = RiskLevel.CRITICAL
+            ),
+            createdAt = Instant.now(),
+            expiresAt = Instant.now().plusSeconds(1800) // 30 minutes
+        )
+
+        // Add to pending approvals for immediate display
+        val existing = _pendingApprovals.value
+        if (existing.none { it.id == approvalRequest.id }) {
+            _pendingApprovals.value = listOf(approvalRequest) + existing
+        }
+
+        // Notify via notification service
+        notificationService?.scheduleApprovalNotification(approvalRequest)
     }
 
     open fun clearError() { _error.value = null }

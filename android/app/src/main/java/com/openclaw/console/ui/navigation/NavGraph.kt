@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,8 @@ import com.openclaw.console.ui.screens.agents.AgentDetailScreen
 import com.openclaw.console.ui.screens.agents.AgentListScreen
 import com.openclaw.console.ui.screens.bridges.BridgeListScreen
 import com.openclaw.console.ui.screens.dashboard.FleetDashboardScreen
+import com.openclaw.console.ui.screens.deployments.DeploymentDetailScreen
+import com.openclaw.console.ui.screens.deployments.DeploymentScreen
 import com.openclaw.console.ui.screens.loops.LoopListScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
@@ -38,6 +41,7 @@ sealed class Screen(val route: String, val label: String) {
     object Dashboard : Screen("dashboard", "Dashboard")
     object Agents : Screen("agents", "Agents")
     object Incidents : Screen("incidents", "Incidents")
+    object Deployments : Screen("deployments", "Deployments")
     object Loops : Screen("loops", "Loops")
     object Bridges : Screen("bridges", "Bridges")
     object Settings : Screen("settings", "Settings")
@@ -54,6 +58,9 @@ sealed class Screen(val route: String, val label: String) {
     }
     object ApprovalDetail : Screen("approvals/{approvalId}", "Approval") {
         fun route(approvalId: String) = "approvals/$approvalId"
+    }
+    object DeploymentDetail : Screen("deployments/{deploymentId}", "Deployment") {
+        fun route(deploymentId: String) = "deployments/$deploymentId"
     }
     object AddGateway : Screen("settings/add", "Add Gateway")
     object Paywall : Screen("paywall?feature={feature}", "Upgrade to Pro") {
@@ -85,6 +92,7 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
         BottomNavItem(Screen.Dashboard, Icons.Default.Dashboard),
         BottomNavItem(Screen.Agents, Icons.Default.Groups),
         BottomNavItem(Screen.Incidents, Icons.Default.BugReport, openIncidentCount),
+        BottomNavItem(Screen.Deployments, Icons.Default.RocketLaunch),
         BottomNavItem(Screen.Loops, Icons.Default.Autorenew),
         BottomNavItem(Screen.Bridges, Icons.Default.Link),
         BottomNavItem(Screen.Settings, Icons.Default.Settings, pendingApprovalCount)
@@ -189,6 +197,28 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                     onIncidentClick = { incidentId ->
                         navController.navigate(Screen.IncidentDetail.route(incidentId))
                     }
+                )
+            }
+
+            // Deployments
+            composable(Screen.Deployments.route) {
+                DeploymentScreen(
+                    appViewModel = appViewModel,
+                    onDeploymentClick = { deploymentId ->
+                        navController.navigate(Screen.DeploymentDetail.route(deploymentId))
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.DeploymentDetail.route,
+                arguments = listOf(navArgument("deploymentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val deploymentId = backStackEntry.arguments?.getString("deploymentId") ?: return@composable
+                DeploymentDetailScreen(
+                    deploymentId = deploymentId,
+                    appViewModel = appViewModel,
+                    onBack = { navController.navigateUp() }
                 )
             }
 

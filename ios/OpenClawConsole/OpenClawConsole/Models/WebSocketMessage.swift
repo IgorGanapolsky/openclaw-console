@@ -82,6 +82,8 @@ enum OutboundEventType: String {
     case unsubscribe
     case approvalResponse = "approval_response"
     case chatMessage = "chat_message"
+    case deploymentTrigger = "deployment_trigger"
+    case deploymentCancel = "deployment_cancel"
 }
 
 /// Client → Server message envelope
@@ -132,6 +134,10 @@ enum InboundEventType: String {
     case bridgeSessionUpdate = "bridge_session_update"
     case recurringTaskUpdated = "recurring_task_updated"
     case gitStateChanged = "git_state_changed"
+    case deploymentNew = "deployment_new"
+    case deploymentUpdate = "deployment_update"
+    case deploymentStepUpdate = "deployment_step_update"
+    case deploymentCompleted = "deployment_completed"
     case heartbeat
     case connected
     case error
@@ -151,6 +157,10 @@ enum InboundEvent {
     case bridgeSessionUpdate(BridgeSession)
     case recurringTaskUpdated(RecurringTask)
     case gitStateChanged(String, GitState)
+    case deploymentNew(Deployment)
+    case deploymentUpdate(DeploymentUpdate)
+    case deploymentStepUpdate(DeploymentStepUpdate)
+    case deploymentCompleted(Deployment)
     case heartbeat(GatewayHeartbeatPayload, timestamp: Date?)
     case connected(sessionId: String, gatewayVersion: String, heartbeatIntervalMs: Int, timestamp: Date?)
     case error(code: Int, message: String)
@@ -250,4 +260,24 @@ struct GatewayHeartbeatPayload: Codable {
 struct ErrorPayload: Codable {
     let code: Int
     let message: String
+}
+
+// MARK: - Deployment Payloads
+
+struct DeploymentTriggerPayload: Codable {
+    let agentId: String
+    let request: DeploymentRequest
+
+    enum CodingKeys: String, CodingKey {
+        case agentId = "agent_id"
+        case request
+    }
+}
+
+struct DeploymentCancelPayload: Codable {
+    let deploymentId: String
+
+    enum CodingKeys: String, CodingKey {
+        case deploymentId = "deployment_id"
+    }
 }

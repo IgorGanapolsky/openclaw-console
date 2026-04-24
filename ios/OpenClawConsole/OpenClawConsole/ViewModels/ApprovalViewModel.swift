@@ -130,6 +130,44 @@ final class ApprovalViewModel {
         pendingApprovals.removeAll { $0.isExpired }
     }
 
+    // MARK: - Deployment Approval
+
+    @MainActor
+    func requestDeploymentApproval(request: DeploymentRequest) async {
+        // Create an approval request for production deployments
+        guard request.environment == .production else {
+            // For staging deployments, trigger directly without approval
+            return
+        }
+
+        let approvalRequest = ApprovalRequest(
+            id: UUID().uuidString,
+            agentId: "", // Will be filled by the gateway
+            agentName: "Deployment System",
+            actionType: .deploy,
+            title: "Production Deployment: \(request.platform.displayName)",
+            description: request.description ?? "Deploy \(request.platform.displayName) to production from branch \(request.branch)",
+            command: "deploy --environment=\(request.environment.rawValue) --platform=\(request.platform.rawValue) --branch=\(request.branch)",
+            context: ApprovalContext(
+                service: "deployment-system",
+                environment: request.environment.rawValue,
+                repository: "openclaw-console",
+                riskLevel: .critical
+            ),
+            createdAt: Date(),
+            expiresAt: Date().addingTimeInterval(1800) // 30 minutes
+        )
+
+        // Add to pending approvals for immediate display
+        if !pendingApprovals.contains(where: { $0.id == approvalRequest.id }) {
+            pendingApprovals.append(approvalRequest)
+        }
+
+        // Notify via notification service
+        await NotificationService.shared.scheduleApprovalNotification(for: approvalRequest)
+        await NotificationService.shared.updateBadge(count: pendingApprovals.count)
+    }
+
     // MARK: - WebSocket
 
     private func subscribeToEvents() {

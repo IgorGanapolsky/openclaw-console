@@ -19,6 +19,9 @@ import { DockerContainerManager } from './container-manager.js';
 import { registerRemoteApi } from './remote-api.js';
 import { SkillGenerator } from './skill-generator.js';
 import { McpManager } from './mcp-manager.js';
+import { createBillingRouter } from '../billing/revenuecat.js';
+import { createAnalyticsRouter } from '../analytics/events.js';
+import { createIntegrationsRouter } from '../integrations/devops-hub.js';
 import type {
   ChatRequest,
   ApprovalRespondRequest,
@@ -28,9 +31,6 @@ import type {
   RuntimeConfigUpdateRequest,
 } from '../types/protocol.js';
 import { ERROR_CODES } from '../types/protocol.js';
-import { createBillingRouter } from '../billing/revenuecat.js';
-import { createAnalyticsRouter } from '../analytics/events.js';
-import { createIntegrationsRouter } from '../integrations/devops-hub.js';
 import { getConfiguredLocalModel, probeLocalModelProvider } from './model-provider.js';
 import { isApprovalPolicyPreset } from '../config/default.js';
 import { normalizeProjectBridgeSession } from './project-session.js';
@@ -65,6 +65,10 @@ export function createGatewayServer(
   // ── Middleware ───────────────────────────────────────────────────────────
 
   app.use(express.json());
+
+  // Create a placeholder for wsManager that will be properly initialized later
+  let wsManagerRef: WebSocketManager | null = null;
+
   
   // Register Remote API for isolated skills
   registerRemoteApi(app, state);
@@ -83,7 +87,12 @@ export function createGatewayServer(
 
   app.get('/api/health', (_req: Request, res: Response) => {
     const tasks = state.listAllTasks();
-    const wsSnapshot = wsManager.getRuntimeSnapshot();
+    // wsManager is created later in the file, so we need to reference it conditionally
+    const wsSnapshot = wsManagerRef ? wsManagerRef.getRuntimeSnapshot() : {
+      connected_clients: 0,
+      last_inbound_at: null,
+      last_outbound_at: null
+    };
     const body: HealthResponse = {
       status: 'ok',
       version: config.version,
@@ -333,6 +342,7 @@ export function createGatewayServer(
   // Placeholder for deployment manager - will be injected after server creation
   let deploymentManager: any = null;
 
+  console.log('[debug] Registering POST /api/deployments route');
   app.post('/api/deployments', auth, async (req: Request, res: Response) => {
     try {
       if (!deploymentManager) {
@@ -364,7 +374,10 @@ export function createGatewayServer(
     }
   });
 
+
+  console.log('[debug] Registering GET /api/deployments route');
   app.get('/api/deployments', auth, async (_req: Request, res: Response) => {
+    console.log('[debug] GET /api/deployments handler called');
     try {
       if (!deploymentManager) {
         res.status(503).json({ error: { code: 5030, message: 'Deployment manager not initialized' } });
@@ -535,6 +548,7 @@ export function createGatewayServer(
   const httpServer = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true });
   const wsManager = createWebSocketManager(wss, state, config);
+  wsManagerRef = wsManager;
 
   // Upgrade HTTP connections to WebSocket with token auth
   httpServer.on('upgrade', (request, socket, head) => {
