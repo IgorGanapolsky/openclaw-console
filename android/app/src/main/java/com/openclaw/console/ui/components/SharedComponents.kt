@@ -92,6 +92,21 @@ fun TimeAgoText(
     Text(text = timeAgo, modifier = modifier, style = style, color = color)
 }
 
+@Composable
+fun TimeAgoText(
+    timestamp: Instant,
+    modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodySmall,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    TimeAgoText(
+        isoTimestamp = timestamp.toString(),
+        modifier = modifier,
+        style = style,
+        color = color
+    )
+}
+
 fun formatTimeAgo(isoTimestamp: String): String {
     return try {
         val then = Instant.parse(isoTimestamp)
@@ -214,7 +229,8 @@ fun EmptyState(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    actions: @Composable ColumnScope.() -> Unit = {}
 ) {
     Column(
         modifier = modifier.fillMaxWidth().padding(32.dp),
@@ -237,6 +253,43 @@ fun EmptyState(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        actions()
+    }
+}
+
+@Composable
+fun ErrorBanner(
+    message: String,
+    onRetry: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.errorContainer,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Error,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            onRetry?.let {
+                TextButton(onClick = it) {
+                    Text("Retry")
+                }
+            }
+        }
     }
 }
 

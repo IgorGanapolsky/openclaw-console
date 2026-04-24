@@ -51,6 +51,9 @@ class AppViewModel(private val application: Application) : ViewModel() {
     private val _approvalRepository = MutableStateFlow<ApprovalRepository?>(null)
     val approvalRepository: StateFlow<ApprovalRepository?> = _approvalRepository
 
+    private val _deploymentRepository = MutableStateFlow<DeploymentRepository?>(null)
+    val deploymentRepository: StateFlow<DeploymentRepository?> = _deploymentRepository
+
     val connectionState: StateFlow<ConnectionState> = _wsClient
         .flatMapLatest { ws ->
             ws?.connectionState ?: MutableStateFlow(ConnectionState.DISCONNECTED)
@@ -102,6 +105,7 @@ class AppViewModel(private val application: Application) : ViewModel() {
         _bridgeRepository.value = BridgeRepository(api, ws)
         _loopRepository.value = LoopRepository(api, ws)
         _approvalRepository.value = ApprovalRepository(api, ws, NotificationService.getInstance(application))
+        _deploymentRepository.value = DeploymentRepository(api, ws)
 
         ws.connect()
         observeGatewaySignals(ws)
@@ -113,6 +117,7 @@ class AppViewModel(private val application: Application) : ViewModel() {
             _bridgeRepository.value?.refreshBridges()
             _loopRepository.value?.refreshLoops()
             _approvalRepository.value?.refreshPendingApprovals()
+            _deploymentRepository.value?.fetchDeployments()
         }
 
         // Update last connected
@@ -160,6 +165,7 @@ class AppViewModel(private val application: Application) : ViewModel() {
         _bridgeRepository.value = null
         _loopRepository.value = null
         _approvalRepository.value = null
+        _deploymentRepository.value = null
     }
 
     override fun onCleared() {

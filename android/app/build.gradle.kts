@@ -130,6 +130,10 @@ dependencies {
     // AndroidX Security (EncryptedSharedPreferences)
     implementation("androidx.security:security-crypto:1.1.0")
 
+    // Deployment persistence model annotations and JSON converters
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("com.google.code.gson:gson:2.11.0")
+
     // Biometric
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
     implementation("com.google.errorprone:error_prone_annotations:2.28.0")

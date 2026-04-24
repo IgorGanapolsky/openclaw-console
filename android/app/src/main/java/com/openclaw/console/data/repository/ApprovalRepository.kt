@@ -122,7 +122,7 @@ open class ApprovalRepository(
             id = java.util.UUID.randomUUID().toString(),
             agentId = "", // Will be filled by the gateway
             agentName = "Deployment System",
-            actionType = ApprovalActionType.DEPLOY,
+            actionType = ActionType.DEPLOY,
             title = "Production Deployment: ${request.platform.displayName}",
             description = request.description
                 ?: "Deploy ${request.platform.displayName} to production from branch ${request.branch}",
@@ -133,8 +133,8 @@ open class ApprovalRepository(
                 repository = "openclaw-console",
                 riskLevel = RiskLevel.CRITICAL
             ),
-            createdAt = Instant.now(),
-            expiresAt = Instant.now().plusSeconds(1800) // 30 minutes
+            createdAt = Instant.now().toString(),
+            expiresAt = Instant.now().plusSeconds(1800).toString() // 30 minutes
         )
 
         // Add to pending approvals for immediate display

@@ -125,6 +125,22 @@ class ApiService(
         }
     }
 
+    suspend fun getDeployments(): Result<List<Deployment>> {
+        return Result.success(emptyList())
+    }
+
+    suspend fun getDeployment(deploymentId: String): Result<Deployment> {
+        return Result.failure(IOException("Deployment endpoint is not available: $deploymentId"))
+    }
+
+    suspend fun triggerDeployment(request: DeploymentRequest): Result<Deployment> {
+        return Result.failure(IOException("Deployment trigger endpoint is not available: ${request.branch}"))
+    }
+
+    suspend fun cancelDeployment(deploymentId: String): Result<Deployment> {
+        return Result.failure(IOException("Deployment cancel endpoint is not available: $deploymentId"))
+    }
+
     suspend fun getBridges(): Result<List<BridgeSession>> {
         val request = Request.Builder()
             .url("${normalizedBase()}/api/bridges")
