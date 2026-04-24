@@ -17,7 +17,7 @@ settings:
 packages:
   RevenueCat:
     url: https://github.com/RevenueCat/purchases-ios
-    exactVersion: 5.67.2
+    version: 5.67.0
 targets:
   OpenClawConsole:
     type: application
