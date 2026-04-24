@@ -9,6 +9,7 @@ echo "==> Checking release contract"
 python3 scripts/validate_release_contract.py --platform both
 
 echo "==> Checking Android agent guardrails"
+python3 scripts/check_android_cli.py
 python3 scripts/check_android_agent_guardrails.py
 
 echo "==> Android unit tests + debug build"
