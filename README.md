@@ -206,3 +206,4 @@ See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 ## License
 
 MIT — see [LICENSE](LICENSE).
+[embed ref=\"ralph-live\" title=\"Ralph Live MCP\" height=\"600\" /]
