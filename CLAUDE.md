@@ -60,6 +60,14 @@ cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
 - **Paths**: Always relative, never absolute. No usernames in paths.
 - **No social app dependencies**: Zero Telegram/WhatsApp/Slack/Discord integration. Ever.
 
+## Android Agent Workflow
+
+- Use `.agents/skills/android-agent-workflow/SKILL.md` before modifying Android code, launcher icons, Firebase App Distribution, Gradle, Android CI, or Android release metadata.
+- Prefer Android CLI when available: `android sdk`, `android emulator`, `android run`, `android docs`, and `android skills`.
+- If Android CLI is unavailable, say so and fall back to repo-native Gradle/scripts.
+- Keep Android responses concise: changed files, relevant command, exact failure or success, and next fix. Do not paste full Gradle logs.
+- Treat iOS/TestFlight app icon as canonical. Android launcher assets must come from `python3 scripts/sync_app_icons.py`.
+
 ## Git Flow & Branching Strategy
 
 ### Branch Model

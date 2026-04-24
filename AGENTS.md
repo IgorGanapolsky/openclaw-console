@@ -83,6 +83,14 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 1. `develop` → `release/vX.Y.Z` → TestFlight + Google Play → tag on `main` → merge back to `develop`
 2. Hotfix: `main` → `hotfix/vX.Y.Z` → stores → tag on `main` → merge to `develop`
 
+## Android Agent Workflow
+
+- Use `.agents/skills/android-agent-workflow/SKILL.md` before modifying Android code, launcher icons, Firebase App Distribution, Gradle, Android CI, or Android release metadata.
+- Prefer Android CLI when available: `android sdk`, `android emulator`, `android run`, `android docs`, and `android skills`.
+- If Android CLI is unavailable, state that explicitly and use the repo commands below.
+- Keep Android agent responses concise: outcome, evidence, changed files, and next fix only. Do not paste full Gradle logs unless the exact failing lines are needed.
+- iOS/TestFlight app icon remains the canonical launcher icon source. Android launcher assets must be regenerated with `python3 scripts/sync_app_icons.py`, never hand-edited.
+
 ## Session Directive: PR Management & System Hygiene
 
 1. Inspect all open PRs and report merge readiness with evidence.

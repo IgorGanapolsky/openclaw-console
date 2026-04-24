@@ -8,7 +8,6 @@ on:
   push:
     branches: [develop, main]
     paths-ignore:
-      - "**.md"
       - "docs/**"
 
 concurrency:
@@ -16,6 +15,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  android-agent-guardrails:
+    name: Android Agent Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Android agent workflow guardrails
+        run: python3 scripts/check_android_agent_guardrails.py
+
   icon-parity:
     name: App Icon Parity
     runs-on: ubuntu-latest

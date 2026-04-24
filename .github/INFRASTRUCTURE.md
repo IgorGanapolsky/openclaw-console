@@ -18,6 +18,10 @@ We follow a modified GitFlow approach:
 
 1. **CI Pipeline** (`ci.yml`)
    - Runs on PRs and pushes to develop
+   - Android agent guardrail validation
+   - App icon parity
+   - Brand parity
+   - Release contract validation
    - Architecture lint (Kotlin + Swift)
    - Skills tests
    - Android build check
@@ -58,6 +62,7 @@ We follow a modified GitFlow approach:
   - App Icon Parity
   - Brand Parity
   - Release Contract
+  - Android Agent Guardrails
   - Architecture Lint Kotlin
   - Architecture Lint Swift
   - Skills Tests
@@ -78,6 +83,7 @@ We follow a modified GitFlow approach:
   - App Icon Parity
   - Brand Parity
   - Release Contract
+  - Android Agent Guardrails
   - Architecture Lint Kotlin
   - Architecture Lint Swift
   - Skills Tests
