@@ -55,9 +55,12 @@ We follow a modified GitFlow approach:
 #### develop
 
 - Required status checks:
-  - Skills Tests
-  - Architecture Lint Kotlin
-  - Architecture Lint Swift
+  - build-and-test
+  - lint
+  - Secrets Scan
+  - Dependency Audit
+  - CodeQL Analysis (javascript-typescript)
+  - Claude Review
 - Dismiss stale reviews
 - No direct pushes
 
@@ -65,12 +68,12 @@ We follow a modified GitFlow approach:
 
 - All develop protections plus:
 - Required status checks:
-  - Skills Tests
-  - Architecture Lint Kotlin
-  - Architecture Lint Swift
-  - Android Build Check
-  - iOS Build Check
+  - build-and-test
+  - lint
   - Secrets Scan
+  - Dependency Audit
+  - CodeQL Analysis (javascript-typescript)
+  - Claude Review
 - Admin enforcement enabled
 - No force push
 
