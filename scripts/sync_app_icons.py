@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Iterable
 
 try:
-    from PIL import Image, ImageChops, ImageDraw
+    from PIL import Image, ImageChops
 except ImportError as exc:
     raise SystemExit(
         "Pillow is required. Install it with `python3 -m pip install pillow`."
@@ -37,7 +37,6 @@ ANDROID_DENSITIES = {
 }
 ANDROID_BACKGROUND = (0, 0, 0)
 ADAPTIVE_SCALE = 108 / 48
-SAFE_ZONE_FRACTION = 0.66
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,15 +63,6 @@ def flatten(image: Image.Image, background: tuple[int, int, int], size: int) -> 
     canvas = Image.new("RGB", (size, size), background)
     canvas.paste(image, mask=image)
     return canvas
-
-
-def rounded_square(image: Image.Image, size: int, radius_ratio: float = 0.224) -> Image.Image:
-    rounded = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    mask = Image.new("L", (size, size), 0)
-    radius = int(size * radius_ratio)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=radius, fill=255)
-    rounded.paste(image, mask=mask)
-    return rounded
 
 
 def ios_targets() -> list[tuple[str, int]]:
@@ -153,24 +143,14 @@ def generate_outputs(target_root: Path) -> list[Path]:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         square = source.resize((size, size), Image.LANCZOS).convert("RGBA")
-        rounded = rounded_square(square, size)
-        flatten(rounded, ANDROID_BACKGROUND, size).save(output_dir / "ic_launcher.png", "PNG", optimize=True)
+        flatten(square, ANDROID_BACKGROUND, size).save(output_dir / "ic_launcher.png", "PNG", optimize=True)
         generated.append(output_dir / "ic_launcher.png")
 
-        round_image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        mask = Image.new("L", (size, size), 0)
-        ImageDraw.Draw(mask).ellipse((0, 0, size - 1, size - 1), fill=255)
-        round_image.paste(rounded, mask=mask)
-        flatten(round_image, ANDROID_BACKGROUND, size).save(output_dir / "ic_launcher_round.png", "PNG", optimize=True)
+        flatten(square, ANDROID_BACKGROUND, size).save(output_dir / "ic_launcher_round.png", "PNG", optimize=True)
         generated.append(output_dir / "ic_launcher_round.png")
 
         foreground_size = int(size * ADAPTIVE_SCALE)
-        inner_size = int(foreground_size * SAFE_ZONE_FRACTION)
-        foreground = Image.new("RGBA", (foreground_size, foreground_size), (0, 0, 0, 0))
-        inset = source.resize((inner_size, inner_size), Image.LANCZOS).convert("RGBA")
-        inset = rounded_square(inset, inner_size)
-        offset = (foreground_size - inner_size) // 2
-        foreground.paste(inset, (offset, offset), mask=inset)
+        foreground = source.resize((foreground_size, foreground_size), Image.LANCZOS).convert("RGBA")
         foreground_path = output_dir / "ic_launcher_foreground.png"
         foreground_path.write_bytes(png_bytes(foreground))
         generated.append(foreground_path)
