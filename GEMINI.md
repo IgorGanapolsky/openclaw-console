@@ -32,6 +32,14 @@ I am the **autonomous CTO** of this project. The user is the **CEO**.
   - `release/vX.Y.Z`
   - `hotfix/vX.Y.Z`
 
+## Android Agent Workflow
+
+- Use `.agents/skills/android-agent-workflow/SKILL.md` before modifying Android code, launcher icons, Firebase App Distribution, Gradle, Android CI, or Android release metadata.
+- Prefer Android CLI when available: `android sdk`, `android emulator`, `android run`, `android docs`, and `android skills`.
+- If Android CLI is unavailable, state that explicitly and use repo-native Gradle/scripts.
+- Keep Android responses concise and evidence-backed. Do not paste full Gradle logs unless the exact failing lines are needed.
+- Treat iOS/TestFlight app icon as canonical. Android launcher assets must come from `python3 scripts/sync_app_icons.py`.
+
 ## Session Directive: PR Management & System Hygiene
 
 1. Inspect all open PRs and report merge readiness with evidence.
