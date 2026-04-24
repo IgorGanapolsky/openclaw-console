@@ -124,6 +124,27 @@ final class APIService {
         try await request(path: "/api/health", gateway: gateway)
     }
 
+    func fetchRuntimeConfig(gateway: GatewayConnection? = nil) async throws -> RuntimeConfigResponse {
+        try await request(path: "/api/config/runtime", gateway: gateway)
+    }
+
+    func updateRuntimeConfig(
+        responseProfile: ResponseProfile? = nil,
+        responseVerbosity: ResponseVerbosity? = nil,
+        gateway: GatewayConnection? = nil
+    ) async throws -> RuntimeConfigResponse {
+        let body = RuntimeConfigUpdateRequest(
+            responseProfile: responseProfile,
+            responseVerbosity: responseVerbosity
+        )
+        return try await request(
+            method: "PATCH",
+            path: "/api/config/runtime",
+            body: body,
+            gateway: gateway
+        )
+    }
+
     // MARK: - Agents
 
     func fetchAgents() async throws -> [Agent] {

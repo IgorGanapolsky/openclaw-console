@@ -3,6 +3,9 @@ package com.openclaw.console.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openclaw.console.data.model.GatewayConnection
+import com.openclaw.console.data.model.ResponseProfile
+import com.openclaw.console.data.model.ResponseVerbosity
+import com.openclaw.console.data.model.RuntimeConfig
 import com.openclaw.console.data.repository.GatewayRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -10,6 +13,7 @@ import kotlinx.coroutines.launch
 data class SettingsUiState(
     val gateways: List<GatewayConnection> = emptyList(),
     val activeGatewayId: String? = null,
+    val runtimeConfig: RuntimeConfig? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -46,14 +50,18 @@ class SettingsViewModel : ViewModel() {
 
     private fun observeGateways(repo: GatewayRepository) {
         viewModelScope.launch {
-            combine(repo.gateways, repo.activeGateway) { gateways, active ->
-                Pair(gateways, active)
-            }.collect { (gateways, active) ->
+            combine(repo.gateways, repo.activeGateway, repo.runtimeConfig) { gateways, active, runtimeConfig ->
+                Triple(gateways, active, runtimeConfig)
+            }.collect { (gateways, active, runtimeConfig) ->
                 _settingsUiState.value = _settingsUiState.value.copy(
                     gateways = gateways,
-                    activeGatewayId = active?.id
+                    activeGatewayId = active?.id,
+                    runtimeConfig = runtimeConfig
                 )
             }
+        }
+        viewModelScope.launch {
+            repo.refreshRuntimeConfig()
         }
     }
 
@@ -123,6 +131,24 @@ class SettingsViewModel : ViewModel() {
     fun setActiveGateway(gatewayId: String) {
         viewModelScope.launch {
             gatewayRepository?.setActiveGateway(gatewayId)
+        }
+    }
+
+    fun updateResponseProfile(profile: ResponseProfile) {
+        viewModelScope.launch {
+            gatewayRepository?.updateRuntimeConfig(responseProfile = profile)
+                ?.onFailure { e ->
+                    _settingsUiState.value = _settingsUiState.value.copy(error = e.message)
+                }
+        }
+    }
+
+    fun updateResponseVerbosity(verbosity: ResponseVerbosity) {
+        viewModelScope.launch {
+            gatewayRepository?.updateRuntimeConfig(responseVerbosity = verbosity)
+                ?.onFailure { e ->
+                    _settingsUiState.value = _settingsUiState.value.copy(error = e.message)
+                }
         }
     }
 

@@ -36,9 +36,14 @@ import { createBillingRouter } from '../billing/revenuecat.js';
 import { createAnalyticsRouter } from '../analytics/events.js';
 import { createIntegrationsRouter } from '../integrations/devops-hub.js';
 import { getConfiguredLocalModel, probeLocalModelProvider } from './model-provider.js';
-import { isApprovalPolicyPreset } from '../config/default.js';
+import {
+  isApprovalPolicyPreset,
+  isResponseProfile,
+  isResponseVerbosity,
+} from '../config/default.js';
 import { normalizeProjectBridgeSession } from './project-session.js';
 import { buildOperatorSummary } from './operator-summary.js';
+import { presentTaskForOperator } from '../utils/response-style.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -101,6 +106,8 @@ export function createGatewayServer(
       last_inbound_ws_at: wsSnapshot.last_inbound_at,
       last_outbound_ws_at: wsSnapshot.last_outbound_at,
       approval_policy_preset: config.approvalPolicyPreset,
+      response_profile: config.responseProfile,
+      response_verbosity: config.responseVerbosity,
       local_model: getConfiguredLocalModel(config),
     };
     res.json(body);
@@ -119,6 +126,10 @@ export function createGatewayServer(
       approval_policy: {
         preset: config.approvalPolicyPreset,
         require_biometric: config.requireBiometric,
+      },
+      response_style: {
+        profile: config.responseProfile,
+        verbosity: config.responseVerbosity,
       },
       local_model: getConfiguredLocalModel(config),
     });
@@ -144,6 +155,8 @@ export function createGatewayServer(
     return {
       approval_policy_preset: config.approvalPolicyPreset,
       heartbeat_interval_ms: config.heartbeatIntervalMs,
+      response_profile: config.responseProfile,
+      response_verbosity: config.responseVerbosity,
       require_biometric: config.requireBiometric,
       local_model: getConfiguredLocalModel(config),
     };
@@ -172,6 +185,22 @@ export function createGatewayServer(
       wsManager.updateHeartbeatInterval(body.heartbeat_interval_ms);
     }
 
+    if (body.response_profile !== undefined) {
+      if (!isResponseProfile(body.response_profile)) {
+        res.status(400).json({ error: { code: 4000, message: 'Invalid response_profile' } });
+        return;
+      }
+      config.responseProfile = body.response_profile;
+    }
+
+    if (body.response_verbosity !== undefined) {
+      if (!isResponseVerbosity(body.response_verbosity)) {
+        res.status(400).json({ error: { code: 4000, message: 'Invalid response_verbosity' } });
+        return;
+      }
+      config.responseVerbosity = body.response_verbosity;
+    }
+
     res.json(runtimeConfigResponse());
   });
 
@@ -198,7 +227,7 @@ export function createGatewayServer(
       res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
       return;
     }
-    res.json(state.listTasksForAgent(agentId));
+    res.json(state.listTasksForAgent(agentId).map((task) => presentTaskForOperator(task, config)));
   });
 
   app.get('/api/agents/:id/tasks/:taskId', auth, (req: Request, res: Response) => {
@@ -213,7 +242,7 @@ export function createGatewayServer(
       res.status(404).json({ error: { code: 4040, message: 'Task not found' } });
       return;
     }
-    res.json(task);
+    res.json(presentTaskForOperator(task, config));
   });
 
   // ── Agent Governance ─────────────────────────────────────────────────────

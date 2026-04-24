@@ -65,6 +65,36 @@ class ApiService(
         return executeRequest(request) { true }
     }
 
+    suspend fun getRuntimeConfig(): Result<RuntimeConfig> {
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/config/runtime")
+            .get()
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<RuntimeConfig>(body)
+        }
+    }
+
+    suspend fun updateRuntimeConfig(
+        responseProfile: ResponseProfile? = null,
+        responseVerbosity: ResponseVerbosity? = null
+    ): Result<RuntimeConfig> {
+        val payload = json.encodeToString(
+            RuntimeConfigUpdateRequest(
+                responseProfile = responseProfile,
+                responseVerbosity = responseVerbosity
+            )
+        )
+        val requestBody = payload.toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/config/runtime")
+            .patch(requestBody)
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<RuntimeConfig>(body)
+        }
+    }
+
     suspend fun getAgents(): Result<List<Agent>> {
         val request = Request.Builder()
             .url("${normalizedBase()}/api/agents")

@@ -79,7 +79,8 @@ final class TaskListViewModel {
                     createdAt: task.createdAt,
                     updatedAt: task.updatedAt,
                     steps: task.steps + [step],
-                    links: task.links
+                    links: task.links,
+                    operatorView: task.operatorView
                 )
             }
         default:
@@ -99,7 +100,8 @@ final class TaskListViewModel {
             createdAt: old.createdAt,
             updatedAt: update.updatedAt,
             steps: old.steps,
-            links: old.links
+            links: old.links,
+            operatorView: update.operatorView ?? old.operatorView
         )
     }
 }

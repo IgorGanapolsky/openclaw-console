@@ -93,12 +93,13 @@ private fun TaskListItem(task: Task, onClick: () -> Unit) {
             )
         },
         supportingContent = {
-            if (task.description.isNotEmpty()) {
+            val supportingText = task.operatorView?.summary ?: task.description
+            if (supportingText.isNotEmpty()) {
                 Text(
-                    text = task.description,
+                    text = supportingText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 2
                 )
             }
         },
@@ -111,9 +112,10 @@ private fun TaskListItem(task: Task, onClick: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 TimeAgoText(task.updatedAt, style = MaterialTheme.typography.labelSmall)
-                if (task.steps.isNotEmpty()) {
+                val stepCount = task.operatorView?.rawStepCount ?: task.steps.size
+                if (stepCount > 0) {
                     Text(
-                        text = "${task.steps.size} steps",
+                        text = "$stepCount steps",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

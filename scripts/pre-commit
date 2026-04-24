@@ -31,6 +31,12 @@ STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js)
 STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM || true)
 STAGED_RELEASE_CONTRACT=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)(AppIcon\.appiconset/|mipmap-(anydpi-v26|mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)/|values/ic_launcher_background\.xml$|android/fastlane/metadata/|ios/OpenClawConsole/fastlane/metadata/|PRIVACY_POLICY\.md$|scripts/sync_app_icons\.py$|scripts/validate_release_contract\.py$|scripts/preflight-release\.sh$|\.github/workflows/(ci|store-listing-parity|native-release|internal-distribution)\.yml$)' || true)
 
+if [ -n "$STAGED_ALL" ] && echo "$STAGED_ALL" | grep -qE '^(android/|ios/OpenClawConsole/OpenClawConsole/Assets\.xcassets/AppIcon\.appiconset/|scripts/check-brand-parity\.sh|scripts/sync-android-launcher-icon\.sh|scripts/android-launcher-icon\.manifest)'; then
+  if ! "$(cd "$(dirname "$0")" && pwd)/check-brand-parity.sh"; then
+    err "Brand parity check failed"
+  fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════
 # OPENCLAW SECURITY PATTERNS
 # ═══════════════════════════════════════════════════════════════════
@@ -258,6 +264,16 @@ fi
 
 if [ "$WARNINGS" -gt 0 ]; then
   echo "Pre-commit: $WARNINGS warning(s) (non-blocking)."
+fi
+
+if [ -n "$STAGED_TS" ]; then
+  echo "Pre-commit: type-checking gateway skills"
+  (cd "$(dirname "$0")/../openclaw-skills" && npm run lint && npm run build) || exit 1
+fi
+
+if [ -n "$STAGED_KT" ] || echo "$STAGED_ALL" | grep -qE '^android/'; then
+  echo "Pre-commit: compiling Android app"
+  (cd "$(dirname "$0")/../android" && ./gradlew :app:compileDebugKotlin --no-daemon) || exit 1
 fi
 
 echo "✅ Pre-commit checks passed!"

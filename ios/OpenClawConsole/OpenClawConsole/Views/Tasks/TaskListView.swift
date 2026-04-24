@@ -111,6 +111,12 @@ struct TaskRow: View {
                     Spacer()
                     TaskStatusBadge(status: task.status)
                 }
+                if let summary = task.operatorView?.summary ?? (!task.description.isEmpty ? task.description : nil) {
+                    Text(summary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
                 TimeAgoText(date: task.updatedAt)
             }
         }

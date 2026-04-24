@@ -38,6 +38,10 @@ struct TaskDetailView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     taskHeader(task: task)
 
+                    if let operatorView = task.operatorView {
+                        operatorSummary(operatorView)
+                    }
+
                     if !task.links.isEmpty {
                         ResourceLinksRow(links: task.links)
                             .padding(.bottom, 8)
@@ -104,6 +108,37 @@ struct TaskDetailView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
+    }
+
+    private func operatorSummary(_ operatorView: TaskOperatorView) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(operatorView.profile.displayName)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(operatorView.verbosity.displayName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if operatorView.hiddenStepCount > 0 {
+                    Text("\(operatorView.hiddenStepCount) hidden")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text(operatorView.summary)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let nextStep = operatorView.nextStep {
+                Text(nextStep)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
     }
 
     // MARK: - Chat Section

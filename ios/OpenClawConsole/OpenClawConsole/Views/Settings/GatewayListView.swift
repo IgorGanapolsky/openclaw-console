@@ -21,8 +21,19 @@ struct GatewayListView: View {
                     gatewayManager.delete(at: offsets)
                 }
             }
+
+            if let activeGateway = gatewayManager.activeGateway {
+                Section("Operator Response") {
+                    OperatorResponseSettingsView(gateway: activeGateway)
+                }
+            }
         }
         .navigationTitle("Gateways")
+        .task(id: gatewayManager.activeGatewayId) {
+            if let gateway = gatewayManager.activeGateway {
+                await gatewayManager.refreshRuntimeConfig(for: gateway)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: { showAddGateway = true }) {
@@ -52,6 +63,57 @@ struct GatewayListView: View {
             Button("Add Gateway") { showAddGateway = true }
                 .buttonStyle(.borderedProminent)
         }
+    }
+}
+
+private struct OperatorResponseSettingsView: View {
+    @Environment(GatewayManager.self) private var gatewayManager
+    let gateway: GatewayConnection
+
+    var body: some View {
+        if let config = gatewayManager.runtimeConfig(for: gateway) {
+            Picker("Style", selection: bindingForProfile(current: config.responseProfile)) {
+                ForEach(ResponseProfile.allCases, id: \.self) { profile in
+                    Text(profile.displayName).tag(profile)
+                }
+            }
+
+            Picker("Verbosity", selection: bindingForVerbosity(current: config.responseVerbosity)) {
+                ForEach(ResponseVerbosity.allCases, id: \.self) { verbosity in
+                    Text(verbosity.displayName).tag(verbosity)
+                }
+            }
+
+            Text("Quiet, operator-first summaries stay visible. Raw task activity remains available in task detail.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else {
+            Text("Testing or reconnecting to load runtime settings.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func bindingForProfile(current: ResponseProfile) -> Binding<ResponseProfile> {
+        Binding(
+            get: { gatewayManager.runtimeConfig(for: gateway)?.responseProfile ?? current },
+            set: { newValue in
+                _Concurrency.Task {
+                    await gatewayManager.updateRuntimeConfig(for: gateway, responseProfile: newValue)
+                }
+            }
+        )
+    }
+
+    private func bindingForVerbosity(current: ResponseVerbosity) -> Binding<ResponseVerbosity> {
+        Binding(
+            get: { gatewayManager.runtimeConfig(for: gateway)?.responseVerbosity ?? current },
+            set: { newValue in
+                _Concurrency.Task {
+                    await gatewayManager.updateRuntimeConfig(for: gateway, responseVerbosity: newValue)
+                }
+            }
+        )
     }
 }
 

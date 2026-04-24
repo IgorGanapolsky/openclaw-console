@@ -18,6 +18,8 @@ concurrency:
 jobs:
   icon-parity:
     name: App Icon Parity
+  brand-parity:
+    name: Brand Parity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +51,15 @@ jobs:
 
       - name: Validate release contract
         run: python3 scripts/validate_release_contract.py --platform both
+
+  brand-parity:
+    name: Brand Parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Android/iOS icon parity
+        run: ./scripts/check-brand-parity.sh
 
   lint-kotlin:
     name: Architecture Lint (Kotlin)
@@ -146,9 +157,12 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
-      - name: Build debug APK
+      - name: Verify brand parity
+        run: ./scripts/check-brand-parity.sh
+
+      - name: Build and validate Android app
         working-directory: android
-        run: ./gradlew testDebugUnitTest assembleDebug --no-daemon
+        run: ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug --no-daemon
 
   ios-build:
     name: iOS Build Check

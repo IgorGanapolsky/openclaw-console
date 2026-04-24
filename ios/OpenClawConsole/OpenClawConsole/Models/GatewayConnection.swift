@@ -50,6 +50,8 @@ struct HealthResponse: Codable {
     let lastInboundWsAt: Date?
     let lastOutboundWsAt: Date?
     let approvalPolicyPreset: String?
+    let responseProfile: ResponseProfile?
+    let responseVerbosity: ResponseVerbosity?
     let localModel: LocalModelStatus?
 
     enum CodingKeys: String, CodingKey {
@@ -63,7 +65,63 @@ struct HealthResponse: Codable {
         case lastInboundWsAt = "last_inbound_ws_at"
         case lastOutboundWsAt = "last_outbound_ws_at"
         case approvalPolicyPreset = "approval_policy_preset"
+        case responseProfile = "response_profile"
+        case responseVerbosity = "response_verbosity"
         case localModel = "local_model"
+    }
+}
+
+enum ResponseProfile: String, Codable, CaseIterable {
+    case codex
+    case claudeCode = "claude-code"
+    case verbose
+    case debug
+
+    var displayName: String {
+        switch self {
+        case .codex: return "Codex"
+        case .claudeCode: return "Claude Code"
+        case .verbose: return "Verbose"
+        case .debug: return "Debug"
+        }
+    }
+}
+
+enum ResponseVerbosity: String, Codable, CaseIterable {
+    case terse
+    case normal
+    case detailed
+
+    var displayName: String {
+        rawValue.capitalized
+    }
+}
+
+struct RuntimeConfigResponse: Codable {
+    let approvalPolicyPreset: String
+    let heartbeatIntervalMs: Int
+    let responseProfile: ResponseProfile
+    let responseVerbosity: ResponseVerbosity
+    let requireBiometric: Bool
+    let localModel: LocalModelStatus
+
+    enum CodingKeys: String, CodingKey {
+        case approvalPolicyPreset = "approval_policy_preset"
+        case heartbeatIntervalMs = "heartbeat_interval_ms"
+        case responseProfile = "response_profile"
+        case responseVerbosity = "response_verbosity"
+        case requireBiometric = "require_biometric"
+        case localModel = "local_model"
+    }
+}
+
+struct RuntimeConfigUpdateRequest: Codable {
+    let responseProfile: ResponseProfile?
+    let responseVerbosity: ResponseVerbosity?
+
+    enum CodingKeys: String, CodingKey {
+        case responseProfile = "response_profile"
+        case responseVerbosity = "response_verbosity"
     }
 }
 

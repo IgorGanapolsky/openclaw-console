@@ -118,6 +118,12 @@ fun TaskDetailScreen(
                         TaskHeader(task = task)
                     }
 
+                    task.operatorView?.let { operatorView ->
+                        item {
+                            OperatorSummaryCard(operatorView = operatorView)
+                        }
+                    }
+
                     // Resource links
                     if (task.links.isNotEmpty()) {
                         item {
@@ -211,6 +217,53 @@ private fun TaskHeader(task: Task) {
             }
         }
         HorizontalDivider()
+    }
+}
+
+@Composable
+private fun OperatorSummaryCard(operatorView: TaskOperatorView) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${operatorView.profile.displayName()} • ${operatorView.verbosity.displayName()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (operatorView.hiddenStepCount > 0) {
+                    Text(
+                        text = "${operatorView.hiddenStepCount} hidden",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Text(
+                text = operatorView.summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            operatorView.nextStep?.let { nextStep ->
+                Text(
+                    text = nextStep,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -337,6 +390,19 @@ private fun formatStepTimestamp(isoTimestamp: String): String {
     } catch (e: Exception) {
         isoTimestamp.take(8)
     }
+}
+
+private fun ResponseProfile.displayName(): String = when (this) {
+    ResponseProfile.CODEX -> "Codex"
+    ResponseProfile.CLAUDE_CODE -> "Claude Code"
+    ResponseProfile.VERBOSE -> "Verbose"
+    ResponseProfile.DEBUG -> "Debug"
+}
+
+private fun ResponseVerbosity.displayName(): String = when (this) {
+    ResponseVerbosity.TERSE -> "Terse"
+    ResponseVerbosity.NORMAL -> "Normal"
+    ResponseVerbosity.DETAILED -> "Detailed"
 }
 
 @Composable

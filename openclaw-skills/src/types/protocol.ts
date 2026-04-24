@@ -38,6 +38,8 @@ export interface Agent {
 
 /** Lifecycle status of a task. */
 export type TaskStatus = 'queued' | 'running' | 'done' | 'failed';
+export type ResponseProfile = 'codex' | 'claude-code' | 'verbose' | 'debug';
+export type ResponseVerbosity = 'terse' | 'normal' | 'detailed';
 
 /** Type of a step in a task timeline. */
 export type StepType = 'log' | 'tool_call' | 'output' | 'error' | 'info';
@@ -59,6 +61,15 @@ export interface TaskStep {
   metadata: Record<string, unknown>;
 }
 
+export interface TaskOperatorView {
+  profile: ResponseProfile;
+  verbosity: ResponseVerbosity;
+  summary: string;
+  next_step: string | null;
+  hidden_step_count: number;
+  raw_step_count: number;
+}
+
 /** A task tracked by an agent. */
 export interface Task {
   id: string;
@@ -70,6 +81,7 @@ export interface Task {
   updated_at: string; // ISO8601
   steps: TaskStep[];
   links: ResourceLink[];
+  operator_view?: TaskOperatorView;
 }
 
 /** Partial update payload for task_update WS event. */
@@ -80,6 +92,7 @@ export interface TaskUpdate {
   title: string;
   updated_at: string;
   active_steps?: number;
+  operator_view?: TaskOperatorView;
 }
 
 // ─── Incident ─────────────────────────────────────────────────────────────────
@@ -285,6 +298,8 @@ export interface BridgeSession {
 export interface RuntimeConfigResponse {
   approval_policy_preset: string;
   heartbeat_interval_ms: number;
+  response_profile: ResponseProfile;
+  response_verbosity: ResponseVerbosity;
   require_biometric: boolean;
   local_model: {
     enabled: boolean;
@@ -296,6 +311,8 @@ export interface RuntimeConfigResponse {
 export interface RuntimeConfigUpdateRequest {
   approval_policy_preset?: string;
   heartbeat_interval_ms?: number;
+  response_profile?: ResponseProfile;
+  response_verbosity?: ResponseVerbosity;
 }
 
 // ─── Scheduled Loops ──────────────────────────────────────────────────────────
@@ -466,6 +483,8 @@ export interface HealthResponse {
   last_inbound_ws_at: string | null;
   last_outbound_ws_at: string | null;
   approval_policy_preset: string;
+  response_profile: ResponseProfile;
+  response_verbosity: ResponseVerbosity;
   local_model: {
     enabled: boolean;
     base_url: string | null;
