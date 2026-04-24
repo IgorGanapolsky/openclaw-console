@@ -55,12 +55,19 @@ We follow a modified GitFlow approach:
 #### develop
 
 - Required status checks:
-  - build-and-test
-  - lint
+  - App Icon Parity
+  - Brand Parity
+  - Release Contract
+  - Architecture Lint Kotlin
+  - Architecture Lint Swift
+  - Skills Tests
+  - Android Build Check
+  - iOS Build Check
   - Secrets Scan
   - Dependency Audit
   - CodeQL Analysis (javascript-typescript)
   - Claude Review
+  - reconcile-pr-state
 - Dismiss stale reviews
 - No direct pushes
 
@@ -68,12 +75,20 @@ We follow a modified GitFlow approach:
 
 - All develop protections plus:
 - Required status checks:
-  - build-and-test
-  - lint
+  - App Icon Parity
+  - Brand Parity
+  - Release Contract
+  - Architecture Lint Kotlin
+  - Architecture Lint Swift
+  - Skills Tests
+  - Android Build Check
+  - iOS Build Check
   - Secrets Scan
   - Dependency Audit
   - CodeQL Analysis (javascript-typescript)
+  - Require develop or release branch
   - Claude Review
+  - reconcile-pr-state
 - Admin enforcement enabled
 - No force push
 
