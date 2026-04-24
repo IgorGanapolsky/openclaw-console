@@ -23,6 +23,7 @@ import type {
   ChatRequest,
   ApprovalRespondRequest,
   HealthResponse,
+  OperatorSummaryResponse,
   ApprovalResponse,
   RuntimeConfigResponse,
   RuntimeConfigUpdateRequest,
@@ -37,6 +38,7 @@ import { createIntegrationsRouter } from '../integrations/devops-hub.js';
 import { getConfiguredLocalModel, probeLocalModelProvider } from './model-provider.js';
 import { isApprovalPolicyPreset } from '../config/default.js';
 import { normalizeProjectBridgeSession } from './project-session.js';
+import { buildOperatorSummary } from './operator-summary.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -120,6 +122,18 @@ export function createGatewayServer(
       },
       local_model: getConfiguredLocalModel(config),
     });
+  });
+
+  app.get('/api/dashboard/summary', auth, (req: Request, res: Response) => {
+    const rawLimit = Number.parseInt(String(req.query['limit'] ?? ''), 10);
+    const body: OperatorSummaryResponse = buildOperatorSummary({
+      config,
+      state,
+      startedAtIso,
+      wsSnapshot: wsManager.getRuntimeSnapshot(),
+      limit: Number.isNaN(rawLimit) ? undefined : rawLimit,
+    });
+    res.json(body);
   });
 
   app.get('/api/model/status', auth, async (_req: Request, res: Response) => {

@@ -473,6 +473,108 @@ export interface HealthResponse {
   };
 }
 
+export interface OperatorSummaryCounts {
+  agents_total: number;
+  agents_online: number;
+  agents_busy: number;
+  agents_offline: number;
+  agents_stale: number;
+  tasks_running: number;
+  tasks_queued: number;
+  tasks_failed: number;
+  approvals_pending: number;
+  incidents_open: number;
+  incidents_critical: number;
+  bridges_open: number;
+  bridges_stale: number;
+  websocket_clients: number;
+}
+
+export interface OperatorSummaryAgent {
+  id: string;
+  name: string;
+  status: AgentStatus;
+  last_active: string;
+  last_active_minutes_ago: number | null;
+  stale: boolean;
+  active_tasks: number;
+  pending_approvals: number;
+  workspace: string;
+  current_branch: string | null;
+  uncommitted_changes: number;
+  ahead_by: number;
+  behind_by: number;
+}
+
+export interface OperatorSummaryTask {
+  id: string;
+  agent_id: string;
+  title: string;
+  status: TaskStatus;
+  updated_at: string;
+  step_count: number;
+  latest_step_type: StepType | null;
+  latest_step_preview: string | null;
+}
+
+export interface OperatorSummaryIncident {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  title: string;
+  updated_at: string;
+}
+
+export interface OperatorSummaryApproval {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  action_type: ActionType;
+  title: string;
+  created_at: string;
+  expires_at: string;
+  risk_level: RiskLevel;
+  environment: string;
+  service: string;
+}
+
+export interface OperatorSummaryBridge {
+  id: string;
+  agent_id: string;
+  title: string;
+  type: BridgeSession['type'];
+  cwd: string;
+  closed: boolean;
+  updated_at: string;
+  updated_minutes_ago: number | null;
+  stale: boolean;
+}
+
+export interface OperatorSummaryResponse {
+  checked_at: string;
+  started_at: string;
+  approval_policy_preset: string;
+  headline: string;
+  needs_attention: string[];
+  summary_lines: string[];
+  counts: OperatorSummaryCounts;
+  agents: OperatorSummaryAgent[];
+  tasks: OperatorSummaryTask[];
+  incidents: OperatorSummaryIncident[];
+  approvals: OperatorSummaryApproval[];
+  bridges: OperatorSummaryBridge[];
+  websocket: GatewayHeartbeatPayload & {
+    sessions: Array<{
+      id: string;
+      connected_at: string;
+      last_message_at: string | null;
+      subscribed_agents: string[];
+    }>;
+  };
+}
+
 // ─── Error Codes ─────────────────────────────────────────────────────────────
 
 export const ERROR_CODES = {
