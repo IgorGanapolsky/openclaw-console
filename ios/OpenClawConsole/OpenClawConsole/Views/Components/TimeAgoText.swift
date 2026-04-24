@@ -24,9 +24,9 @@ struct TimeAgoText: View {
             .onAppear { update() }
             // Refresh every minute
             .task {
-                while !_Concurrency.Task.isCancelled {
+                while !Task.isCancelled {
                     update()
-                    try? await _Concurrency.Task.sleep(nanoseconds: 60_000_000_000)
+                    try? await Task.sleep(nanoseconds: 60_000_000_000)
                 }
             }
             .accessibilityLabel(accessibilityDate)
