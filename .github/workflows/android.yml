@@ -4,10 +4,18 @@ on:
   pull_request:
     paths:
       - 'android/**'
+      - 'ios/OpenClawConsole/OpenClawConsole/Assets.xcassets/AppIcon.appiconset/**'
+      - 'scripts/check-brand-parity.sh'
+      - 'scripts/sync-android-launcher-icon.sh'
+      - 'scripts/android-launcher-icon.manifest'
   push:
     branches: [main, develop]
     paths:
       - 'android/**'
+      - 'ios/OpenClawConsole/OpenClawConsole/Assets.xcassets/AppIcon.appiconset/**'
+      - 'scripts/check-brand-parity.sh'
+      - 'scripts/sync-android-launcher-icon.sh'
+      - 'scripts/android-launcher-icon.manifest'
 
 jobs:
   build-and-test:
@@ -30,6 +38,9 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Verify brand parity
+        run: ../scripts/check-brand-parity.sh
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
@@ -65,8 +76,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Verify brand parity
+        run: ../scripts/check-brand-parity.sh
+
       - name: Run Android Lint
-        run: ./gradlew lintDebug || echo "::warning::Android Lint crashed due to a known AGP/Compose tooling issue — see uploaded report"
+        run: ./gradlew lintDebug
 
       - name: Upload lint results
         if: always()

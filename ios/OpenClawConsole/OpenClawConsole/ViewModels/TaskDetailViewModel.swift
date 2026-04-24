@@ -102,7 +102,8 @@ final class TaskDetailViewModel {
                 createdAt: current.createdAt,
                 updatedAt: current.updatedAt,
                 steps: current.steps + [step],
-                links: current.links
+                links: current.links,
+                operatorView: current.operatorView
             )
 
         case .taskUpdate(let update):
@@ -116,7 +117,8 @@ final class TaskDetailViewModel {
                 createdAt: current.createdAt,
                 updatedAt: update.updatedAt,
                 steps: current.steps,
-                links: current.links
+                links: current.links,
+                operatorView: update.operatorView ?? current.operatorView
             )
 
         case .chatResponse(let message):

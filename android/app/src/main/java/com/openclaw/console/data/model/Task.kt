@@ -46,6 +46,16 @@ data class TaskStep(
 )
 
 @Serializable
+data class TaskOperatorView(
+    val profile: ResponseProfile,
+    val verbosity: ResponseVerbosity,
+    val summary: String,
+    @SerialName("next_step") val nextStep: String? = null,
+    @SerialName("hidden_step_count") val hiddenStepCount: Int = 0,
+    @SerialName("raw_step_count") val rawStepCount: Int = 0
+)
+
+@Serializable
 data class Task(
     val id: String,
     @SerialName("agent_id") val agentId: String,
@@ -55,7 +65,8 @@ data class Task(
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
     val steps: List<TaskStep> = emptyList(),
-    val links: List<ResourceLink> = emptyList()
+    val links: List<ResourceLink> = emptyList(),
+    @SerialName("operator_view") val operatorView: TaskOperatorView? = null
 )
 
 @Serializable
@@ -63,5 +74,6 @@ data class TaskUpdate(
     val id: String,
     @SerialName("agent_id") val agentId: String,
     val status: TaskStatus,
-    @SerialName("updated_at") val updatedAt: String
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("operator_view") val operatorView: TaskOperatorView? = null
 )

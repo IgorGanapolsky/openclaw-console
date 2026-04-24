@@ -3,6 +3,8 @@
  */
 
 export type ApprovalPolicyPreset = 'manual' | 'safe-yolo' | 'repo-yolo' | 'ci-yolo' | 'danger-yolo';
+export type ResponseProfile = 'codex' | 'claude-code' | 'verbose' | 'debug';
+export type ResponseVerbosity = 'terse' | 'normal' | 'detailed';
 
 export interface GatewayConfig {
   /** HTTP/WS listen port */
@@ -37,6 +39,10 @@ export interface GatewayConfig {
   approvalPolicyPreset: ApprovalPolicyPreset;
   /** How frequently WebSocket clients receive heartbeat/status events */
   heartbeatIntervalMs: number;
+  /** Operator-facing response style used for task/activity presentation */
+  responseProfile: ResponseProfile;
+  /** Operator-facing verbosity used for task/activity presentation */
+  responseVerbosity: ResponseVerbosity;
   /** Local OpenAI-compatible model endpoint, e.g. vLLM on Jetson */
   localModelBaseUrl: string | null;
   /** Local model identifier to display and use for local chat calls */
@@ -64,6 +70,8 @@ const DEFAULT_CONFIG: GatewayConfig = {
   corsOrigins: process.env['CORS_ORIGINS'] ?? '*',
   approvalPolicyPreset: parseApprovalPolicyPreset(process.env['OPENCLAW_APPROVAL_POLICY'] ?? 'manual'),
   heartbeatIntervalMs: parseInt(process.env['OPENCLAW_HEARTBEAT_INTERVAL_MS'] ?? '10000', 10),
+  responseProfile: parseResponseProfile(process.env['OPENCLAW_RESPONSE_PROFILE'] ?? 'codex'),
+  responseVerbosity: parseResponseVerbosity(process.env['OPENCLAW_RESPONSE_VERBOSITY'] ?? 'normal'),
   localModelBaseUrl: process.env['OPENCLAW_LOCAL_MODEL_BASE_URL'] ?? process.env['OPENAI_BASE_URL'] ?? null,
   localModelName: process.env['OPENCLAW_LOCAL_MODEL_NAME'] ?? null,
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
@@ -79,6 +87,28 @@ export function parseApprovalPolicyPreset(raw: string): ApprovalPolicyPreset {
     return raw;
   }
   return 'manual';
+}
+
+export function isResponseProfile(raw: string): raw is ResponseProfile {
+  return raw === 'codex' || raw === 'claude-code' || raw === 'verbose' || raw === 'debug';
+}
+
+export function parseResponseProfile(raw: string): ResponseProfile {
+  if (isResponseProfile(raw)) {
+    return raw;
+  }
+  return 'codex';
+}
+
+export function isResponseVerbosity(raw: string): raw is ResponseVerbosity {
+  return raw === 'terse' || raw === 'normal' || raw === 'detailed';
+}
+
+export function parseResponseVerbosity(raw: string): ResponseVerbosity {
+  if (isResponseVerbosity(raw)) {
+    return raw;
+  }
+  return 'normal';
 }
 
 export default DEFAULT_CONFIG;

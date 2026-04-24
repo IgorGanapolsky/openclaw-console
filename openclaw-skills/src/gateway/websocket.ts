@@ -33,6 +33,11 @@ import type {
 import { ERROR_CODES } from '../types/protocol.js';
 import type { StateManager } from './state.js';
 import type { GatewayConfig } from '../config/default.js';
+import {
+  buildTaskUpdate,
+  presentTaskStepForOperator,
+  shouldBroadcastTaskStep,
+} from '../utils/response-style.js';
 
 // ── Client session ────────────────────────────────────────────────────────────
 
@@ -88,29 +93,20 @@ export class WebSocketManager {
     });
 
     this.state.events.on('task_created', (task: Task) => {
-      this.broadcastToSubscribers(task.agent_id, 'task_update', {
-        id: task.id,
-        agent_id: task.agent_id,
-        status: task.status,
-        title: task.title,
-        updated_at: task.updated_at,
-      });
+      this.broadcastToSubscribers(task.agent_id, 'task_update', buildTaskUpdate(task, this.config));
     });
 
     this.state.events.on('task_updated', (task: Task) => {
-      this.broadcastToSubscribers(task.agent_id, 'task_update', {
-        id: task.id,
-        agent_id: task.agent_id,
-        status: task.status,
-        title: task.title,
-        updated_at: task.updated_at,
-      });
+      this.broadcastToSubscribers(task.agent_id, 'task_update', buildTaskUpdate(task, this.config));
     });
 
     this.state.events.on('task_step_added', (step: TaskStep) => {
       const task = this.state.getTask(step.task_id);
       if (task) {
-        this.broadcastToSubscribers(task.agent_id, 'task_step', step);
+        this.broadcastToSubscribers(task.agent_id, 'task_update', buildTaskUpdate(task, this.config));
+        if (shouldBroadcastTaskStep(step, this.config)) {
+          this.broadcastToSubscribers(task.agent_id, 'task_step', presentTaskStepForOperator(step, this.config));
+        }
       }
     });
 

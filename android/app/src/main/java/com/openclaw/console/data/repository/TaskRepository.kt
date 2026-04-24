@@ -42,7 +42,8 @@ class TaskRepository(
                             if (task.id == event.update.id) {
                                 task.copy(
                                     status = event.update.status,
-                                    updatedAt = event.update.updatedAt
+                                    updatedAt = event.update.updatedAt,
+                                    operatorView = event.update.operatorView ?: task.operatorView
                                 )
                             } else task
                         } ?: return@collect

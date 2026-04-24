@@ -225,6 +225,7 @@ fun EmptyState(
     title: String,
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    primaryAction: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalOpenClawColors.current
@@ -266,6 +267,7 @@ fun EmptyState(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            primaryAction?.invoke()
         }
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.data.model.GatewayConnection
+import com.openclaw.console.data.model.ResponseProfile
+import com.openclaw.console.data.model.ResponseVerbosity
+import com.openclaw.console.data.model.RuntimeConfig
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -94,6 +98,17 @@ fun SettingsScreen(
                 }
             }
 
+            uiState.runtimeConfig?.let { runtimeConfig ->
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
+                    OperatorResponseCard(
+                        runtimeConfig = runtimeConfig,
+                        onProfileChange = viewModel::updateResponseProfile,
+                        onVerbosityChange = viewModel::updateResponseVerbosity
+                    )
+                }
+            }
+
             item {
                 HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -111,6 +126,115 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun OperatorResponseCard(
+    runtimeConfig: RuntimeConfig,
+    onProfileChange: (ResponseProfile) -> Unit,
+    onVerbosityChange: (ResponseVerbosity) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(
+                text = "Operator Response",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        LabeledDropdown(
+            label = "Style",
+            selected = runtimeConfig.responseProfile.displayName(),
+            options = ResponseProfile.entries,
+            optionLabel = { it.displayName() },
+            onSelected = onProfileChange
+        )
+
+        LabeledDropdown(
+            label = "Verbosity",
+            selected = runtimeConfig.responseVerbosity.displayName(),
+            options = ResponseVerbosity.entries,
+            optionLabel = { it.displayName() },
+            onSelected = onVerbosityChange
+        )
+
+        Text(
+            text = "Quiet summaries stay visible first. Raw task activity remains in task detail.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun <T> LabeledDropdown(
+    label: String,
+    selected: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    onSelected: (T) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it }
+        ) {
+            OutlinedTextField(
+                value = selected,
+                onValueChange = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(optionLabel(option)) },
+                        onClick = {
+                            expanded = false
+                            onSelected(option)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun ResponseProfile.displayName(): String = when (this) {
+    ResponseProfile.CODEX -> "Codex"
+    ResponseProfile.CLAUDE_CODE -> "Claude Code"
+    ResponseProfile.VERBOSE -> "Verbose"
+    ResponseProfile.DEBUG -> "Debug"
+}
+
+private fun ResponseVerbosity.displayName(): String = when (this) {
+    ResponseVerbosity.TERSE -> "Terse"
+    ResponseVerbosity.NORMAL -> "Normal"
+    ResponseVerbosity.DETAILED -> "Detailed"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -30,6 +30,7 @@ final class GatewayManager {
     // Connection status per gateway id
     private(set) var connectionStatuses: [String: GatewayConnectionStatus] = [:]
     private(set) var gatewayHealth: [String: HealthResponse] = [:]
+    private(set) var runtimeConfigs: [String: RuntimeConfigResponse] = [:]
 
     // MARK: Private
 
@@ -132,6 +133,7 @@ final class GatewayManager {
         do {
             let health = try await APIService.shared.healthCheck(gateway: gateway)
             gatewayHealth[gateway.id] = health
+            runtimeConfigs[gateway.id] = try await APIService.shared.fetchRuntimeConfig(gateway: gateway)
             connectionStatuses[gateway.id] = .connected
         } catch let error as OpenClawError {
             connectionStatuses[gateway.id] = .failed(error.localizedDescription)
@@ -146,5 +148,56 @@ final class GatewayManager {
 
     func health(for gateway: GatewayConnection) -> HealthResponse? {
         gatewayHealth[gateway.id]
+    }
+
+    func runtimeConfig(for gateway: GatewayConnection) -> RuntimeConfigResponse? {
+        runtimeConfigs[gateway.id]
+    }
+
+    @MainActor
+    func refreshRuntimeConfig(for gateway: GatewayConnection) async {
+        do {
+            runtimeConfigs[gateway.id] = try await APIService.shared.fetchRuntimeConfig(gateway: gateway)
+        } catch let error as OpenClawError {
+            connectionStatuses[gateway.id] = .failed(error.localizedDescription)
+        } catch {
+            connectionStatuses[gateway.id] = .failed(error.localizedDescription)
+        }
+    }
+
+    @MainActor
+    func updateRuntimeConfig(
+        for gateway: GatewayConnection,
+        responseProfile: ResponseProfile? = nil,
+        responseVerbosity: ResponseVerbosity? = nil
+    ) async {
+        do {
+            runtimeConfigs[gateway.id] = try await APIService.shared.updateRuntimeConfig(
+                responseProfile: responseProfile,
+                responseVerbosity: responseVerbosity,
+                gateway: gateway
+            )
+            if let health = gatewayHealth[gateway.id] {
+                gatewayHealth[gateway.id] = HealthResponse(
+                    status: health.status,
+                    version: health.version,
+                    gatewayVersion: health.gatewayVersion,
+                    startedAt: health.startedAt,
+                    checkedAt: Date(),
+                    uptimeSeconds: health.uptimeSeconds,
+                    websocketClients: health.websocketClients,
+                    lastInboundWsAt: health.lastInboundWsAt,
+                    lastOutboundWsAt: health.lastOutboundWsAt,
+                    approvalPolicyPreset: health.approvalPolicyPreset,
+                    responseProfile: responseProfile ?? health.responseProfile,
+                    responseVerbosity: responseVerbosity ?? health.responseVerbosity,
+                    localModel: health.localModel
+                )
+            }
+        } catch let error as OpenClawError {
+            connectionStatuses[gateway.id] = .failed(error.localizedDescription)
+        } catch {
+            connectionStatuses[gateway.id] = .failed(error.localizedDescription)
+        }
     }
 }

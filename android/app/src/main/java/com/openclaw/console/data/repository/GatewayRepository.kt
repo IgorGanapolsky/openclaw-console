@@ -1,6 +1,9 @@
 package com.openclaw.console.data.repository
 
 import com.openclaw.console.data.model.GatewayConnection
+import com.openclaw.console.data.model.ResponseProfile
+import com.openclaw.console.data.model.ResponseVerbosity
+import com.openclaw.console.data.model.RuntimeConfig
 import com.openclaw.console.data.network.ApiService
 import com.openclaw.console.service.SecureStorage
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +22,9 @@ class GatewayRepository(private val secureStorage: SecureStorage) {
 
     private val _activeGateway = MutableStateFlow<GatewayConnection?>(null)
     val activeGateway: StateFlow<GatewayConnection?> = _activeGateway
+
+    private val _runtimeConfig = MutableStateFlow<RuntimeConfig?>(null)
+    val runtimeConfig: StateFlow<RuntimeConfig?> = _runtimeConfig
 
     init {
         loadGateways()
@@ -69,6 +75,7 @@ class GatewayRepository(private val secureStorage: SecureStorage) {
             secureStorage.saveActiveGatewayId(gatewayId)
         }
         loadGateways()
+        refreshRuntimeConfig()
     }
 
     suspend fun testConnection(baseUrl: String, token: String): Result<Boolean> {
@@ -90,6 +97,37 @@ class GatewayRepository(private val secureStorage: SecureStorage) {
         updated.find { it.id == gatewayId }?.let { gw ->
             val toStore = gw.copy(token = "")
             secureStorage.saveGatewayMeta("gateway_$gatewayId", json.encodeToString(toStore))
+        }
+    }
+
+    suspend fun refreshRuntimeConfig() {
+        val gateway = _activeGateway.value ?: run {
+            _runtimeConfig.value = null
+            return
+        }
+        val token = getToken(gateway.id) ?: run {
+            _runtimeConfig.value = null
+            return
+        }
+        withContext(Dispatchers.IO) {
+            val api = ApiService(gateway.baseUrl, token)
+            api.getRuntimeConfig()
+                .onSuccess { _runtimeConfig.value = it }
+                .onFailure { _runtimeConfig.value = null }
+        }
+    }
+
+    suspend fun updateRuntimeConfig(
+        responseProfile: ResponseProfile? = null,
+        responseVerbosity: ResponseVerbosity? = null
+    ): Result<RuntimeConfig> {
+        val gateway = _activeGateway.value ?: return Result.failure(IllegalStateException("No active gateway"))
+        val token = getToken(gateway.id) ?: return Result.failure(IllegalStateException("No token for active gateway"))
+
+        return withContext(Dispatchers.IO) {
+            val api = ApiService(gateway.baseUrl, token)
+            api.updateRuntimeConfig(responseProfile, responseVerbosity)
+                .onSuccess { _runtimeConfig.value = it }
         }
     }
 }

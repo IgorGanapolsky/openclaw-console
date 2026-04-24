@@ -199,6 +199,14 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                         appViewModel = appViewModel,
                         onAgentClick = { agentId ->
                             navController.navigate(Screen.AgentDetail.route(agentId))
+                        },
+                        onAddGateway = {
+                            navController.navigate(Screen.AddGateway.route)
+                        },
+                        onManageGateways = {
+                            navController.navigate(Screen.Settings.route) {
+                                launchSingleTop = true
+                            }
                         }
                     )
                 }

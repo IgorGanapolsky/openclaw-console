@@ -64,6 +64,8 @@ describe('runtime config API', () => {
       body: JSON.stringify({
         approval_policy_preset: 'repo-yolo',
         heartbeat_interval_ms: 1_000,
+        response_profile: 'claude-code',
+        response_verbosity: 'terse',
       }),
     });
 
@@ -71,8 +73,12 @@ describe('runtime config API', () => {
     const body = await response.json() as Record<string, unknown>;
     expect(body['approval_policy_preset']).toBe('repo-yolo');
     expect(body['heartbeat_interval_ms']).toBe(1_000);
+    expect(body['response_profile']).toBe('claude-code');
+    expect(body['response_verbosity']).toBe('terse');
     expect(config.approvalPolicyPreset).toBe('repo-yolo');
     expect(config.heartbeatIntervalMs).toBe(1_000);
+    expect(config.responseProfile).toBe('claude-code');
+    expect(config.responseVerbosity).toBe('terse');
 
     fs.rmSync(config.tokenStorePath, { force: true });
   });
@@ -92,6 +98,25 @@ describe('runtime config API', () => {
 
     expect(response.status).toBe(400);
     expect(config.approvalPolicyPreset).toBe(DEFAULT_CONFIG.approvalPolicyPreset);
+
+    fs.rmSync(config.tokenStorePath, { force: true });
+  });
+
+  test('rejects invalid response settings', async () => {
+    const config = tempConfig();
+    const { baseUrl, token } = await start(config);
+
+    const response = await fetch(`${baseUrl}/api/config/runtime`, {
+      method: 'PATCH',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ response_profile: 'essay-mode' }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(config.responseProfile).toBe(DEFAULT_CONFIG.responseProfile);
 
     fs.rmSync(config.tokenStorePath, { force: true });
   });

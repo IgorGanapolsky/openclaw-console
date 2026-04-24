@@ -87,7 +87,7 @@ struct TaskStep: Codable, Identifiable, Hashable {
     let type: TaskStepType
     let content: String
     let timestamp: Date
-    let metadata: [String: String]?
+    let metadata: [String: AnyCodable]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -105,8 +105,7 @@ struct TaskStep: Codable, Identifiable, Hashable {
         type = try container.decode(TaskStepType.self, forKey: .type)
         content = try container.decode(String.self, forKey: .content)
         timestamp = try container.decode(Date.self, forKey: .timestamp)
-        // metadata is freeform; decode as string dict if possible, otherwise nil
-        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata)
+        metadata = try container.decodeIfPresent([String: AnyCodable].self, forKey: .metadata)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -128,6 +127,24 @@ struct TaskStep: Codable, Identifiable, Hashable {
     }
 }
 
+struct TaskOperatorView: Codable, Hashable {
+    let profile: ResponseProfile
+    let verbosity: ResponseVerbosity
+    let summary: String
+    let nextStep: String?
+    let hiddenStepCount: Int
+    let rawStepCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case profile
+        case verbosity
+        case summary
+        case nextStep = "next_step"
+        case hiddenStepCount = "hidden_step_count"
+        case rawStepCount = "raw_step_count"
+    }
+}
+
 // MARK: - Task
 
 struct OCTask: Codable, Identifiable, Hashable {
@@ -140,6 +157,7 @@ struct OCTask: Codable, Identifiable, Hashable {
     let updatedAt: Date
     let steps: [TaskStep]
     let links: [ResourceLink]
+    let operatorView: TaskOperatorView?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -151,6 +169,7 @@ struct OCTask: Codable, Identifiable, Hashable {
         case updatedAt = "updated_at"
         case steps
         case links
+        case operatorView = "operator_view"
     }
 
     static func == (lhs: OCTask, rhs: OCTask) -> Bool {
@@ -169,11 +188,13 @@ struct OCTaskUpdate: Codable {
     let agentId: String
     let status: TaskStatus
     let updatedAt: Date
+    let operatorView: TaskOperatorView?
 
     enum CodingKeys: String, CodingKey {
         case id
         case agentId = "agent_id"
         case status
         case updatedAt = "updated_at"
+        case operatorView = "operator_view"
     }
 }
