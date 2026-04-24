@@ -184,6 +184,9 @@ describe('dashboard operator summary API', () => {
     expect(body.approvals[0]?.risk_level).toBe('critical');
     expect(body.bridges[0]?.stale).toBe(true);
     expect(body.agents[0]?.name).toBe('Offline Agent');
+    const gatewayAgent = body.agents.find((agent) => agent.name === 'Gateway Agent');
+    expect(gatewayAgent?.pending_approvals).toBe(1);
+    expect(gatewayAgent?.active_tasks).toBe(1);
 
     state.respondToApproval({
       approval_id: seeded.approvalId,

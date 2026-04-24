@@ -46,7 +46,12 @@ function clampLimit(raw: number | undefined): number {
   return Math.max(1, Math.min(10, raw));
 }
 
-function summarizeAgent(agent: Agent, nowMs: number): OperatorSummaryAgent {
+function summarizeAgent(
+  agent: Agent,
+  nowMs: number,
+  activeTasks: number,
+  pendingApprovals: number,
+): OperatorSummaryAgent {
   const lastSeenMinutes = minutesSince(agent.last_active, nowMs);
   const stale = lastSeenMinutes !== null && lastSeenMinutes >= 15;
   return {
@@ -56,8 +61,8 @@ function summarizeAgent(agent: Agent, nowMs: number): OperatorSummaryAgent {
     last_active: agent.last_active,
     last_active_minutes_ago: lastSeenMinutes,
     stale,
-    active_tasks: agent.active_tasks,
-    pending_approvals: agent.pending_approvals,
+    active_tasks: activeTasks,
+    pending_approvals: pendingApprovals,
     workspace: agent.workspace,
     current_branch: agent.git_state?.current_branch ?? null,
     uncommitted_changes: agent.git_state?.uncommitted_changes ?? 0,
@@ -209,6 +214,18 @@ export function buildOperatorSummary({
   const incidents = state.listIncidents();
   const approvals = state.listPendingApprovals();
   const bridges = state.listBridgeSessions();
+  const activeTaskCounts = new Map<string, number>();
+  const approvalCounts = new Map<string, number>();
+
+  for (const task of tasks) {
+    if (task.status === 'running' || task.status === 'queued') {
+      activeTaskCounts.set(task.agent_id, (activeTaskCounts.get(task.agent_id) ?? 0) + 1);
+    }
+  }
+
+  for (const approval of approvals) {
+    approvalCounts.set(approval.agent_id, (approvalCounts.get(approval.agent_id) ?? 0) + 1);
+  }
 
   const counts = buildCounts(agents, tasks, incidents, approvals, bridges, wsSnapshot, nowMs);
   const attention = buildAttentionLines(counts);
@@ -224,8 +241,18 @@ export function buildOperatorSummary({
     counts,
     agents: [...agents]
       .sort((left, right) => {
-        const leftSummary = summarizeAgent(left, nowMs);
-        const rightSummary = summarizeAgent(right, nowMs);
+        const leftSummary = summarizeAgent(
+          left,
+          nowMs,
+          activeTaskCounts.get(left.id) ?? 0,
+          approvalCounts.get(left.id) ?? 0,
+        );
+        const rightSummary = summarizeAgent(
+          right,
+          nowMs,
+          activeTaskCounts.get(right.id) ?? 0,
+          approvalCounts.get(right.id) ?? 0,
+        );
         const leftScore = (leftSummary.status === 'offline' ? 100 : 0)
           + (leftSummary.stale ? 50 : 0)
           + leftSummary.pending_approvals * 10
@@ -237,7 +264,12 @@ export function buildOperatorSummary({
         return rightScore - leftScore;
       })
       .slice(0, cappedLimit)
-      .map((agent) => summarizeAgent(agent, nowMs)),
+      .map((agent) => summarizeAgent(
+        agent,
+        nowMs,
+        activeTaskCounts.get(agent.id) ?? 0,
+        approvalCounts.get(agent.id) ?? 0,
+      )),
     tasks: [...tasks]
       .sort((left, right) => {
         const rankDelta = statusRank(left.status) - statusRank(right.status);
