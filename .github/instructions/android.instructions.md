@@ -5,6 +5,7 @@
 - Prefer official Android CLI surfaces when available: `android sdk`, `android emulator`, `android run`, `android docs`, and `android skills`.
 - Use `android docs` for current Android, Firebase, Google, and Kotlin guidance before changing platform-sensitive APIs.
 - Use `android skills` for official workflow instructions such as Navigation, edge-to-edge, AGP migration, XML-to-Compose migration, and R8 analysis.
+- Run `python3 scripts/check_android_cli.py` before Android work. If Android CLI is unavailable, use repo Gradle/SDK commands and state that fallback in the final response.
 - Do not paste full Gradle logs in agent responses. Summarize the exact failing task, the relevant error lines, and the next fix.
 
 ## Architecture

@@ -9,13 +9,15 @@ Make Android agent work fast, current, and quiet. Agents should use official And
 ## Required Workflow
 
 1. Inspect the narrow Android surface touched by the task.
-2. Prefer official Android CLI commands when available:
+2. Run the Android CLI preflight:
+   - `python3 scripts/check_android_cli.py`
+   - If it reports Android CLI is unavailable, keep working with the repo Gradle/SDK commands and state that fallback explicitly.
+3. Prefer official Android CLI commands when available:
    - `android sdk` for SDK/component setup.
    - `android emulator` for virtual device creation and lifecycle.
    - `android run` for deploy/run loops.
    - `android docs` for current Android, Firebase, Google, and Kotlin guidance.
    - `android skills` for official Android task instructions.
-3. If Android CLI is unavailable, use existing repo commands and state that the CLI path was unavailable.
 4. Keep summaries concise: report the changed files, the failing/passing command, and the next concrete fix. Do not paste full Gradle logs unless the exact failing lines are needed.
 5. Preserve iOS parity before changing Android UI or branding. Android should match the iOS/TestFlight visual source of truth unless the task explicitly says otherwise.
 
@@ -24,6 +26,7 @@ Make Android agent work fast, current, and quiet. Agents should use official And
 Run the narrowest applicable checks before reporting completion:
 
 ```bash
+python3 scripts/check_android_cli.py
 python3 scripts/sync_app_icons.py --check
 ./scripts/check-brand-parity.sh
 cd android && ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug --no-daemon

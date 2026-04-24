@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify Android CLI bootstrap path
+        run: python3 scripts/check_android_cli.py --allow-missing-tools
+
       - name: Verify Android agent workflow guardrails
         run: python3 scripts/check_android_agent_guardrails.py
 

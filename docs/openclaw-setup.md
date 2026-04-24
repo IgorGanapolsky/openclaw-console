@@ -2,6 +2,38 @@
 
 This guide covers installing the OpenClaw Work Console skills on your existing OpenClaw instance.
 
+## Android Agent CLI Preflight
+
+Android CLI is a preview tool for agentic Android work. OpenClaw agents should prefer it when it is installed, but Android development must still work through the repo Gradle and Android SDK path when it is unavailable.
+
+Use this preflight before Android changes:
+
+```bash
+python3 scripts/check_android_cli.py
+```
+
+Expected local fallback output on systems without the preview CLI:
+
+```text
+Android CLI: unavailable on PATH
+SDK fallback tools: available (sdkmanager, avdmanager, adb)
+Result: passed with SDK fallback tools.
+```
+
+After installing Android CLI from the official Android docs, run:
+
+```bash
+android init
+```
+
+That installs official Android agent skills. Until then, agents should use the existing repo checks:
+
+```bash
+python3 scripts/sync_app_icons.py --check
+./scripts/check-brand-parity.sh
+cd android && ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug --no-daemon
+```
+
 ## Prerequisites
 
 - An OpenClaw instance running on a server you control (VPS, home lab, etc.)

@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_SNIPPETS: dict[str, tuple[str, ...]] = {
     ".agents/skills/android-agent-workflow/SKILL.md": (
+        "python3 scripts/check_android_cli.py",
         "android sdk",
         "android emulator",
         "android run",
@@ -24,6 +25,7 @@ REQUIRED_SNIPPETS: dict[str, tuple[str, ...]] = {
     ),
     ".github/instructions/android.instructions.md": (
         "Android CLI",
+        "check_android_cli.py",
         "android docs",
         "android skills",
         "scripts/sync_app_icons.py --check",
@@ -48,12 +50,21 @@ REQUIRED_SNIPPETS: dict[str, tuple[str, ...]] = {
     ),
     ".github/workflows/ci.yml": (
         "Android Agent Guardrails",
+        "python3 scripts/check_android_cli.py --allow-missing-tools",
         "python3 scripts/check_android_agent_guardrails.py",
     ),
+    "scripts/check_android_cli.py": (
+        "Android CLI: unavailable on PATH",
+        "--allow-missing-tools",
+        "--require-android-cli",
+        "android init",
+    ),
     "scripts/pre-commit": (
+        "check_android_cli.py",
         "check_android_agent_guardrails.py",
     ),
     "scripts/pre-push": (
+        "check_android_cli.py",
         "check_android_agent_guardrails.py",
     ),
 }
