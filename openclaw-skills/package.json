@@ -18,7 +18,7 @@
     "@slack/oauth": "^3.0.5",
     "@slack/web-api": "^7.15.1",
     "express": "^5.2.1",
-    "firebase-admin": "^13.7.0",
+    "firebase-admin": "^13.8.0",
     "node-fetch": "^3.3.2",
     "redis": "^5.11.0",
     "simple-git": "^3.25.0",
