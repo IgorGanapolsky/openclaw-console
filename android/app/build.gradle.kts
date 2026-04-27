@@ -136,7 +136,7 @@ dependencies {
     implementation("com.google.errorprone:error_prone_annotations:2.49.0")
 
     // Pull-to-refresh
-    implementation("androidx.compose.material:material:1.6.0")
+    implementation("androidx.compose.material:material:1.11.0")
 
     // RevenueCat (Android billing + subscription management).
     // Mirrors iOS SubscriptionService — product IDs and entitlement name must match iOS.
