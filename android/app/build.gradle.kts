@@ -132,7 +132,7 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0")
 
     // Biometric
-    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("androidx.biometric:biometric:1.4.0-alpha07")
     implementation("com.google.errorprone:error_prone_annotations:2.49.0")
 
     // Pull-to-refresh
