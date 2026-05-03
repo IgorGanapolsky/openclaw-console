@@ -1,3 +1,8 @@
+---
+name: android-agent-workflow
+description: Use when modifying Android code, launcher icons, Firebase App Distribution, Compose UI, Gradle, Android CI, Android release metadata, or Android agent workflow guardrails in OpenClaw Console.
+---
+
 # Android Agent Workflow
 
 Use this skill when an agent modifies `android/`, Android launcher icons, Firebase App Distribution, Compose UI, Gradle, Android CI, or Android release metadata.
