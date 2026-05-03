@@ -8,9 +8,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ANDROID_SKILL_PATH = ".agents/skills/android-agent-workflow/SKILL.md"
 
 REQUIRED_SNIPPETS: dict[str, tuple[str, ...]] = {
-    ".agents/skills/android-agent-workflow/SKILL.md": (
+    ANDROID_SKILL_PATH: (
+        "---",
+        "name: android-agent-workflow",
+        "description:",
         "python3 scripts/check_android_cli.py",
         "android sdk",
         "android emulator",
@@ -83,6 +87,21 @@ def main() -> int:
         for snippet in snippets:
             if snippet not in text:
                 failures.append(f"{relative_path}: missing `{snippet}`")
+
+    skill_path = ROOT / ANDROID_SKILL_PATH
+    if skill_path.exists():
+        text = skill_path.read_text(encoding="utf-8")
+        if not text.startswith("---\n"):
+            failures.append(f"{ANDROID_SKILL_PATH}: missing YAML frontmatter opener")
+        else:
+            frontmatter_end = text.find("\n---\n", 4)
+            if frontmatter_end == -1:
+                failures.append(f"{ANDROID_SKILL_PATH}: missing YAML frontmatter closer")
+            else:
+                frontmatter = text[4:frontmatter_end]
+                for field in ("name:", "description:"):
+                    if field not in frontmatter:
+                        failures.append(f"{ANDROID_SKILL_PATH}: frontmatter missing `{field}`")
 
     if failures:
         print("Android agent guardrails are incomplete:")
