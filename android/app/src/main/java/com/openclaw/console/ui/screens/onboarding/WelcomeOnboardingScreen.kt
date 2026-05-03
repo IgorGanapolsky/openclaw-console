@@ -55,7 +55,7 @@ fun WelcomeOnboardingScreen(
                 shadowElevation = 8.dp
             ) {
                 Image(
-                    painter = painterResource(id = R.mipmap.ic_launcher),
+                    painter = painterResource(id = R.mipmap.ic_launcher_foreground),
                     contentDescription = "OpenClaw Console icon",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
