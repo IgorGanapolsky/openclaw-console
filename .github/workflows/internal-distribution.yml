@@ -237,6 +237,7 @@ jobs:
             --version "$VERSION" \
             --groups "$TESTFLIGHT_INTERNAL_GROUPS" \
             --required-testers "$TESTFLIGHT_REQUIRED_TESTERS" \
+            --assign-required-testers \
             --wait \
             --timeout 900 \
             --poll-interval 60
