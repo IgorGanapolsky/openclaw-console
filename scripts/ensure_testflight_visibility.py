@@ -10,6 +10,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -35,6 +36,32 @@ def csv(raw: str) -> list[str]:
 
 def is_internal_pseudo_group(name: str) -> bool:
     return " ".join(name.strip().lower().split()) in INTERNAL_PSEUDO_GROUPS
+
+
+def summarize_asc_error(body: str) -> str:
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return body.strip()[:1000] if body.strip() else "empty response body"
+
+    errors = payload.get("errors")
+    if not isinstance(errors, list):
+        return json.dumps(payload, sort_keys=True)[:1000]
+
+    summaries: list[str] = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        parts = [
+            str(error.get("status") or "").strip(),
+            str(error.get("code") or "").strip(),
+            str(error.get("title") or "").strip(),
+            str(error.get("detail") or "").strip(),
+        ]
+        summary = " ".join(part for part in parts if part)
+        if summary:
+            summaries.append(summary)
+    return "; ".join(summaries)[:1000] if summaries else json.dumps(payload, sort_keys=True)[:1000]
 
 
 def private_key_from_env() -> str:
@@ -108,9 +135,16 @@ class ASCClient:
                 "Content-Type": "application/json",
             },
         )
-        with urlopen(req, timeout=30) as response:
-            body = response.read().decode("utf-8")
-            return json.loads(body) if body else {}
+        try:
+            with urlopen(req, timeout=30) as response:
+                body = response.read().decode("utf-8")
+                return json.loads(body) if body else {}
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"App Store Connect API {method} {path} failed: "
+                f"HTTP {exc.code} {exc.reason}: {summarize_asc_error(body)}"
+            ) from exc
 
     def get_all(self, path: str, *, params: dict[str, str] | None = None) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
@@ -118,8 +152,15 @@ class ASCClient:
         while True:
             if next_url:
                 req = Request(next_url, headers={"Authorization": f"Bearer {self.token}"})
-                with urlopen(req, timeout=30) as response:
-                    payload = json.loads(response.read().decode("utf-8"))
+                try:
+                    with urlopen(req, timeout=30) as response:
+                        payload = json.loads(response.read().decode("utf-8"))
+                except HTTPError as exc:
+                    body = exc.read().decode("utf-8", errors="replace")
+                    raise RuntimeError(
+                        f"App Store Connect API GET {path} page failed: "
+                        f"HTTP {exc.code} {exc.reason}: {summarize_asc_error(body)}"
+                    ) from exc
             else:
                 payload = self.request("GET", path, params=params)
             items.extend(payload.get("data", []))
@@ -194,13 +235,13 @@ class TestFlightVisibility:
         testers = payload.get("data", [])
         return testers[0] if testers else None
 
-    def app_store_user(self, email: str) -> dict[str, Any] | None:
+    def app_store_user(self, username: str) -> dict[str, Any] | None:
         payload = self.client.request(
             "GET",
             "/users",
             params={
-                "filter[email]": email,
-                "fields[users]": "email,roles,allAppsVisible",
+                "filter[username]": username,
+                "fields[users]": "username,roles,allAppsVisible",
                 "limit": "1",
             },
         )
