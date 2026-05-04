@@ -385,9 +385,8 @@ export function createGatewayServer(
     });
   });
 
-  app.get('/api/security/secret-inventory', auth, (req: Request, res: Response) => {
-    const rawRoot = typeof req.query['root'] === 'string' ? req.query['root'] : process.cwd();
-    res.json(scanSecretExposureInventory({ rootDir: rawRoot }));
+  app.get('/api/security/secret-inventory', auth, (_req: Request, res: Response) => {
+    res.json(scanSecretExposureInventory({ rootDir: process.cwd() }));
   });
 
   app.post('/api/security/supply-chain/incidents', auth, async (req: Request, res: Response) => {
@@ -402,8 +401,7 @@ export function createGatewayServer(
       : 'Suspected developer-machine supply-chain exposure';
     const command = typeof req.body?.command === 'string' ? req.body.command : undefined;
     const repository = typeof req.body?.repository === 'string' ? req.body.repository : undefined;
-    const inventoryRoot = typeof req.body?.inventory_root === 'string' ? req.body.inventory_root : process.cwd();
-    const inventory = scanSecretExposureInventory({ rootDir: inventoryRoot });
+    const inventory = scanSecretExposureInventory({ rootDir: process.cwd() });
     const incident = await incidentManager.createSupplyChainIncident({
       agentId,
       agentName: agent.name,

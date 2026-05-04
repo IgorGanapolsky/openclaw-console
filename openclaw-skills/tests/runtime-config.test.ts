@@ -151,8 +151,7 @@ describe('runtime config API', () => {
   });
 
   test('exposes supply-chain assessment and secret inventory APIs', async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'openclaw-security-api-'));
-    fs.writeFileSync(path.join(root, '.env'), 'STRIPE_SECRET_KEY=sk-live-hidden\n', 'utf8');
+    process.env['OPENCLAW_TEST_SECRET_KEY'] = 'hidden-runtime-test-value';
     const config = tempConfig();
     const { baseUrl, token } = await start(config);
 
@@ -169,16 +168,16 @@ describe('runtime config API', () => {
     const assessBody = await assessResponse.json() as Record<string, unknown>;
     expect(assessBody['detected']).toBe(true);
 
-    const inventoryResponse = await fetch(`${baseUrl}/api/security/secret-inventory?root=${encodeURIComponent(root)}`, {
+    const inventoryResponse = await fetch(`${baseUrl}/api/security/secret-inventory`, {
       headers: { authorization: `Bearer ${token}` },
     });
 
     expect(inventoryResponse.status).toBe(200);
     const inventoryBody = await inventoryResponse.json() as Record<string, unknown>;
-    expect(JSON.stringify(inventoryBody)).toContain('STRIPE_SECRET_KEY');
-    expect(JSON.stringify(inventoryBody)).not.toContain('sk-live-hidden');
+    expect(JSON.stringify(inventoryBody)).toContain('OPENCLAW_TEST_SECRET_KEY');
+    expect(JSON.stringify(inventoryBody)).not.toContain('hidden-runtime-test-value');
 
-    fs.rmSync(root, { recursive: true, force: true });
+    delete process.env['OPENCLAW_TEST_SECRET_KEY'];
     fs.rmSync(config.tokenStorePath, { force: true });
   });
 });
