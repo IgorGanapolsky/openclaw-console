@@ -36,7 +36,7 @@ ANDROID_DENSITIES = {
     "mipmap-xxhdpi": 144,
     "mipmap-xxxhdpi": 192,
 }
-ANDROID_BACKGROUND = (0, 0, 0)
+ANDROID_BACKGROUND = (255, 255, 255)
 ADAPTIVE_SCALE = 108 / 48
 ADAPTIVE_SAFE_ZONE_SCALE = 72 / 48
 
@@ -179,7 +179,7 @@ def generate_outputs(target_root: Path) -> list[Path]:
         output_dir = target_root / ANDROID_RES_DIR.relative_to(ROOT) / density
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        square = clear_edge_background(source.resize((size, size), Image.LANCZOS))
+        square = source.resize((size, size), Image.LANCZOS).convert("RGB")
         square.save(output_dir / "ic_launcher.png", "PNG", optimize=True)
         generated.append(output_dir / "ic_launcher.png")
 
@@ -189,7 +189,7 @@ def generate_outputs(target_root: Path) -> list[Path]:
         foreground_size = int(size * ADAPTIVE_SCALE)
         safe_zone_size = int(size * ADAPTIVE_SAFE_ZONE_SCALE)
         foreground = Image.new("RGBA", (foreground_size, foreground_size), (255, 255, 255, 0))
-        safe_zone_icon = clear_edge_background(source.resize((safe_zone_size, safe_zone_size), Image.LANCZOS))
+        safe_zone_icon = source.resize((safe_zone_size, safe_zone_size), Image.LANCZOS).convert("RGBA")
         offset = ((foreground_size - safe_zone_size) // 2, (foreground_size - safe_zone_size) // 2)
         foreground.paste(safe_zone_icon, offset, safe_zone_icon)
         foreground_path = output_dir / "ic_launcher_foreground.png"
