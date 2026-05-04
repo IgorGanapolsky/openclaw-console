@@ -91,6 +91,17 @@ Developer machines are now part of the production attack surface because agents,
 
 This is a sharper DAA driver than generic monitoring: every risky supply-chain action becomes a meaningful approval moment.
 
+### Agent Runtime Control Angle
+
+Cloud coding agents are moving into long-running, sandboxed background workflows. OpenClaw should be the mobile control plane around those systems:
+
+- Track background agent lifecycle separately from its sandbox: running, paused, hibernated, cancelled, failed, completed.
+- Give operators mobile controls for pause, resume, hibernate, cancel, and read-only session sharing.
+- Register modular skill workflow systems with explicit inputs, handoffs, checkpoints, and visual result artifacts.
+- Require approval for agent commerce actions such as Cloudflare account provisioning, paid subscriptions, domain registration, token minting, and production deploys.
+
+This keeps OpenClaw focused on DAA: every long-running agent needs observable state, cancellability, checkpoint approvals, and budget-aware infrastructure permissions.
+
 ## Customer Personas
 
 ### Primary Persona: Solo DevOps Engineer

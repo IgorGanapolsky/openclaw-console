@@ -1,11 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ActionType, RiskLevel, SupplyChainRisk } from '../types/protocol.js';
+import type { ActionType, AgentCommerceRisk, RiskLevel, SupplyChainRisk } from '../types/protocol.js';
 
 export interface SupplyChainRiskInput {
   actionType?: ActionType;
   command?: string;
   fileChanges?: string[];
+}
+
+export interface AgentCommerceRiskInput {
+  actionType?: ActionType;
+  command?: string;
+  estimatedMonthlyUsd?: number;
+  monthlyBudgetLimitUsd?: number;
 }
 
 export interface SecretExposureInventoryOptions {
@@ -112,6 +119,66 @@ const SUPPLY_CHAIN_PATTERNS: Array<{
   },
 ];
 
+const DEFAULT_AGENT_COMMERCE_MONTHLY_BUDGET_USD = 100;
+
+const AGENT_COMMERCE_PATTERNS: Array<{
+  pattern: RegExp;
+  category: AgentCommerceRisk['category'];
+  provider: AgentCommerceRisk['provider'];
+  severity: RiskLevel;
+  reason: string;
+}> = [
+  {
+    pattern: /\bstripe\s+projects\s+add\s+cloudflare\/registrar:domain\b/i,
+    category: 'domain_registration',
+    provider: 'stripe_projects',
+    severity: 'critical',
+    reason: 'Stripe Projects can register a Cloudflare domain and bill the signed-in user.',
+  },
+  {
+    pattern: /\bstripe\s+projects\s+add\s+cloudflare\/(?!registrar:domain\b)[^ \n]+/i,
+    category: 'paid_subscription',
+    provider: 'stripe_projects',
+    severity: 'critical',
+    reason: 'Stripe Projects can provision paid Cloudflare services using the user payment context.',
+  },
+  {
+    pattern: /\bstripe\s+projects\s+(deploy|provision|create|use)\b.*\bcloudflare\b/i,
+    category: 'cloud_account_provisioning',
+    provider: 'stripe_projects',
+    severity: 'critical',
+    reason: 'Agent-driven Cloudflare provisioning can create accounts, subscriptions, and deployable credentials.',
+  },
+  {
+    pattern: /(?:\bwrangler\b|\bcloudflare\s+).*\b(registrar|register|domain|zone)\b/i,
+    category: 'domain_registration',
+    provider: 'cloudflare',
+    severity: 'critical',
+    reason: 'Cloudflare domain and zone operations can create durable externally reachable infrastructure.',
+  },
+  {
+    pattern: /(?:\bwrangler\b|\bcloudflare\s+).*\b(account|subscription|billing|plan)\b/i,
+    category: 'paid_subscription',
+    provider: 'cloudflare',
+    severity: 'critical',
+    reason: 'Cloudflare account, subscription, and billing operations can create spend obligations.',
+  },
+  {
+    pattern: /(?:\bwrangler\b|\bcloudflare\s+).*\b(api[-_ ]?token|token|secret)\b/i,
+    category: 'api_token_minting',
+    provider: 'cloudflare',
+    severity: 'critical',
+    reason: 'Cloudflare token and secret operations can mint or expose deploy-capable credentials.',
+  },
+  {
+    pattern: /\bwrangler\s+(deploy|pages\s+deploy)\b/i,
+    category: 'deployment',
+    provider: 'cloudflare',
+    severity: 'high',
+    reason: 'Cloudflare deploy commands publish code to an externally reachable runtime.',
+  },
+];
+
 const SECRET_FILE_BASENAMES = new Set([
   '.env',
   '.env.local',
@@ -214,6 +281,75 @@ export function appendSupplyChainApprovalSummary(description: string, risk: Supp
     `Risk: ${risk.severity.toUpperCase()} (${risk.category})`,
     ...risk.reasons.map((reason) => `- ${reason}`),
     'Before approving, verify the package/source, expected credential access, and rollback/rotation plan.',
+  ].join('\n');
+}
+
+export function assessAgentCommerceRisk(input: AgentCommerceRiskInput): AgentCommerceRisk | null {
+  const command = input.command?.trim() ?? '';
+  if (!command && input.actionType !== 'deploy') return null;
+
+  const matches = AGENT_COMMERCE_PATTERNS.filter((entry) => command && entry.pattern.test(command));
+  if (input.actionType === 'deploy' && /\b(cloudflare|wrangler|workers?|pages)\b/i.test(command)) {
+    matches.push({
+      pattern: /.*/,
+      category: 'deployment',
+      provider: 'cloudflare',
+      severity: 'high',
+      reason: 'Cloudflare deployments publish code to production-like infrastructure.',
+    });
+  }
+
+  if (matches.length === 0) return null;
+
+  const categories = Array.from(new Set(matches.map((match) => match.category)));
+  const providers = Array.from(new Set(matches.map((match) => match.provider)));
+  const monthlyLimit = input.monthlyBudgetLimitUsd ?? DEFAULT_AGENT_COMMERCE_MONTHLY_BUDGET_USD;
+  const estimatedMonthlyUsd = normalizeUsd(input.estimatedMonthlyUsd) ?? extractUsdAmount(command);
+  const requiresBudgetConfirmation = estimatedMonthlyUsd === undefined;
+  const overBudget = estimatedMonthlyUsd !== undefined && estimatedMonthlyUsd > monthlyLimit;
+  const severity: RiskLevel = overBudget || matches.some((match) => match.severity === 'critical') ? 'critical' : 'high';
+
+  return {
+    detected: true,
+    category: categories.length === 1 ? categories[0]! : 'mixed',
+    provider: providers.length === 1 ? providers[0]! : 'unknown',
+    severity,
+    requires_explicit_approval: true,
+    reasons: Array.from(new Set([
+      ...matches.map((match) => match.reason),
+      overBudget
+        ? `Estimated monthly spend ${formatUsd(estimatedMonthlyUsd)} exceeds the configured ${formatUsd(monthlyLimit)} monthly approval budget.`
+        : null,
+      requiresBudgetConfirmation
+        ? `No monthly spend estimate was supplied; default approval budget is ${formatUsd(monthlyLimit)} per provider.`
+        : null,
+    ].filter((reason): reason is string => reason !== null))),
+    recommended_questions: recommendedAgentCommerceQuestions(categories, overBudget, requiresBudgetConfirmation),
+    budget: {
+      currency: 'USD',
+      monthly_limit_usd: monthlyLimit,
+      estimated_monthly_usd: estimatedMonthlyUsd ?? null,
+      over_budget: overBudget,
+      requires_budget_confirmation: requiresBudgetConfirmation,
+    },
+    artifacts: {
+      domains: extractDomains(command),
+      services: extractCloudflareServices(command),
+    },
+  };
+}
+
+export function appendAgentCommerceApprovalSummary(description: string, risk: AgentCommerceRisk | null): string {
+  if (!risk) return description;
+  return [
+    description,
+    '',
+    'Agent commerce guardrail:',
+    `Risk: ${risk.severity.toUpperCase()} (${risk.category})`,
+    `Provider: ${risk.provider}`,
+    `Budget: ${risk.budget.estimated_monthly_usd === null ? 'unestimated' : formatUsd(risk.budget.estimated_monthly_usd)} / ${formatUsd(risk.budget.monthly_limit_usd)} monthly limit`,
+    ...risk.reasons.map((reason) => `- ${reason}`),
+    'Before approving, verify ownership, billing cap, token scope, deployment target, and rollback/revoke plan.',
   ].join('\n');
 }
 
@@ -349,6 +485,28 @@ function recommendedRotations(categories: SupplyChainRisk['category'][]): string
   return Array.from(rotations);
 }
 
+function recommendedAgentCommerceQuestions(
+  categories: AgentCommerceRisk['category'][],
+  overBudget: boolean,
+  requiresBudgetConfirmation: boolean,
+): string[] {
+  const questions = [
+    'Which signed-in user, account, and payment method will own the provisioned Cloudflare resources?',
+    'What token scopes and expiration will be issued, and where will the token be stored?',
+    'What is the rollback plan: revoke token, cancel subscription, remove DNS/zone, or delete deployment?',
+  ];
+  if (categories.includes('domain_registration')) {
+    questions.unshift('What exact domain is being registered, what is the renewal cost, and who owns the registrant contact?');
+  }
+  if (categories.includes('paid_subscription') || overBudget || requiresBudgetConfirmation) {
+    questions.unshift('What monthly spend cap applies to this provider before the agent is allowed to continue?');
+  }
+  if (categories.includes('deployment')) {
+    questions.unshift('Which environment, route, and public hostname will receive the deployment?');
+  }
+  return Array.from(new Set(questions));
+}
+
 function isSecretBearingPath(filePath: string): boolean {
   const normalized = filePath.toLowerCase();
   const basename = path.basename(normalized);
@@ -366,6 +524,39 @@ function isPackageManifest(filePath: string): boolean {
   return PACKAGE_MANIFEST_BASENAMES.has(basename) ||
     filePath.includes('.github/dependabot.yml') ||
     filePath.includes('.github/dependabot.yaml');
+}
+
+function normalizeUsd(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
+  return Math.round(value * 100) / 100;
+}
+
+function extractUsdAmount(command: string): number | undefined {
+  const amounts = [
+    ...Array.from(command.matchAll(/\$\s*(\d+(?:\.\d{1,2})?)/g)).map((match) => Number.parseFloat(match[1]!)),
+    ...Array.from(command.matchAll(/\bUSD\s*(\d+(?:\.\d{1,2})?)/gi)).map((match) => Number.parseFloat(match[1]!)),
+    ...Array.from(command.matchAll(/--(?:budget|max[-_]?spend|monthly[-_]?limit|spend[-_]?limit)(?:=|\s+)(\d+(?:\.\d{1,2})?)/gi)).map((match) => Number.parseFloat(match[1]!)),
+  ].filter((amount) => Number.isFinite(amount) && amount >= 0);
+  if (amounts.length === 0) return undefined;
+  return Math.max(...amounts);
+}
+
+function formatUsd(amount: number): string {
+  return `$${amount.toFixed(2)} USD`;
+}
+
+function extractDomains(command: string): string[] {
+  return Array.from(command.matchAll(/\b([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(?:ai|app|build|cloud|co|com|dev|io|me|net|org|page|site|us|xyz))\b/gi))
+    .map((match) => match[1]!.toLowerCase())
+    .filter((domain, index, domains) => domains.indexOf(domain) === index)
+    .sort();
+}
+
+function extractCloudflareServices(command: string): string[] {
+  return Array.from(command.matchAll(/\b(cloudflare\/[a-z0-9:_-]+)\b/gi))
+    .map((match) => match[1]!.toLowerCase())
+    .filter((service, index, services) => services.indexOf(service) === index)
+    .sort();
 }
 
 function walk(rootDir: string, currentDir: string, onFile: (absolutePath: string, relativePath: string) => void): void {

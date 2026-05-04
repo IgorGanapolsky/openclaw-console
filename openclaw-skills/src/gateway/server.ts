@@ -41,10 +41,16 @@ import {
   isResponseProfile,
   isResponseVerbosity,
 } from '../config/default.js';
-import { normalizeProjectBridgeSession } from './project-session.js';
+import {
+  applyBridgeSessionControl,
+  isBridgeSessionControlAction,
+  normalizeProjectBridgeSession,
+} from './project-session.js';
+import { normalizeSkillWorkflowSystem } from './skill-workflow.js';
 import { buildOperatorSummary } from './operator-summary.js';
 import { presentTaskForOperator } from '../utils/response-style.js';
 import {
+  assessAgentCommerceRisk,
   assessSupplyChainRisk,
   scanSecretExposureInventory,
 } from '../security/supply-chain-guardrails.js';
@@ -385,6 +391,28 @@ export function createGatewayServer(
     });
   });
 
+  app.post('/api/security/agent-commerce/assess', auth, (req: Request, res: Response) => {
+    const command = typeof req.body?.command === 'string' ? req.body.command : '';
+    const actionType = isActionType(req.body?.action_type) ? req.body.action_type : 'shell_command';
+    const estimatedMonthlyUsd = parseOptionalUsd(req.body?.estimated_monthly_usd);
+    const monthlyBudgetLimitUsd = parseOptionalUsd(req.body?.monthly_budget_limit_usd);
+    if (!command) {
+      res.status(400).json({ error: { code: 4000, message: 'command is required' } });
+      return;
+    }
+    const risk = assessAgentCommerceRisk({
+      actionType,
+      command,
+      estimatedMonthlyUsd,
+      monthlyBudgetLimitUsd,
+    });
+    res.json({
+      checked_at: new Date().toISOString(),
+      detected: risk !== null,
+      risk,
+    });
+  });
+
   app.get('/api/security/secret-inventory', auth, (_req: Request, res: Response) => {
     res.json(scanSecretExposureInventory({ rootDir: process.cwd() }));
   });
@@ -431,6 +459,62 @@ export function createGatewayServer(
   app.post('/api/bridges/upsert', auth, async (req: Request, res: Response) => {
     const session = await state.upsertBridgeSession(normalizeProjectBridgeSession(req.body));
     res.json(session);
+  });
+
+  app.post('/api/bridges/:id/control', auth, async (req: Request, res: Response) => {
+    const bridgeId = String(req.params['id'] ?? '');
+    const session = state.listBridgeSessions().find((item) => item.id === bridgeId);
+    if (!session) {
+      res.status(404).json({ error: { code: 4040, message: 'Bridge session not found' } });
+      return;
+    }
+    if (!isBridgeSessionControlAction(req.body?.action)) {
+      res.status(400).json({ error: { code: 4000, message: 'action must be cancel, pause, resume, hibernate, or share_readonly' } });
+      return;
+    }
+    const actor = parseActor(req.body?.actor);
+    const updated = applyBridgeSessionControl(session, req.body.action, {
+      actor,
+      readOnlyShareUrl: typeof req.body?.read_only_share_url === 'string' ? req.body.read_only_share_url : undefined,
+    });
+    const stored = await state.upsertBridgeSession(updated);
+    await state.recordGovernanceEvent?.({
+      agent_id: stored.agent_id,
+      type: 'environment_observed',
+      title: `Bridge session ${req.body.action}`,
+      summary: `Applied ${req.body.action} to ${stored.title}`,
+      actor,
+      risk_level: 'high',
+      metadata: {
+        bridge_id: stored.id,
+        lifecycle: stored.lifecycle,
+        execution: stored.execution,
+      },
+    });
+    res.json(stored);
+  });
+
+  // ── Skill Workflow Systems ───────────────────────────────────────────────
+
+  app.get('/api/skill-workflows', auth, (req: Request, res: Response) => {
+    const agentId = typeof req.query['agent_id'] === 'string' ? req.query['agent_id'] : undefined;
+    res.json(state.listSkillWorkflowSystems(agentId));
+  });
+
+  app.post('/api/skill-workflows/upsert', auth, async (req: Request, res: Response) => {
+    const agentId = typeof req.body?.agent_id === 'string' ? req.body.agent_id : '';
+    if (!agentId || !state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    if (typeof req.body?.name !== 'string' || typeof req.body?.trigger_prompt !== 'string' || !Array.isArray(req.body?.steps)) {
+      res.status(400).json({ error: { code: 4000, message: 'agent_id, name, trigger_prompt, and steps are required' } });
+      return;
+    }
+    const existing = typeof req.body?.id === 'string' ? state.getSkillWorkflowSystem(req.body.id) : undefined;
+    const workflow = normalizeSkillWorkflowSystem(req.body, existing);
+    const stored = await state.upsertSkillWorkflowSystem(workflow);
+    res.status(stored.validation.valid ? 200 : 422).json(stored);
   });
 
   // ── Recurring Tasks (Loops) ───────────────────────────────────────────────
@@ -626,4 +710,11 @@ export function createGatewayServer(
 
   function parseActor(value: unknown): GovernanceEvent['actor'] {
     return value === 'human' || value === 'gateway' || value === 'policy' ? value : 'agent';
+  }
+
+  function parseOptionalUsd(value: unknown): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value));
+    if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+    return Math.round(parsed * 100) / 100;
   }

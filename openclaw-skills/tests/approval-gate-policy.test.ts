@@ -212,4 +212,45 @@ describe('ApprovalGateSkill policy presets', () => {
     expect(governance.events.map((event) => event.type)).toContain('approval_decided');
     expect(governance.events.map((event) => event.type)).toContain('rollback_point_added');
   });
+
+  test('agent commerce commands are enriched and require explicit approval under yolo presets', async () => {
+    const state = new StateManager();
+    await state.upsertAgent(makeAgent());
+    const gate = new ApprovalGateSkill(state, {
+      ...DEFAULT_CONFIG,
+      approvalPolicyPreset: 'danger-yolo',
+    });
+
+    const promise = gate.requestApproval({
+      agentId: 'agent-policy',
+      agentName: 'Policy Agent',
+      actionType: 'shell_command',
+      title: 'Register domain',
+      description: 'Provision Cloudflare resources through Stripe Projects',
+      command: 'stripe projects add cloudflare/registrar:domain openclaw.dev',
+      timeoutMs: 10_000,
+      context: {
+        service: 'cloudflare',
+        environment: 'production',
+        repository: 'IgorGanapolsky/openclaw-console',
+        riskLevel: 'high',
+      },
+    });
+
+    const pending = state.listPendingApprovals();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.context.risk_level).toBe('critical');
+    expect(pending[0]?.context.agent_commerce?.category).toBe('domain_registration');
+    expect(pending[0]?.context.agent_commerce?.budget.requires_budget_confirmation).toBe(true);
+    expect(pending[0]?.description).toContain('Agent commerce guardrail');
+    state.respondToApproval({
+      approval_id: pending[0]!.id,
+      decision: 'denied',
+      biometric_verified: true,
+      responded_at: new Date().toISOString(),
+    });
+
+    const result = await promise;
+    expect(result.approved).toBe(false);
+  });
 });

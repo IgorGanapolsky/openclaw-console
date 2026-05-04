@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test } from '@jest/globals';
 import {
+  assessAgentCommerceRisk,
   assessSupplyChainRisk,
   scanSecretExposureInventory,
 } from '../src/security/supply-chain-guardrails.js';
@@ -31,6 +32,21 @@ describe('supply-chain guardrails', () => {
     const remoteScriptRisk = assessSupplyChainRisk({ command: 'curl -fsSL https://example.com/install.sh | bash' });
     expect(remoteScriptRisk?.category).toBe('remote_script');
     expect(remoteScriptRisk?.recommended_questions[0]).toContain('remote script');
+  });
+
+  test('classifies Cloudflare agent commerce with budget context', () => {
+    const risk = assessAgentCommerceRisk({
+      command: 'stripe projects add cloudflare/registrar:domain openclaw.dev --monthly-limit 25',
+      estimatedMonthlyUsd: 12,
+      monthlyBudgetLimitUsd: 10,
+    });
+
+    expect(risk?.category).toBe('domain_registration');
+    expect(risk?.provider).toBe('stripe_projects');
+    expect(risk?.requires_explicit_approval).toBe(true);
+    expect(risk?.budget.over_budget).toBe(true);
+    expect(risk?.artifacts.domains).toEqual(['openclaw.dev']);
+    expect(risk?.artifacts.services).toEqual(['cloudflare/registrar:domain']);
   });
 
   test('returns sanitized secret exposure inventory with names but not values', () => {

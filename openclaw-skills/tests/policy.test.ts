@@ -91,4 +91,37 @@ describe('approval policy presets', () => {
     expect(decision.autoApproved).toBe(false);
     expect(decision.reason).toContain('supply-chain');
   });
+
+  test('danger-yolo blocks agent commerce provisioning', () => {
+    const decision = evaluateApprovalPolicy('danger-yolo', {
+      actionType: 'shell_command',
+      command: 'stripe projects add cloudflare/registrar:domain openclaw.dev',
+      context: {
+        ...baseContext,
+        agent_commerce: {
+          detected: true,
+          category: 'domain_registration',
+          provider: 'stripe_projects',
+          severity: 'critical',
+          requires_explicit_approval: true,
+          reasons: ['Registers and bills a domain.'],
+          recommended_questions: [],
+          budget: {
+            currency: 'USD',
+            monthly_limit_usd: 100,
+            estimated_monthly_usd: null,
+            over_budget: false,
+            requires_budget_confirmation: true,
+          },
+          artifacts: {
+            domains: ['openclaw.dev'],
+            services: ['cloudflare/registrar:domain'],
+          },
+        },
+      },
+    });
+
+    expect(decision.autoApproved).toBe(false);
+    expect(decision.reason).toContain('agent commerce');
+  });
 });
