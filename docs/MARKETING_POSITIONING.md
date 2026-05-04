@@ -53,6 +53,7 @@ OpenClaw Console is positioned as the definitive mobile control plane for self-h
 | **Self-hosted** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Biometric approval** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Agent workflows** | ✅ | ❌ | ❌ | ❌ | ⚠️ |
+| **Supply-chain approval gates** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Privacy-first** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Price (per user)** | $15-20 | $21+ | $15-23 | $9-19 | $0-12.50 |
 | **Mobile-native** | ✅ | ✅ | ✅ | ✅ | ❌ |
@@ -78,6 +79,17 @@ OpenClaw Console is positioned as the definitive mobile control plane for self-h
 
 **Supporting Message (60+ seconds)**
 "Stop relying on Slack notifications and SSH sessions for critical operations. OpenClaw Console provides a professional mobile interface for approving database migrations, production deployments, and infrastructure changes with Face ID/Touch ID security. Self-hosted for complete data sovereignty, designed specifically for DevOps professionals who value security and privacy."
+
+### Supply-Chain Security Angle
+
+Developer machines are now part of the production attack surface because agents, package managers, dependency bots, and CLI tools can all touch non-human identities. OpenClaw turns those moments into explicit mobile decisions:
+
+- Approve or deny package installs, Docker runs, remote installer scripts, credential commands, and agent tooling changes.
+- Show sanitized secret exposure inventory by key name and source, never by value.
+- Open a rotation-first incident workflow when a developer-machine compromise is suspected.
+- Preserve the audit trail that proves who approved the action, when, and with what risk context.
+
+This is a sharper DAA driver than generic monitoring: every risky supply-chain action becomes a meaningful approval moment.
 
 ## Customer Personas
 

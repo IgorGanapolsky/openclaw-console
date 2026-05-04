@@ -86,6 +86,88 @@ describe('ApprovalGateSkill policy presets', () => {
     expect(gate.getDecisionLog()[0]?.autoApproved).toBe(false);
   });
 
+  test('supply-chain commands are enriched and require explicit approval under yolo presets', async () => {
+    const state = new StateManager();
+    await state.upsertAgent(makeAgent());
+    const gate = new ApprovalGateSkill(state, {
+      ...DEFAULT_CONFIG,
+      approvalPolicyPreset: 'danger-yolo',
+    });
+
+    const promise = gate.requestApproval({
+      agentId: 'agent-policy',
+      agentName: 'Policy Agent',
+      actionType: 'shell_command',
+      title: 'Install package',
+      description: 'Install a new package for the agent runtime',
+      command: 'npm install suspicious-package',
+      timeoutMs: 10_000,
+      context: {
+        service: 'repo',
+        environment: 'development',
+        repository: 'IgorGanapolsky/openclaw-console',
+        riskLevel: 'high',
+      },
+    });
+
+    const pending = state.listPendingApprovals();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.context.risk_level).toBe('critical');
+    expect(pending[0]?.context.supply_chain?.category).toBe('dependency_install');
+    expect(pending[0]?.description).toContain('Supply-chain guardrail');
+    state.respondToApproval({
+      approval_id: pending[0]!.id,
+      decision: 'denied',
+      biometric_verified: true,
+      responded_at: new Date().toISOString(),
+    });
+
+    const result = await promise;
+    expect(result.approved).toBe(false);
+  });
+
+  test('secret-bearing file changes mark git commits as critical', async () => {
+    const state = new StateManager();
+    await state.upsertAgent(makeAgent());
+    const gate = new ApprovalGateSkill(state, {
+      ...DEFAULT_CONFIG,
+      approvalPolicyPreset: 'repo-yolo',
+    });
+
+    const promise = gate.requestApproval({
+      agentId: 'agent-policy',
+      agentName: 'Policy Agent',
+      actionType: 'git_commit',
+      title: 'Commit env config',
+      description: 'Commit environment config changes',
+      command: 'git commit -m "update env"',
+      timeoutMs: 10_000,
+      context: {
+        service: 'git',
+        environment: 'development',
+        repository: 'IgorGanapolsky/openclaw-console',
+        riskLevel: 'high',
+        git_operation: {
+          operation_type: 'commit',
+          file_changes: ['.env.production'],
+          diff_summary: '+2 -0',
+        },
+      },
+    });
+
+    const pending = state.listPendingApprovals();
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.context.supply_chain?.category).toBe('secret_touch');
+    state.respondToApproval({
+      approval_id: pending[0]!.id,
+      decision: 'denied',
+      biometric_verified: true,
+      responded_at: new Date().toISOString(),
+    });
+
+    await promise;
+  });
+
   test('approved dangerous action records rollback point and audit events', async () => {
     const state = new StateManager();
     await state.upsertAgent(makeAgent());

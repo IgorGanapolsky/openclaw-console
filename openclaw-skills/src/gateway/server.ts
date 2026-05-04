@@ -44,6 +44,11 @@ import {
 import { normalizeProjectBridgeSession } from './project-session.js';
 import { buildOperatorSummary } from './operator-summary.js';
 import { presentTaskForOperator } from '../utils/response-style.js';
+import {
+  assessSupplyChainRisk,
+  scanSecretExposureInventory,
+} from '../security/supply-chain-guardrails.js';
+import { IncidentManagerSkill } from '../skills/incident-manager.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -69,6 +74,7 @@ export function createGatewayServer(
   const containerManager = new DockerContainerManager(config);
   const mcpManager = new McpManager();
   const skillGenerator = new SkillGenerator(containerManager, mcpManager, state);
+  const incidentManager = new IncidentManagerSkill(state);
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
@@ -357,6 +363,59 @@ export function createGatewayServer(
 
   app.get('/api/incidents', auth, (_req: Request, res: Response) => {
     res.json(state.listIncidents());
+  });
+
+  // ── Supply-Chain Guardrails ──────────────────────────────────────────────
+
+  app.post('/api/security/supply-chain/assess', auth, (req: Request, res: Response) => {
+    const command = typeof req.body?.command === 'string' ? req.body.command : '';
+    const fileChanges = Array.isArray(req.body?.file_changes)
+      ? req.body.file_changes.filter((item: unknown): item is string => typeof item === 'string')
+      : undefined;
+    const actionType = isActionType(req.body?.action_type) ? req.body.action_type : 'shell_command';
+    if (!command && (!fileChanges || fileChanges.length === 0)) {
+      res.status(400).json({ error: { code: 4000, message: 'command or file_changes is required' } });
+      return;
+    }
+    const risk = assessSupplyChainRisk({ actionType, command, fileChanges });
+    res.json({
+      checked_at: new Date().toISOString(),
+      detected: risk !== null,
+      risk,
+    });
+  });
+
+  app.get('/api/security/secret-inventory', auth, (req: Request, res: Response) => {
+    const rawRoot = typeof req.query['root'] === 'string' ? req.query['root'] : process.cwd();
+    res.json(scanSecretExposureInventory({ rootDir: rawRoot }));
+  });
+
+  app.post('/api/security/supply-chain/incidents', auth, async (req: Request, res: Response) => {
+    const agentId = typeof req.body?.agent_id === 'string' ? req.body.agent_id : '';
+    const agent = agentId ? state.getAgent(agentId) : null;
+    if (!agent) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    const title = typeof req.body?.title === 'string' && req.body.title.trim()
+      ? req.body.title.trim()
+      : 'Suspected developer-machine supply-chain exposure';
+    const command = typeof req.body?.command === 'string' ? req.body.command : undefined;
+    const repository = typeof req.body?.repository === 'string' ? req.body.repository : undefined;
+    const inventoryRoot = typeof req.body?.inventory_root === 'string' ? req.body.inventory_root : process.cwd();
+    const inventory = scanSecretExposureInventory({ rootDir: inventoryRoot });
+    const incident = await incidentManager.createSupplyChainIncident({
+      agentId,
+      agentName: agent.name,
+      title,
+      command,
+      repository,
+      inventory,
+    });
+    res.json({
+      incident,
+      inventory_counts: inventory.counts,
+    });
   });
 
   // ── Approvals ─────────────────────────────────────────────────────────────

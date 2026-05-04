@@ -39,6 +39,10 @@ export function evaluateApprovalPolicy(
     return deny(preset, `${input.actionType} is never auto-approved`);
   }
 
+  if (input.context.supply_chain?.requires_explicit_approval) {
+    return deny(preset, `supply-chain ${input.context.supply_chain.category} risk requires explicit approval`);
+  }
+
   if (input.context.risk_level === 'critical' && preset !== 'danger-yolo') {
     return deny(preset, 'critical risk requires explicit approval');
   }

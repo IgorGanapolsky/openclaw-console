@@ -157,6 +157,25 @@ export interface GitOperation {
   diff_summary?: string;
 }
 
+/** Supply-chain/security classification for commands or repo changes. */
+export interface SupplyChainRisk {
+  detected: boolean;
+  category:
+    | 'dependency_install'
+    | 'container_image'
+    | 'remote_script'
+    | 'cli_install'
+    | 'credential_command'
+    | 'secret_touch'
+    | 'agent_tooling'
+    | 'mixed';
+  severity: RiskLevel;
+  requires_explicit_approval: boolean;
+  reasons: string[];
+  recommended_questions: string[];
+  recommended_rotations: string[];
+}
+
 /** Context metadata for an approval request. */
 export interface ApprovalContext {
   service: string;
@@ -164,6 +183,7 @@ export interface ApprovalContext {
   repository: string;
   risk_level: RiskLevel;
   git_operation?: GitOperation;
+  supply_chain?: SupplyChainRisk;
 }
 
 /** An approval request pending human decision. */

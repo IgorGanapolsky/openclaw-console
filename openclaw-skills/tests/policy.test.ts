@@ -69,4 +69,26 @@ describe('approval policy presets', () => {
     expect(decision.autoApproved).toBe(false);
     expect(decision.reason).toContain('never');
   });
+
+  test('repo-yolo blocks supply-chain commands even when they are repository operations', () => {
+    const decision = evaluateApprovalPolicy('repo-yolo', {
+      actionType: 'shell_command',
+      command: 'npm install left-pad',
+      context: {
+        ...baseContext,
+        supply_chain: {
+          detected: true,
+          category: 'dependency_install',
+          severity: 'critical',
+          requires_explicit_approval: true,
+          reasons: ['Package install can execute lifecycle scripts.'],
+          recommended_questions: [],
+          recommended_rotations: [],
+        },
+      },
+    });
+
+    expect(decision.autoApproved).toBe(false);
+    expect(decision.reason).toContain('supply-chain');
+  });
 });

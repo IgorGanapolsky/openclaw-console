@@ -28,6 +28,9 @@ wss://gateway.example.com/ws?token=<gateway-token>
 | GET | `/api/incidents` | All incidents across agents |
 | GET | `/api/approvals/pending` | Pending approval requests |
 | POST | `/api/approvals/:id/respond` | Submit approval decision |
+| POST | `/api/security/supply-chain/assess` | Classify package, CLI, container, remote-script, and credential-command risk |
+| GET | `/api/security/secret-inventory` | Return sanitized secret-bearing key names and file names, never values |
+| POST | `/api/security/supply-chain/incidents` | Open a supply-chain incident with credential-rotation guidance |
 | POST | `/api/agents/:id/chat` | Send message to agent |
 
 ## WebSocket Events
@@ -138,12 +141,47 @@ wss://gateway.example.com/ws?token=<gateway-token>
     "service": "string",
     "environment": "string",
     "repository": "string",
-    "risk_level": "high" | "critical"
+    "risk_level": "high" | "critical",
+    "supply_chain": {
+      "detected": true,
+      "category": "dependency_install" | "container_image" | "remote_script" | "cli_install" | "credential_command" | "secret_touch" | "agent_tooling" | "mixed",
+      "severity": "high" | "critical",
+      "requires_explicit_approval": true,
+      "reasons": ["string"],
+      "recommended_questions": ["string"],
+      "recommended_rotations": ["string"]
+    }
   },
   "created_at": "ISO8601",
   "expires_at": "ISO8601"
 }
 ```
+
+### SecretExposureInventory
+```json
+{
+  "root_dir": "string",
+  "checked_at": "ISO8601",
+  "env_secret_key_names": ["GITHUB_TOKEN"],
+  "local_secret_files": [
+    {
+      "path": ".env",
+      "key_names": ["OPENAI_API_KEY"]
+    }
+  ],
+  "github_actions_secret_references": ["APPSTORE_KEY_ID"],
+  "package_manifests": ["package.json", "Dockerfile"],
+  "counts": {
+    "env_secret_keys": 1,
+    "local_secret_files": 1,
+    "local_secret_key_names": 1,
+    "github_actions_secret_references": 1,
+    "package_manifests": 2
+  }
+}
+```
+
+Secret inventory responses expose names and counts only. They MUST NOT include secret values.
 
 ### ApprovalResponse
 ```json
@@ -195,4 +233,6 @@ All WebSocket messages use this envelope:
 - Tokens MUST be stored in platform secure storage (Keychain / Android Keystore)
 - Tokens MUST NOT appear in logs
 - Approval responses MUST include biometric verification flag
+- Supply-chain risk approval requests MUST NOT be auto-approved by yolo presets
+- Secret inventory endpoints MUST return key names and source paths only, never values
 - Plain HTTP/WS connections require explicit user opt-in with warning

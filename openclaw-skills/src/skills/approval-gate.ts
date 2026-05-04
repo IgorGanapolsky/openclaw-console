@@ -11,6 +11,10 @@ import type { ApprovalRequest, ApprovalResponse, ActionType, RiskLevel, GitOpera
 import type { IStateManager } from '../gateway/state-interface.js';
 import type { GatewayConfig } from '../config/default.js';
 import { evaluateApprovalPolicy } from '../gateway/policy.js';
+import {
+  appendSupplyChainApprovalSummary,
+  assessSupplyChainRisk,
+} from '../security/supply-chain-guardrails.js';
 
 export interface DangerousActionOptions {
   agentId: string;
@@ -88,6 +92,12 @@ export class ApprovalGateSkill {
     const now = new Date();
     const timeoutMs = options.timeoutMs ?? this.config.approvalTimeoutMs;
     const expiresAt = new Date(now.getTime() + timeoutMs);
+    const supplyChainRisk = assessSupplyChainRisk({
+      actionType: options.actionType,
+      command: options.command,
+      fileChanges: options.context.git_operation?.file_changes,
+    });
+    const riskLevel = supplyChainRisk?.severity === 'critical' ? 'critical' : options.context.riskLevel;
 
     const request: ApprovalRequest = {
       id: uuidv4(),
@@ -95,14 +105,15 @@ export class ApprovalGateSkill {
       agent_name: options.agentName,
       action_type: options.actionType,
       title: options.title,
-      description: options.description,
+      description: appendSupplyChainApprovalSummary(options.description, supplyChainRisk),
       command: options.command,
       context: {
         service: options.context.service,
         environment: options.context.environment,
         repository: options.context.repository,
-        risk_level: options.context.riskLevel,
+        risk_level: riskLevel,
         git_operation: options.context.git_operation,
+        supply_chain: supplyChainRisk ?? undefined,
       },
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
@@ -156,6 +167,7 @@ export class ApprovalGateSkill {
           command: request.command,
           policy_preset: policy.preset,
           policy_reason: policy.reason,
+          supply_chain: request.context.supply_chain,
         },
       });
       await this.storeRollbackPoint(request, options.rollback);

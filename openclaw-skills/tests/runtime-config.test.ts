@@ -149,4 +149,36 @@ describe('runtime config API', () => {
 
     fs.rmSync(config.tokenStorePath, { force: true });
   });
+
+  test('exposes supply-chain assessment and secret inventory APIs', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'openclaw-security-api-'));
+    fs.writeFileSync(path.join(root, '.env'), 'STRIPE_SECRET_KEY=sk-live-hidden\n', 'utf8');
+    const config = tempConfig();
+    const { baseUrl, token } = await start(config);
+
+    const assessResponse = await fetch(`${baseUrl}/api/security/supply-chain/assess`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ command: 'docker run --rm untrusted/image:latest' }),
+    });
+
+    expect(assessResponse.status).toBe(200);
+    const assessBody = await assessResponse.json() as Record<string, unknown>;
+    expect(assessBody['detected']).toBe(true);
+
+    const inventoryResponse = await fetch(`${baseUrl}/api/security/secret-inventory?root=${encodeURIComponent(root)}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(inventoryResponse.status).toBe(200);
+    const inventoryBody = await inventoryResponse.json() as Record<string, unknown>;
+    expect(JSON.stringify(inventoryBody)).toContain('STRIPE_SECRET_KEY');
+    expect(JSON.stringify(inventoryBody)).not.toContain('sk-live-hidden');
+
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(config.tokenStorePath, { force: true });
+  });
 });
