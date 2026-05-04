@@ -157,6 +157,53 @@ export interface GitOperation {
   diff_summary?: string;
 }
 
+/** Supply-chain/security classification for commands or repo changes. */
+export interface SupplyChainRisk {
+  detected: boolean;
+  category:
+    | 'dependency_install'
+    | 'container_image'
+    | 'remote_script'
+    | 'cli_install'
+    | 'credential_command'
+    | 'secret_touch'
+    | 'agent_tooling'
+    | 'mixed';
+  severity: RiskLevel;
+  requires_explicit_approval: boolean;
+  reasons: string[];
+  recommended_questions: string[];
+  recommended_rotations: string[];
+}
+
+/** Agent commerce classification for account, paid service, domain, token, and deployment provisioning. */
+export interface AgentCommerceRisk {
+  detected: boolean;
+  category:
+    | 'cloud_account_provisioning'
+    | 'paid_subscription'
+    | 'domain_registration'
+    | 'api_token_minting'
+    | 'deployment'
+    | 'mixed';
+  provider: 'cloudflare' | 'stripe_projects' | 'unknown';
+  severity: RiskLevel;
+  requires_explicit_approval: boolean;
+  reasons: string[];
+  recommended_questions: string[];
+  budget: {
+    currency: 'USD';
+    monthly_limit_usd: number;
+    estimated_monthly_usd: number | null;
+    over_budget: boolean;
+    requires_budget_confirmation: boolean;
+  };
+  artifacts: {
+    domains: string[];
+    services: string[];
+  };
+}
+
 /** Context metadata for an approval request. */
 export interface ApprovalContext {
   service: string;
@@ -164,6 +211,8 @@ export interface ApprovalContext {
   repository: string;
   risk_level: RiskLevel;
   git_operation?: GitOperation;
+  supply_chain?: SupplyChainRisk;
+  agent_commerce?: AgentCommerceRisk;
 }
 
 /** An approval request pending human decision. */
@@ -233,6 +282,7 @@ export type GovernanceEventType =
   | 'agent_objective_updated'
   | 'agent_plan_step_upserted'
   | 'environment_observed'
+  | 'skill_workflow_registered'
   | 'rollback_point_added'
   | 'approval_requested'
   | 'approval_decided'
@@ -286,10 +336,84 @@ export interface ChatMessage {
 export interface BridgeSession {
   id: string;
   agent_id: string;
-  type: 'codex' | 'terminal' | 'other';
+  type: 'codex' | 'terminal' | 'background_agent' | 'other';
   title: string;
   cwd: string;
   closed: boolean;
+  created_at: string; // ISO8601
+  updated_at: string; // ISO8601
+  lifecycle?: 'starting' | 'running' | 'paused' | 'hibernated' | 'cancelling' | 'cancelled' | 'failed' | 'completed';
+  execution?: {
+    provider: 'vercel_open_agents' | 'cloudflare_agents' | 'local' | 'other';
+    workflow_id?: string;
+    sandbox_id?: string;
+    sandbox_state?: 'starting' | 'running' | 'paused' | 'hibernated' | 'stopped' | 'failed';
+    repository?: string;
+    branch?: string;
+    pull_request_url?: string;
+    dev_server_url?: string;
+    read_only_share_url?: string;
+  };
+  controls?: {
+    can_cancel: boolean;
+    can_pause: boolean;
+    can_resume: boolean;
+    can_hibernate: boolean;
+    can_share_readonly: boolean;
+  };
+  metadata: Record<string, unknown>;
+}
+
+// ─── Skill Workflow Systems ──────────────────────────────────────────────────
+
+export interface SkillWorkflowArtifact {
+  id: string;
+  label: string;
+  type: 'markdown' | 'html' | 'png' | 'json' | 'dashboard';
+  path?: string;
+  url?: string;
+}
+
+export interface SkillWorkflowCheckpoint {
+  id: string;
+  title: string;
+  after_step_id: string;
+  required: boolean;
+  approval_action_type?: ActionType;
+}
+
+export interface SkillWorkflowStep {
+  id: string;
+  order: number;
+  skill_name: string;
+  title: string;
+  input_requirements: string[];
+  consumes_from: string[];
+  output_contract: string[];
+  produces: string[];
+  human_checkpoint: boolean;
+  artifacts: SkillWorkflowArtifact[];
+}
+
+export interface SkillWorkflowValidation {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  ordered_step_ids: string[];
+}
+
+export interface SkillWorkflowSystem {
+  id: string;
+  agent_id: string;
+  name: string;
+  description: string;
+  version: string;
+  trigger_prompt: string;
+  status: 'draft' | 'active' | 'archived';
+  steps: SkillWorkflowStep[];
+  checkpoints: SkillWorkflowCheckpoint[];
+  artifacts: SkillWorkflowArtifact[];
+  validation: SkillWorkflowValidation;
   created_at: string; // ISO8601
   updated_at: string; // ISO8601
   metadata: Record<string, unknown>;
