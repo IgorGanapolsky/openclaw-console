@@ -129,6 +129,18 @@ export class TokenManager {
   public getDefaultDevToken(): string | undefined {
     return this.store.tokens.find((t) => t.label === 'default-dev' && !t.revoked)?.token;
   }
+
+  /**
+   * Return an existing non-revoked token for a label, or create one.
+   * Used by local pairing so the QR/link remains stable across page refreshes.
+   */
+  public getOrCreateToken(label: string): string {
+    const existing = this.store.tokens.find((t) => t.label === label && !t.revoked);
+    if (existing) {
+      return existing.token;
+    }
+    return this.generate(label);
+  }
 }
 
 // ── Express Middleware ────────────────────────────────────────────────────────
