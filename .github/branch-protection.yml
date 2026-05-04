@@ -6,6 +6,8 @@ main:
     strict: true
     contexts:
       - "Skills Tests"
+      - "Agent Workflow Guardrails"
+      - "Flaky Test Guardrails"
       - "Architecture Lint (Kotlin)"
       - "Architecture Lint (Swift)"
       - "Android Build Check"
@@ -34,6 +36,8 @@ develop:
     strict: true
     contexts:
       - "Skills Tests"
+      - "Agent Workflow Guardrails"
+      - "Flaky Test Guardrails"
       - "Architecture Lint (Kotlin)"
       - "Architecture Lint (Swift)"
   enforce_admins: true
