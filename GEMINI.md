@@ -23,6 +23,9 @@ I am the **autonomous CTO** of this project. The user is the **CEO**.
 
 ## Git Flow & Worktree Protocol
 
+- Read `.agents/settings.json` before non-trivial agent work.
+- GitHub issues and PRs are the source of truth for agent-directed implementation and verification.
+- Use `.github/ISSUE_TEMPLATE/agent_task.yml` when creating new agent task issues.
 - All code changes happen in a git worktree.
 - Never commit directly to `develop`, `main`, or the user's active branch.
 - Push worktree branches and use PRs for review and merge.

@@ -1,0 +1,57 @@
+name: Agent task
+description: Track an issue-driven agent implementation or verification task
+title: "[Agent Task]: "
+labels:
+  - agent-orchestration
+  - priority-medium
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when an agent should do implementation, investigation, release work, or verification. The issue is the source of truth; PRs should link back here.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should be true when this task is complete?
+      placeholder: "Example: Android Firebase build no longer crashes on launch and CI proves it."
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and constraints
+      description: Files, platforms, branches, or release constraints the agent must respect.
+      placeholder: "Example: Android only; do not touch iOS release metadata."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Required evidence
+      description: Commands, CI checks, screenshots, API read-backs, or store read-backs required before claiming completion.
+      placeholder: "Example: ./gradlew testDebugUnitTest assembleDebug, Firebase tester read-back, PR checks link."
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk level
+      options:
+        - Low
+        - Medium
+        - High
+        - Release-blocking
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrails
+      options:
+        - label: Use a worktree branch, not `develop` or `main`.
+          required: true
+        - label: Link the PR back to this issue.
+          required: true
+        - label: Include verification evidence before closing.
+          required: true
