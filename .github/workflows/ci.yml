@@ -15,6 +15,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ios-changes:
+    name: Detect iOS Changes
+    runs-on: ubuntu-latest
+    outputs:
+      ios_changed: ${{ steps.changed.outputs.ios_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE="$PR_BASE_SHA"
+            HEAD="$PR_HEAD_SHA"
+          elif [[ -n "${BEFORE_SHA:-}" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            BASE="$BEFORE_SHA"
+            HEAD="$GITHUB_SHA"
+          else
+            BASE="HEAD^"
+            HEAD="HEAD"
+          fi
+
+          git diff --name-only "$BASE" "$HEAD" > changed-files.txt || git show --name-only --format= "$HEAD" > changed-files.txt
+          if grep -Eq '^(ios/|Package\.swift$|Package\.resolved$)' changed-files.txt; then
+            echo "ios_changed=true" >> "$GITHUB_OUTPUT"
+            echo "iOS changes detected"
+          else
+            echo "ios_changed=false" >> "$GITHUB_OUTPUT"
+            echo "No iOS changes detected"
+          fi
+
   android-agent-guardrails:
     name: Android Agent Guardrails
     runs-on: ubuntu-latest
@@ -175,14 +214,21 @@ jobs:
 
   ios-build:
     name: iOS Build Check
-    runs-on: macos-14
+    needs: [ios-changes]
+    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && 'macos-14' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Skip iOS build when no iOS files changed
+        if: needs.ios-changes.outputs.ios_changed != 'true'
+        run: echo "No iOS files changed; skipping macOS simulator build."
+
       - name: Select Xcode
+        if: needs.ios-changes.outputs.ios_changed == 'true'
         run: sudo xcode-select -s /Applications/Xcode_15.2.app
 
       - name: Resolve and build for simulator
+        if: needs.ios-changes.outputs.ios_changed == 'true'
         working-directory: ios/OpenClawConsole
         run: |
           # Resolve SPM packages first with explicit derivedDataPath
