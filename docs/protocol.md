@@ -28,6 +28,13 @@ wss://gateway.example.com/ws?token=<gateway-token>
 | GET | `/api/incidents` | All incidents across agents |
 | GET | `/api/approvals/pending` | Pending approval requests |
 | POST | `/api/approvals/:id/respond` | Submit approval decision |
+| POST | `/api/security/supply-chain/assess` | Classify package, CLI, container, remote-script, and credential-command risk |
+| POST | `/api/security/agent-commerce/assess` | Classify agent-created cloud accounts, paid services, domains, tokens, and deploys |
+| GET | `/api/security/secret-inventory` | Return sanitized secret-bearing key names and file names, never values |
+| POST | `/api/security/supply-chain/incidents` | Open a supply-chain incident with credential-rotation guidance |
+| GET | `/api/skill-workflows` | List reusable skill workflow systems, optionally filtered by `agent_id` |
+| POST | `/api/skill-workflows/upsert` | Register or update a modular skill workflow with handoffs, checkpoints, and artifacts |
+| POST | `/api/bridges/:id/control` | Pause, resume, hibernate, cancel, or attach a read-only share URL to a background agent session |
 | POST | `/api/agents/:id/chat` | Send message to agent |
 
 ## WebSocket Events
@@ -130,7 +137,7 @@ wss://gateway.example.com/ws?token=<gateway-token>
   "id": "string",
   "agent_id": "string",
   "agent_name": "string",
-  "action_type": "deploy" | "shell_command" | "config_change" | "key_rotation" | "trade_execution" | "destructive",
+  "action_type": "deploy" | "shell_command" | "config_change" | "key_rotation" | "trade_execution" | "destructive" | "agent_skill_install",
   "title": "string",
   "description": "string",
   "command": "string",
@@ -138,12 +145,117 @@ wss://gateway.example.com/ws?token=<gateway-token>
     "service": "string",
     "environment": "string",
     "repository": "string",
-    "risk_level": "high" | "critical"
+    "risk_level": "high" | "critical",
+    "supply_chain": {
+      "detected": true,
+      "category": "dependency_install" | "container_image" | "remote_script" | "cli_install" | "credential_command" | "secret_touch" | "agent_tooling" | "mixed",
+      "severity": "high" | "critical",
+      "requires_explicit_approval": true,
+      "reasons": ["string"],
+      "recommended_questions": ["string"],
+      "recommended_rotations": ["string"]
+    },
+    "agent_commerce": {
+      "detected": true,
+      "category": "cloud_account_provisioning" | "paid_subscription" | "domain_registration" | "api_token_minting" | "deployment" | "mixed",
+      "provider": "cloudflare" | "stripe_projects" | "unknown",
+      "severity": "high" | "critical",
+      "requires_explicit_approval": true,
+      "reasons": ["string"],
+      "recommended_questions": ["string"],
+      "budget": {
+        "currency": "USD",
+        "monthly_limit_usd": 100,
+        "estimated_monthly_usd": 12,
+        "over_budget": false,
+        "requires_budget_confirmation": false
+      },
+      "artifacts": {
+        "domains": ["openclaw.dev"],
+        "services": ["cloudflare/registrar:domain"]
+      }
+    }
   },
   "created_at": "ISO8601",
   "expires_at": "ISO8601"
 }
 ```
+
+### SkillWorkflowSystem
+```json
+{
+  "id": "skill-workflow:video-to-brief:abc123",
+  "agent_id": "agent-1",
+  "name": "Video-to-brief orchestrator",
+  "trigger_prompt": "Create a strategic brief from a video URL",
+  "status": "draft" | "active" | "archived",
+  "steps": [
+    {
+      "id": "step-1",
+      "order": 1,
+      "skill_name": "transcript-extractor",
+      "input_requirements": ["video_url"],
+      "consumes_from": [],
+      "output_contract": ["clean transcript markdown"],
+      "produces": ["transcript_md"],
+      "human_checkpoint": false,
+      "artifacts": []
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "checkpoint-1",
+      "title": "Approve high-ROI item list",
+      "after_step_id": "step-2",
+      "required": true,
+      "approval_action_type": "propose_fix"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "artifact-1",
+      "label": "Operator dashboard",
+      "type": "html",
+      "path": "artifacts/operator-dashboard.html"
+    }
+  ],
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "ordered_step_ids": ["step-1"]
+  }
+}
+```
+
+### Background Bridge Controls
+Bridge sessions may represent cloud background agents using `type: "background_agent"` with execution metadata for workflow ID, sandbox ID/state, repository, branch, PR URL, dev server URL, and read-only share URL. `POST /api/bridges/:id/control` accepts `cancel`, `pause`, `resume`, `hibernate`, or `share_readonly` and records a governance event for mobile audit.
+
+### SecretExposureInventory
+```json
+{
+  "root_dir": "string",
+  "checked_at": "ISO8601",
+  "env_secret_key_names": ["GITHUB_TOKEN"],
+  "local_secret_files": [
+    {
+      "path": ".env",
+      "key_names": ["OPENAI_API_KEY"]
+    }
+  ],
+  "github_actions_secret_references": ["APPSTORE_KEY_ID"],
+  "package_manifests": ["package.json", "Dockerfile"],
+  "counts": {
+    "env_secret_keys": 1,
+    "local_secret_files": 1,
+    "local_secret_key_names": 1,
+    "github_actions_secret_references": 1,
+    "package_manifests": 2
+  }
+}
+```
+
+Secret inventory responses expose names and counts only. They MUST NOT include secret values.
 
 ### ApprovalResponse
 ```json
@@ -195,4 +307,6 @@ All WebSocket messages use this envelope:
 - Tokens MUST be stored in platform secure storage (Keychain / Android Keystore)
 - Tokens MUST NOT appear in logs
 - Approval responses MUST include biometric verification flag
+- Supply-chain risk approval requests MUST NOT be auto-approved by yolo presets
+- Secret inventory endpoints MUST return key names and source paths only, never values
 - Plain HTTP/WS connections require explicit user opt-in with warning
