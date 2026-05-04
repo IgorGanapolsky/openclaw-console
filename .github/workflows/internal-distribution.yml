@@ -77,7 +77,7 @@ jobs:
     name: iOS TestFlight (Internal)
     needs: [gate]
     if: needs.gate.outputs.should_run == 'true'
-    runs-on: macos-26
+    runs-on: ${{ fromJSON(vars.IOS_TESTFLIGHT_RUNS_ON || '"macos-26"') }}
     timeout-minutes: 45
     environment: production
     steps:
@@ -86,9 +86,17 @@ jobs:
           ref: ${{ needs.gate.outputs.ref }}
 
       - name: Setup Python
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+
+      - name: Configure self-hosted Python
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -m pip --version
 
       - name: Install Pillow
         run: python3 -m pip install pillow
@@ -118,14 +126,30 @@ jobs:
         run: bash scripts/preflight-release.sh --platform ios --layer 1
 
       - name: Setup Ruby
+        if: runner.environment != 'self-hosted'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
+      - name: Setup Ruby (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          echo "/opt/homebrew/opt/ruby@3.2/bin" >> "$GITHUB_PATH"
+          /opt/homebrew/opt/ruby@3.2/bin/ruby --version
+          /opt/homebrew/opt/ruby@3.2/bin/bundle install --jobs 4 --retry 3
+        working-directory: ios/OpenClawConsole
+
       - name: Install Fastlane
+        if: runner.environment != 'self-hosted'
         run: gem install fastlane
+        working-directory: ios/OpenClawConsole
+
+      - name: Verify Fastlane (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: bundle exec fastlane --version
         working-directory: ios/OpenClawConsole
 
       - name: Write App Store Connect key
