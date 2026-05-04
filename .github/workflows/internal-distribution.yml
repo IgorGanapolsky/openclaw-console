@@ -93,6 +93,9 @@ jobs:
       - name: Install Pillow
         run: python3 -m pip install pillow
 
+      - name: Install App Store Connect Python dependencies
+        run: python3 -m pip install pyjwt==2.11.0 cryptography==46.0.5
+
       - name: Fail fast on required iOS distribution secrets
         env:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
@@ -215,6 +218,28 @@ jobs:
           set -Eeuo pipefail
           bundle exec fastlane beta --verbose 2>&1 | tee fastlane-upload.log
         working-directory: ios/OpenClawConsole
+
+      - name: Ensure TestFlight internal visibility
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
+          TESTFLIGHT_INTERNAL_GROUPS: ${{ vars.TESTFLIGHT_INTERNAL_GROUPS || vars.TESTFLIGHT_GROUPS || secrets.TESTFLIGHT_GROUPS || 'App Store Connect Users' }}
+          TESTFLIGHT_REQUIRED_TESTERS: ${{ vars.TESTFLIGHT_INTERNAL_TESTERS || secrets.TESTFLIGHT_INTERNAL_TESTERS || '' }}
+        run: |
+          set -euo pipefail
+          VERSION="$(cd ios/OpenClawConsole && xcodebuild -showBuildSettings -scheme OpenClawConsole 2>/dev/null | awk -F'= ' '/MARKETING_VERSION/ {print $2; exit}')"
+          if [ -z "$VERSION" ]; then
+            echo "❌ Could not resolve iOS MARKETING_VERSION"
+            exit 1
+          fi
+          python3 scripts/ensure_testflight_visibility.py \
+            --version "$VERSION" \
+            --groups "$TESTFLIGHT_INTERNAL_GROUPS" \
+            --required-testers "$TESTFLIGHT_REQUIRED_TESTERS" \
+            --wait \
+            --timeout 900 \
+            --poll-interval 60
 
       - name: Collect iOS distribution logs
         if: always()
