@@ -8,6 +8,11 @@
 
 import type { Incident, IncidentSeverity, IncidentStatus, ActionType } from '../types/protocol.js';
 import type { IStateManager } from '../gateway/state-interface.js';
+import {
+  assessSupplyChainRisk,
+  buildSupplyChainIncidentRunbook,
+  type SecretExposureInventory,
+} from '../security/supply-chain-guardrails.js';
 
 export interface CreateIncidentOptions {
   agentId: string;
@@ -23,6 +28,15 @@ export interface ActionResult {
   action: ActionType;
   output: string;
   updatedAt: string;
+}
+
+export interface CreateSupplyChainIncidentOptions {
+  agentId: string;
+  agentName: string;
+  title: string;
+  command?: string;
+  repository?: string;
+  inventory?: SecretExposureInventory | null;
 }
 
 /**
@@ -43,6 +57,52 @@ export class IncidentManagerSkill {
       description: options.description,
       actions: options.actions ?? ['ask_root_cause', 'propose_fix', 'acknowledge'],
     });
+  }
+
+  /**
+   * Open a supply-chain incident with a rotation-first remediation runbook.
+   */
+  public async createSupplyChainIncident(options: CreateSupplyChainIncidentOptions): Promise<Incident> {
+    const risk = assessSupplyChainRisk({
+      actionType: 'shell_command',
+      command: options.command,
+    });
+    const description = buildSupplyChainIncidentRunbook({
+      title: options.title,
+      command: options.command,
+      risk,
+      inventory: options.inventory ?? null,
+    });
+
+    const incident = await this.state.createIncident({
+      agent_id: options.agentId,
+      agent_name: options.agentName,
+      severity: risk?.severity === 'critical' ? 'critical' : 'warning',
+      title: options.title,
+      description: [
+        description,
+        options.repository ? '' : null,
+        options.repository ? `Repository: ${options.repository}` : null,
+      ].filter((line): line is string => line !== null).join('\n'),
+      actions: ['ask_root_cause', 'key_rotation', 'acknowledge'],
+    });
+
+    await this.state.recordGovernanceEvent?.({
+      agent_id: options.agentId,
+      type: 'incident_state_changed',
+      title: options.title,
+      summary: 'Supply-chain incident opened with credential rotation workflow',
+      actor: 'gateway',
+      risk_level: incident.severity === 'critical' ? 'critical' : 'high',
+      incident_id: incident.id,
+      metadata: {
+        command: options.command,
+        repository: options.repository,
+        supply_chain: risk,
+        inventory_counts: options.inventory?.counts,
+      },
+    });
+    return incident;
   }
 
   /**
@@ -68,6 +128,9 @@ export class IncidentManagerSkill {
       case 'acknowledge':
         output = `Incident acknowledged. An engineer has been paged.`;
         newStatus = 'acknowledged';
+        break;
+      case 'key_rotation':
+        output = await this.planKeyRotation(incident);
         break;
       default:
         output = `Action "${action}" executed on incident "${incident.title}".`;
@@ -147,6 +210,20 @@ export class IncidentManagerSkill {
       ``,
       `Estimated resolution time: 15–30 minutes.`,
       `Rollback plan: \`kubectl rollout undo deployment/${incident.agent_name.toLowerCase().replace(/\s+/g, '-')}\``,
+    ].join('\n');
+  }
+
+  private async planKeyRotation(incident: Incident): Promise<string> {
+    await sleep(200);
+    return [
+      `Credential rotation plan for "${incident.title}":`,
+      ``,
+      `1. Inventory reachable credentials: local .env key names, shell environment key names, GitHub Actions secret names, package registry tokens, and cloud/app-store credentials.`,
+      `2. Revoke high-risk non-human identities first: GitHub, package registries, cloud providers, deployment platforms, billing, analytics, and AI provider API keys.`,
+      `3. Reissue least-privilege replacements and update .env plus GitHub Actions secrets with sanitized verification only.`,
+      `4. Re-run the failed or risky workflow from a clean dependency lockfile/container digest.`,
+      ``,
+      `Evidence required before resolution: secret names rotated, provider status response, and CI/deploy validation link.`,
     ].join('\n');
   }
 }

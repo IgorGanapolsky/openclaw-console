@@ -39,6 +39,15 @@ export function evaluateApprovalPolicy(
     return deny(preset, `${input.actionType} is never auto-approved`);
   }
 
+  if (input.context.supply_chain?.requires_explicit_approval) {
+    return deny(preset, `supply-chain ${input.context.supply_chain.category} risk requires explicit approval`);
+  }
+
+  if (input.context.agent_commerce?.requires_explicit_approval) {
+    const budgetReason = input.context.agent_commerce.budget.over_budget ? ' and exceeds budget' : '';
+    return deny(preset, `agent commerce ${input.context.agent_commerce.category} risk requires explicit approval${budgetReason}`);
+  }
+
   if (input.context.risk_level === 'critical' && preset !== 'danger-yolo') {
     return deny(preset, 'critical risk requires explicit approval');
   }

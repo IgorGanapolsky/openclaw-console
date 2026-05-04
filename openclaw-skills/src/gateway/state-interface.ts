@@ -14,6 +14,7 @@ import type {
   ApprovalResponse,
   BridgeSession,
   RecurringTask,
+  SkillWorkflowSystem,
   AgentGovernanceState,
   AgentPlanStep,
   AgentPlanStepStatus,
@@ -74,6 +75,10 @@ export interface IStateManager {
 
   upsertRecurringTask?(task: RecurringTask): Promise<RecurringTask>;
   listRecurringTasks?(): Promise<RecurringTask[]> | RecurringTask[];
+
+  upsertSkillWorkflowSystem?(workflow: SkillWorkflowSystem): Promise<SkillWorkflowSystem>;
+  listSkillWorkflowSystems?(agentId?: string): Promise<SkillWorkflowSystem[]> | SkillWorkflowSystem[];
+  getSkillWorkflowSystem?(id: string): Promise<SkillWorkflowSystem | undefined> | SkillWorkflowSystem | undefined;
 
   getAgentGovernance?(agentId: string): Promise<AgentGovernanceState> | AgentGovernanceState;
   updateAgentObjective?(agentId: string, objective: string, actor?: GovernanceEvent['actor']): Promise<AgentGovernanceState>;
