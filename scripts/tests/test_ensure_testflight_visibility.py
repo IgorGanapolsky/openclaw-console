@@ -8,9 +8,22 @@ from scripts.ensure_testflight_visibility import TestFlightVisibility, is_intern
 
 
 class FakeClient:
-    def __init__(self, *, tester_exists: bool = True, tester_has_build: bool = True) -> None:
+    def __init__(
+        self,
+        *,
+        tester_exists: bool = True,
+        tester_has_build: bool = True,
+        user_exists: bool = True,
+        user_roles: list[str] | None = None,
+        all_apps_visible: bool = True,
+        visible_app_ids: set[str] | None = None,
+    ) -> None:
         self.tester_exists = tester_exists
         self.tester_has_build = tester_has_build
+        self.user_exists = user_exists
+        self.user_roles = user_roles or ["ADMIN"]
+        self.all_apps_visible = all_apps_visible
+        self.visible_app_ids = visible_app_ids if visible_app_ids is not None else {"app-1"}
         self.group_requests = 0
         self.assigned_builds: list[tuple[str, str]] = []
 
@@ -35,6 +48,21 @@ class FakeClient:
                 self.assigned_builds.append(("tester-1", payload["data"][0]["id"]))
                 self.tester_has_build = True
                 return {}
+        if path == "/users":
+            return {
+                "data": [
+                    {
+                        "id": "user-1",
+                        "attributes": {
+                            "email": "iganapolsky@gmail.com",
+                            "roles": self.user_roles,
+                            "allAppsVisible": self.all_apps_visible,
+                        },
+                    }
+                ]
+                if self.user_exists
+                else []
+            }
         raise AssertionError(f"unexpected request: {method} {path}")
 
     def get_all(self, path, *, params=None):
@@ -43,6 +71,8 @@ class FakeClient:
             return []
         if path == "/betaTesters/tester-1/relationships/builds":
             return [{"id": "build-1"}] if self.tester_has_build else []
+        if path == "/users/user-1/visibleApps":
+            return [{"id": app_id} for app_id in sorted(self.visible_app_ids)]
         raise AssertionError(f"unexpected get_all: {path}")
 
 
@@ -52,8 +82,8 @@ class TestInternalPseudoGroups(unittest.TestCase):
         self.assertTrue(is_internal_pseudo_group("  appstore   connect users "))
         self.assertFalse(is_internal_pseudo_group("Internal Testers"))
 
-    def test_pseudo_group_checks_build_and_required_tester_without_beta_group(self) -> None:
-        client = FakeClient(tester_exists=True)
+    def test_pseudo_group_checks_build_and_required_asc_user_without_beta_group(self) -> None:
+        client = FakeClient(user_exists=True)
         result = TestFlightVisibility(client, "com.openclaw.console").ensure(
             "1.0.0",
             ["App Store Connect Users"],
@@ -67,25 +97,34 @@ class TestInternalPseudoGroups(unittest.TestCase):
         self.assertEqual(client.group_requests, 0)
 
     def test_pseudo_group_fails_when_required_tester_is_missing(self) -> None:
-        client = FakeClient(tester_exists=False)
-        with self.assertRaisesRegex(RuntimeError, "Required internal TestFlight testers missing"):
+        client = FakeClient(user_exists=False)
+        with self.assertRaisesRegex(RuntimeError, "missing from App Store Connect users"):
             TestFlightVisibility(client, "com.openclaw.console").ensure(
                 "1.0.0",
                 ["App Store Connect Users"],
                 ["iganapolsky@gmail.com"],
             )
 
-    def test_pseudo_group_fails_when_required_tester_lacks_build_access(self) -> None:
-        client = FakeClient(tester_exists=True, tester_has_build=False)
-        with self.assertRaisesRegex(RuntimeError, "not assigned to build"):
+    def test_pseudo_group_fails_when_required_user_lacks_internal_tester_role(self) -> None:
+        client = FakeClient(user_exists=True, user_roles=["CUSTOMER_SUPPORT"])
+        with self.assertRaisesRegex(RuntimeError, "do not have an internal testing role"):
             TestFlightVisibility(client, "com.openclaw.console").ensure(
                 "1.0.0",
                 ["App Store Connect Users"],
                 ["iganapolsky@gmail.com"],
             )
 
-    def test_pseudo_group_assigns_required_tester_to_build_when_requested(self) -> None:
-        client = FakeClient(tester_exists=True, tester_has_build=False)
+    def test_pseudo_group_fails_when_required_user_lacks_app_access(self) -> None:
+        client = FakeClient(user_exists=True, all_apps_visible=False, visible_app_ids={"other-app"})
+        with self.assertRaisesRegex(RuntimeError, "do not have access to app"):
+            TestFlightVisibility(client, "com.openclaw.console").ensure(
+                "1.0.0",
+                ["App Store Connect Users"],
+                ["iganapolsky@gmail.com"],
+            )
+
+    def test_pseudo_group_passes_when_required_user_has_specific_app_access(self) -> None:
+        client = FakeClient(user_exists=True, all_apps_visible=False, visible_app_ids={"app-1"})
         result = TestFlightVisibility(client, "com.openclaw.console").ensure(
             "1.0.0",
             ["App Store Connect Users"],
@@ -93,8 +132,8 @@ class TestInternalPseudoGroups(unittest.TestCase):
             assign_required_testers=True,
         )
         self.assertEqual(result["status"], "VISIBLE")
-        self.assertEqual(result["required_testers_assigned"], 1)
-        self.assertEqual(client.assigned_builds, [("tester-1", "build-1")])
+        self.assertEqual(result["required_testers_assigned"], 0)
+        self.assertEqual(client.assigned_builds, [])
 
 
 if __name__ == "__main__":
