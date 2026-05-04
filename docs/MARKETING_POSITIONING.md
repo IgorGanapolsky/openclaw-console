@@ -53,6 +53,7 @@ OpenClaw Console is positioned as the definitive mobile control plane for self-h
 | **Self-hosted** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Biometric approval** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Agent workflows** | ✅ | ❌ | ❌ | ❌ | ⚠️ |
+| **Supply-chain approval gates** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Privacy-first** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Price (per user)** | $15-20 | $21+ | $15-23 | $9-19 | $0-12.50 |
 | **Mobile-native** | ✅ | ✅ | ✅ | ✅ | ❌ |
@@ -78,6 +79,28 @@ OpenClaw Console is positioned as the definitive mobile control plane for self-h
 
 **Supporting Message (60+ seconds)**
 "Stop relying on Slack notifications and SSH sessions for critical operations. OpenClaw Console provides a professional mobile interface for approving database migrations, production deployments, and infrastructure changes with Face ID/Touch ID security. Self-hosted for complete data sovereignty, designed specifically for DevOps professionals who value security and privacy."
+
+### Supply-Chain Security Angle
+
+Developer machines are now part of the production attack surface because agents, package managers, dependency bots, and CLI tools can all touch non-human identities. OpenClaw turns those moments into explicit mobile decisions:
+
+- Approve or deny package installs, Docker runs, remote installer scripts, credential commands, and agent tooling changes.
+- Show sanitized secret exposure inventory by key name and source, never by value.
+- Open a rotation-first incident workflow when a developer-machine compromise is suspected.
+- Preserve the audit trail that proves who approved the action, when, and with what risk context.
+
+This is a sharper DAA driver than generic monitoring: every risky supply-chain action becomes a meaningful approval moment.
+
+### Agent Runtime Control Angle
+
+Cloud coding agents are moving into long-running, sandboxed background workflows. OpenClaw should be the mobile control plane around those systems:
+
+- Track background agent lifecycle separately from its sandbox: running, paused, hibernated, cancelled, failed, completed.
+- Give operators mobile controls for pause, resume, hibernate, cancel, and read-only session sharing.
+- Register modular skill workflow systems with explicit inputs, handoffs, checkpoints, and visual result artifacts.
+- Require approval for agent commerce actions such as Cloudflare account provisioning, paid subscriptions, domain registration, token minting, and production deploys.
+
+This keeps OpenClaw focused on DAA: every long-running agent needs observable state, cancellability, checkpoint approvals, and budget-aware infrastructure permissions.
 
 ## Customer Personas
 

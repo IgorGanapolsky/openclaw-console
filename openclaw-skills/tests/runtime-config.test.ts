@@ -149,4 +149,126 @@ describe('runtime config API', () => {
 
     fs.rmSync(config.tokenStorePath, { force: true });
   });
+
+  test('exposes supply-chain assessment and secret inventory APIs', async () => {
+    process.env['OPENCLAW_TEST_SECRET_KEY'] = 'hidden-runtime-test-value';
+    const config = tempConfig();
+    const { baseUrl, token } = await start(config);
+
+    const assessResponse = await fetch(`${baseUrl}/api/security/supply-chain/assess`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ command: 'docker run --rm untrusted/image:latest' }),
+    });
+
+    expect(assessResponse.status).toBe(200);
+    const assessBody = await assessResponse.json() as Record<string, unknown>;
+    expect(assessBody['detected']).toBe(true);
+
+    const commerceResponse = await fetch(`${baseUrl}/api/security/agent-commerce/assess`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        command: 'stripe projects add cloudflare/registrar:domain openclaw.dev',
+        estimated_monthly_usd: 12,
+        monthly_budget_limit_usd: 10,
+      }),
+    });
+
+    expect(commerceResponse.status).toBe(200);
+    const commerceBody = await commerceResponse.json() as Record<string, unknown>;
+    expect(commerceBody['detected']).toBe(true);
+    expect(JSON.stringify(commerceBody)).toContain('domain_registration');
+
+    const inventoryResponse = await fetch(`${baseUrl}/api/security/secret-inventory`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(inventoryResponse.status).toBe(200);
+    const inventoryBody = await inventoryResponse.json() as Record<string, unknown>;
+    expect(JSON.stringify(inventoryBody)).toContain('OPENCLAW_TEST_SECRET_KEY');
+    expect(JSON.stringify(inventoryBody)).not.toContain('hidden-runtime-test-value');
+
+    delete process.env['OPENCLAW_TEST_SECRET_KEY'];
+    fs.rmSync(config.tokenStorePath, { force: true });
+  });
+
+  test('registers skill workflow systems for orchestrator skills', async () => {
+    const config = tempConfig();
+    const state = new StateManager();
+    await state.upsertAgent({
+      id: 'agent-skill-workflow',
+      name: 'Skill Workflow Agent',
+      description: 'Test agent',
+      status: 'online',
+      workspace: 'test',
+      tags: ['test'],
+      last_active: new Date().toISOString(),
+      active_tasks: 0,
+      pending_approvals: 0,
+    });
+    const { baseUrl, token } = await start(config, state);
+
+    const response = await fetch(`${baseUrl}/api/skill-workflows/upsert`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        agent_id: 'agent-skill-workflow',
+        name: 'Research orchestrator',
+        trigger_prompt: 'Research and implement high-ROI items',
+        steps: [
+          {
+            skill_name: 'source-reader',
+            input_requirements: ['url'],
+            output_contract: ['verified source notes'],
+            produces: ['source_notes'],
+          },
+          {
+            skill_name: 'implementation-planner',
+            consumes_from: ['source_notes'],
+            input_requirements: ['source_notes'],
+            output_contract: ['ranked implementation plan'],
+            produces: ['implementation_plan'],
+          },
+        ],
+        checkpoints: [
+          {
+            title: 'Approve implementation plan',
+            after_step_id: 'step-2',
+            required: true,
+          },
+        ],
+        artifacts: [
+          {
+            label: 'Plan markdown',
+            type: 'markdown',
+            path: 'docs/plan.md',
+          },
+        ],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as Record<string, unknown>;
+    expect(JSON.stringify(body)).toContain('Research orchestrator');
+    expect(JSON.stringify(body)).toContain('ordered_step_ids');
+
+    const listResponse = await fetch(`${baseUrl}/api/skill-workflows?agent_id=agent-skill-workflow`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(listResponse.status).toBe(200);
+    const listBody = await listResponse.json() as unknown[];
+    expect(listBody).toHaveLength(1);
+
+    fs.rmSync(config.tokenStorePath, { force: true });
+  });
 });
