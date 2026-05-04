@@ -4,7 +4,7 @@ require "shellwords"
 default_platform(:ios)
 
 APP_IDENTIFIER = "com.openclaw.console"
-DEFAULT_TESTFLIGHT_GROUP = "External Testers"
+DEFAULT_TESTFLIGHT_GROUP = "Internal Testers"
 DEFAULT_EXTERNAL_TESTERS = [
   { email: "iganapolsky@gmail.com", first_name: "Igor", last_name: "Ganapolsky" },
   { email: "igor.ganapolsky@icloud.com", first_name: "Igor", last_name: "Ganapolsky" }
@@ -263,21 +263,22 @@ platform :ios do
       UI.message("Skipping automated tester sync. Set TESTFLIGHT_SYNC_TESTERS=true to enable it.")
     end
 
+    distribute_external = truthy_env?("TESTFLIGHT_DISTRIBUTE_EXTERNAL", default: false)
+    notify_external_testers = truthy_env?("TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS", default: distribute_external)
+
     upload_options = {
-      skip_waiting_for_build_processing: truthy_env?("TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING", default: true),
+      skip_waiting_for_build_processing: truthy_env?("TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING", default: false),
       api_key: api_key,
       ipa: configured_ipa_path,
-      groups: [configured_testflight_group],
-      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for external testing.",
+      beta_app_description: ENV["TESTFLIGHT_BETA_DESCRIPTION"] || "OpenClaw Console beta build for internal testing.",
       beta_app_feedback_email: ENV["TESTFLIGHT_FEEDBACK_EMAIL"] || "igor.ganapolsky@icloud.com",
       changelog: "Latest OpenClaw Console beta build"
     }
 
     beta_review_info = beta_review_info_from_env
-    distribute_external = truthy_env?("TESTFLIGHT_DISTRIBUTE_EXTERNAL", default: true)
-    notify_external_testers = truthy_env?("TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS", default: distribute_external)
 
     if distribute_external && beta_review_info
+      upload_options[:groups] = [configured_testflight_group]
       upload_options[:beta_app_review_info] = beta_review_info
       upload_options[:distribute_external] = true
       upload_options[:notify_external_testers] = notify_external_testers
@@ -288,8 +289,8 @@ platform :ios do
       )
     else
       UI.message(
-        "TESTFLIGHT_DISTRIBUTE_EXTERNAL=false; assigning internal/private TestFlight build to " \
-        "#{configured_testflight_group.inspect}."
+        "TESTFLIGHT_DISTRIBUTE_EXTERNAL=false; uploading as internal/private TestFlight build. " \
+        "Post-upload ASC visibility checks own group/tester verification."
       )
     end
 
