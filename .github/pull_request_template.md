@@ -15,6 +15,8 @@
 - [ ] Unit tests pass
 - [ ] Manual testing on device/simulator
 - [ ] No regressions in existing functionality
+- [ ] Flaky test quarantine unchanged or validated with `python3 scripts/check_flaky_quarantine.py`
+- [ ] Agent workflow settings unchanged or validated with `python3 scripts/check_agent_workflow_settings.py`
 
 ## North Star: Daily Active Approvers
 - [ ] This PR helps users approve agent actions more safely or more often

@@ -12,6 +12,12 @@ echo "==> Checking Android agent guardrails"
 python3 scripts/check_android_cli.py
 python3 scripts/check_android_agent_guardrails.py
 
+echo "==> Checking flaky test quarantine"
+python3 scripts/check_flaky_quarantine.py
+
+echo "==> Checking agent workflow settings"
+python3 scripts/check_agent_workflow_settings.py
+
 echo "==> Android unit tests + debug build"
 (
   cd android
