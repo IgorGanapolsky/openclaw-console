@@ -51,6 +51,8 @@ jobs:
             const PENDING_STATES = new Set(["pending"]);
             const REQUIRED_CHECK_WORKFLOWS = new Map([
               ["Skills Tests", "ci.yml"],
+              ["Agent Workflow Guardrails", "ci.yml"],
+              ["Flaky Test Guardrails", "ci.yml"],
               ["Architecture Lint (Kotlin)", "ci.yml"],
               ["Architecture Lint (Swift)", "ci.yml"],
               ["Android Build Check", "ci.yml"],
@@ -62,9 +64,11 @@ jobs:
               ["CodeQL Analysis (swift)", "security.yml"]
             ]);
             const DEFAULT_REQUIRED_CHECKS = {
-              develop: ["Skills Tests", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"],
+              develop: ["Skills Tests", "Agent Workflow Guardrails", "Flaky Test Guardrails", "Architecture Lint (Kotlin)", "Architecture Lint (Swift)"],
               main: [
                 "Skills Tests",
+                "Agent Workflow Guardrails",
+                "Flaky Test Guardrails",
                 "Architecture Lint (Kotlin)",
                 "Architecture Lint (Swift)",
                 "Android Build Check",
