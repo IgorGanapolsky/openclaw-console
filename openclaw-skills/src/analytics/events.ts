@@ -7,6 +7,7 @@ export type ConversionEvent =
   | 'app_install'
   | 'account_created'
   | 'first_approval'
+  | 'approval_completed'
   | 'subscription_started'
   | 'subscription_cancelled'
   | 'feature_used'
@@ -65,6 +66,29 @@ const conversionFunnels = new Map<string, ConversionFunnel>();
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
 // const FIREBASE_PRIVATE_KEY = process.env.FIREBASE_PRIVATE_KEY; // Reserved for future use
 // const FIREBASE_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL; // Reserved for future use
+
+const POSTHOG_DEFAULT_HOST = 'https://us.i.posthog.com';
+
+interface PostHogConfig {
+  enabled: boolean;
+  host: string;
+  captureUrl: string;
+  projectApiKey?: string;
+  rawEmailEnabled: boolean;
+}
+
+export interface AnalyticsProviderStatus {
+  local: { enabled: true; eventCount: number; revenueEventCount: number; userCount: number };
+  firebase: { enabled: boolean; projectConfigured: boolean };
+  posthog: {
+    enabled: boolean;
+    host: string;
+    projectApiKeyConfigured: boolean;
+    personalApiKeyConfigured: boolean;
+    projectIdConfigured: boolean;
+    rawEmailEnabled: boolean;
+  };
+}
 
 // A/B testing configuration
 interface ABTestConfig {
@@ -131,6 +155,152 @@ function initializeFirebaseAnalytics(): { success: boolean; error?: string } {
   }
 }
 
+function posthogConfig(): PostHogConfig {
+  const host = (process.env.POSTHOG_HOST || POSTHOG_DEFAULT_HOST).replace(/\/+$/, '');
+  const projectApiKey = (
+    process.env.POSTHOG_PROJECT_API_KEY?.trim()
+    || process.env.POSTHOG_PROJECT_TOKEN?.trim()
+    || process.env.POSTHOG_API_KEY?.trim()
+    || ''
+  );
+
+  return {
+    enabled: projectApiKey.length > 0,
+    host,
+    captureUrl: `${host}/capture/`,
+    projectApiKey: projectApiKey || undefined,
+    rawEmailEnabled: process.env.POSTHOG_SEND_RAW_EMAIL === 'true'
+  };
+}
+
+function cleanProperties(
+  properties: Record<string, unknown> | undefined,
+  options: { includeEmail?: boolean } = {}
+): Record<string, string | number | boolean> {
+  const cleaned: Record<string, string | number | boolean> = {};
+
+  for (const [key, value] of Object.entries(properties || {})) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (key === 'email' && !options.includeEmail) {
+      continue;
+    }
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      cleaned[key] = value;
+    }
+  }
+
+  return cleaned;
+}
+
+async function postToPostHog(body: Record<string, unknown>): Promise<void> {
+  const config = posthogConfig();
+  if (!config.enabled || !config.projectApiKey) {
+    return;
+  }
+
+  const response = await fetch(config.captureUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: config.projectApiKey,
+      ...body
+    })
+  });
+
+  if (!response.ok) {
+    const details = await response.text().catch(() => '');
+    throw new Error(`PostHog capture failed: HTTP ${response.status}${details ? ` ${details}` : ''}`);
+  }
+}
+
+async function sendToPostHog(event: AnalyticsEvent): Promise<void> {
+  const config = posthogConfig();
+  if (!config.enabled) {
+    return;
+  }
+
+  const userProperties = cleanProperties(event.userProperties, { includeEmail: config.rawEmailEnabled });
+  await postToPostHog({
+    event: event.event,
+    distinct_id: event.userId,
+    timestamp: event.timestamp,
+    properties: {
+      ...cleanProperties(event.properties),
+      ...(Object.keys(userProperties).length > 0 ? { $set: userProperties } : {})
+    }
+  });
+}
+
+async function bestEffortPostHogCapture(event: AnalyticsEvent): Promise<void> {
+  try {
+    await sendToPostHog(event);
+  } catch (error) {
+    console.warn(
+      '[Analytics] PostHog capture skipped:',
+      error instanceof Error ? error.message : 'unknown error'
+    );
+  }
+}
+
+async function bestEffortPostHogIdentify(
+  userId: string,
+  properties: Record<string, string | number | boolean | undefined>
+): Promise<void> {
+  try {
+    await identifyUserInPostHog(userId, properties);
+  } catch (error) {
+    console.warn(
+      '[Analytics] PostHog identify skipped for user:',
+      userId,
+      error instanceof Error ? error.message : 'unknown error'
+    );
+  }
+}
+
+async function identifyUserInPostHog(
+  userId: string,
+  properties: Record<string, string | number | boolean | undefined>
+): Promise<void> {
+  const config = posthogConfig();
+  if (!config.enabled) {
+    return;
+  }
+
+  await postToPostHog({
+    event: '$identify',
+    distinct_id: userId,
+    properties: {
+      $set: cleanProperties(properties, { includeEmail: config.rawEmailEnabled })
+    }
+  });
+}
+
+export function getAnalyticsProviderStatus(): AnalyticsProviderStatus {
+  const config = posthogConfig();
+  return {
+    local: {
+      enabled: true,
+      eventCount: analyticsEvents.length,
+      revenueEventCount: revenueEvents.length,
+      userCount: conversionFunnels.size
+    },
+    firebase: {
+      enabled: Boolean(FIREBASE_PROJECT_ID),
+      projectConfigured: Boolean(FIREBASE_PROJECT_ID)
+    },
+    posthog: {
+      enabled: config.enabled,
+      host: config.host,
+      projectApiKeyConfigured: Boolean(config.projectApiKey),
+      personalApiKeyConfigured: Boolean(process.env.POSTHOG_PERSONAL_API_KEY?.trim()),
+      projectIdConfigured: Boolean(process.env.POSTHOG_PROJECT_ID?.trim()),
+      rawEmailEnabled: config.rawEmailEnabled
+    }
+  };
+}
+
 /**
  * Track a conversion event
  */
@@ -163,6 +333,9 @@ export async function trackConversionEvent(
     if (FIREBASE_PROJECT_ID) {
       await sendToFirebaseAnalytics(analyticsEvent);
     }
+
+    // Send server-side product events to PostHog when a project API key is configured.
+    await bestEffortPostHogCapture(analyticsEvent);
 
     console.log(`[Analytics] Event tracked: ${event} for user ${userId}`);
     return { success: true };
@@ -259,6 +432,8 @@ export async function identifyUser(
       properties.cohort_week = cohortWeek;
     }
 
+    await bestEffortPostHogIdentify(userId, properties);
+
     // Track user identification as event
     await trackConversionEvent('account_created', userId, {
       source: properties.install_source || 'unknown'
@@ -301,6 +476,7 @@ function updateConversionFunnel(userId: string, event: ConversionEvent, timestam
       break;
 
     case 'first_approval':
+    case 'approval_completed':
       funnel.firstApprovalDate = timestamp;
       funnel.currentStage = 'activated';
       break;
@@ -584,6 +760,24 @@ export function createAnalyticsRouter(): Router {
 
     } catch (error) {
       console.error('[Analytics] Conversion endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
+      });
+      return;
+    }
+  });
+
+  // Get analytics provider configuration status without exposing secrets
+  router.get('/status', (_req: Request, res: Response) => {
+    try {
+      res.json({
+        success: true,
+        providers: getAnalyticsProviderStatus()
+      });
+      return;
+    } catch (error) {
+      console.error('[Analytics] Status endpoint error:', error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Internal server error'
