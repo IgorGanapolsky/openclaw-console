@@ -21,6 +21,12 @@ INTERNAL_PSEUDO_GROUPS = {
     "appstore connect users",
     "asc users",
 }
+INTERNAL_TESTER_ROLES = {
+    "ADMIN",
+    "APP_MANAGER",
+    "DEVELOPER",
+    "MARKETING",
+}
 
 
 def csv(raw: str) -> list[str]:
@@ -188,6 +194,23 @@ class TestFlightVisibility:
         testers = payload.get("data", [])
         return testers[0] if testers else None
 
+    def app_store_user(self, email: str) -> dict[str, Any] | None:
+        payload = self.client.request(
+            "GET",
+            "/users",
+            params={
+                "filter[email]": email,
+                "fields[users]": "email,roles,allAppsVisible",
+                "limit": "1",
+            },
+        )
+        users = payload.get("data", [])
+        return users[0] if users else None
+
+    def user_visible_app_ids(self, user_id: str) -> set[str]:
+        apps = self.client.get_all(f"/users/{user_id}/visibleApps", params={"limit": "200"})
+        return {app["id"] for app in apps}
+
     def beta_tester_build_ids(self, tester_id: str) -> set[str]:
         builds = self.client.get_all(f"/betaTesters/{tester_id}/relationships/builds", params={"limit": "200"})
         return {build["id"] for build in builds}
@@ -269,35 +292,38 @@ class TestFlightVisibility:
 
         if groups and all(is_internal_pseudo_group(name) for name in groups):
             missing: list[str] = []
-            missing_build_access: list[str] = []
+            ineligible: list[str] = []
+            missing_app_access: list[str] = []
             for email in required_testers:
                 normalized_email = email.lower()
-                tester = self.beta_tester(normalized_email)
-                if not tester:
+                user = self.app_store_user(normalized_email)
+                if not user:
                     missing.append(normalized_email)
                     continue
 
-                tester_id = tester["id"]
-                if build_id in self.beta_tester_build_ids(tester_id):
+                attrs = user.get("attributes", {})
+                roles = set(attrs.get("roles") or [])
+                if not roles.intersection(INTERNAL_TESTER_ROLES):
+                    ineligible.append(f"{normalized_email} roles={sorted(roles)}")
                     continue
 
-                if assign_required_testers:
-                    self.attach_beta_tester_build(tester_id, build_id)
-                    if build_id in self.beta_tester_build_ids(tester_id):
-                        assigned_required_testers.append(normalized_email)
-                        continue
-
-                missing_build_access.append(normalized_email)
+                if not bool(attrs.get("allAppsVisible")) and app_id not in self.user_visible_app_ids(user["id"]):
+                    missing_app_access.append(normalized_email)
 
             if missing:
                 raise RuntimeError(
-                    "Required internal TestFlight testers missing from App Store Connect beta testers: "
+                    "Required internal TestFlight testers missing from App Store Connect users: "
                     + ", ".join(missing)
                 )
-            if missing_build_access:
+            if ineligible:
                 raise RuntimeError(
-                    "Required internal TestFlight testers are not assigned to build "
-                    f"{version} ({build_number}): " + ", ".join(missing_build_access)
+                    "Required internal TestFlight testers do not have an internal testing role: "
+                    + "; ".join(ineligible)
+                )
+            if missing_app_access:
+                raise RuntimeError(
+                    "Required internal TestFlight testers do not have access to app "
+                    f"{self.bundle_id}: " + ", ".join(missing_app_access)
                 )
 
         if missing_testers:
