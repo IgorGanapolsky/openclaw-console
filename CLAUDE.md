@@ -59,6 +59,7 @@ cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
 - **Branch**: `develop` is integration. Conventional commits.
 - **Paths**: Always relative, never absolute. No usernames in paths.
 - **No social app dependencies**: Zero Telegram/WhatsApp/Slack/Discord integration. Ever.
+- **Portable agent settings**: Read `.agents/settings.json` before non-trivial work. GitHub issues and PRs are the source of truth for agent tasks, verification evidence, and follow-up.
 
 ## Android Agent Workflow
 

@@ -24,6 +24,7 @@ branches:
         # Production mirror - only accepts trusted Dependabot, develop, release/*, or hotfix/* merges
         contexts:
           - "Skills Tests"
+          - "Agent Workflow Guardrails"
           - "Flaky Test Guardrails"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
@@ -54,6 +55,7 @@ branches:
         # Integration branch - all feature work merges here first
         contexts:
           - "Skills Tests"
+          - "Agent Workflow Guardrails"
           - "Flaky Test Guardrails"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"

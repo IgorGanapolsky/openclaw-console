@@ -6,6 +6,7 @@ main:
     strict: true
     contexts:
       - "Skills Tests"
+      - "Agent Workflow Guardrails"
       - "Flaky Test Guardrails"
       - "Architecture Lint (Kotlin)"
       - "Architecture Lint (Swift)"
@@ -35,6 +36,7 @@ develop:
     strict: true
     contexts:
       - "Skills Tests"
+      - "Agent Workflow Guardrails"
       - "Flaky Test Guardrails"
       - "Architecture Lint (Kotlin)"
       - "Architecture Lint (Swift)"

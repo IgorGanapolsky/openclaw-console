@@ -75,6 +75,15 @@ jobs:
       - name: Validate flaky test quarantine manifest
         run: python3 scripts/check_flaky_quarantine.py
 
+  agent-workflow-guardrails:
+    name: Agent Workflow Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate portable agent workflow settings
+        run: python3 scripts/check_agent_workflow_settings.py
+
   icon-parity:
     name: App Icon Parity
     runs-on: ubuntu-latest
