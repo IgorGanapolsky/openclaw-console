@@ -193,7 +193,7 @@ jobs:
         working-directory: ios/OpenClawConsole
 
       - name: Upload archived IPA to TestFlight
-        timeout-minutes: 15
+        timeout-minutes: 45
         env:
           CI: "true"
           FASTLANE_SKIP_UPDATE_CHECK: "true"
@@ -209,7 +209,7 @@ jobs:
           TESTFLIGHT_GROUPS: ${{ vars.TESTFLIGHT_INTERNAL_GROUPS || vars.TESTFLIGHT_GROUPS || secrets.TESTFLIGHT_GROUPS || 'App Store Connect Users' }}
           TESTFLIGHT_DISTRIBUTE_EXTERNAL: ${{ vars.TESTFLIGHT_DISTRIBUTE_EXTERNAL || 'false' }}
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: ${{ vars.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS || 'false' }}
-          TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "true"
+          TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "false"
           TESTFLIGHT_UPLOAD_ONLY: "true"
         run: |
           set -Eeuo pipefail
