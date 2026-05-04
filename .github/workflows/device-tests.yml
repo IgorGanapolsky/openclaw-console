@@ -83,13 +83,28 @@ jobs:
 
       - name: Run Maestro tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          CI_RETRY_ATTEMPTS: "2"
+          CI_RETRY_DELAY_SECONDS: "15"
+          CI_RETRY_LOG_DIR: ${{ runner.temp }}/openclaw-ci-retry
         with:
           api-level: 30
           arch: x86_64
           target: google_apis
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
-          script: sh scripts/device-tests/ci-maestro.sh
+          script: scripts/ci/run-with-retry.sh --label android-maestro -- sh scripts/device-tests/ci-maestro.sh
+
+      - name: Upload Android device diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-device-diagnostics
+          path: |
+            ${{ runner.temp }}/openclaw-ci-retry/
+            android/app/build/reports/
+            android/app/build/outputs/apk/debug/
+          if-no-files-found: ignore
 
   ios-device-tests:
     name: iOS Simulator Tests
@@ -157,11 +172,15 @@ jobs:
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
       - name: Run Maestro tests (if available)
+        env:
+          CI_RETRY_ATTEMPTS: "2"
+          CI_RETRY_DELAY_SECONDS: "15"
+          CI_RETRY_LOG_DIR: ${{ runner.temp }}/openclaw-ci-retry
         run: |
           if [ -d ".maestro" ] && [ -f ".maestro/smoke-test-ios.yaml" ]; then
             echo "Running iOS Maestro tests..."
             set +e
-            maestro test .maestro/smoke-test-ios.yaml 2>&1 | tee /tmp/maestro-ios.log
+            scripts/ci/run-with-retry.sh --label ios-maestro -- maestro test .maestro/smoke-test-ios.yaml 2>&1 | tee /tmp/maestro-ios.log
             maestro_exit=${PIPESTATUS[0]}
             set -e
 
@@ -175,3 +194,15 @@ jobs:
           else
             echo "No iOS Maestro tests found - skipping E2E tests"
           fi
+
+      - name: Upload iOS device diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-device-diagnostics
+          path: |
+            /tmp/xcode-test.log
+            /tmp/maestro-ios.log
+            ${{ runner.temp }}/openclaw-ci-retry/
+            ios/OpenClawConsole/.build/DerivedData/Logs/Test/
+          if-no-files-found: ignore
