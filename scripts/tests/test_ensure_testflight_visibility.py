@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from scripts.ensure_testflight_visibility import TestFlightVisibility, is_internal_pseudo_group
+from scripts.ensure_testflight_visibility import (
+    TestFlightVisibility,
+    is_internal_pseudo_group,
+    summarize_asc_error,
+)
 
 
 class FakeClient:
@@ -26,6 +30,7 @@ class FakeClient:
         self.visible_app_ids = visible_app_ids if visible_app_ids is not None else {"app-1"}
         self.group_requests = 0
         self.assigned_builds: list[tuple[str, str]] = []
+        self.user_query_params: dict[str, str] | None = None
 
     def request(self, method, path, *, params=None, payload=None):
         if path == "/apps":
@@ -49,12 +54,13 @@ class FakeClient:
                 self.tester_has_build = True
                 return {}
         if path == "/users":
+            self.user_query_params = params
             return {
                 "data": [
                     {
                         "id": "user-1",
                         "attributes": {
-                            "email": "iganapolsky@gmail.com",
+                            "username": "iganapolsky@gmail.com",
                             "roles": self.user_roles,
                             "allAppsVisible": self.all_apps_visible,
                         },
@@ -95,6 +101,8 @@ class TestInternalPseudoGroups(unittest.TestCase):
         self.assertEqual(result["required_testers_checked"], 1)
         self.assertEqual(result["required_testers_assigned"], 0)
         self.assertEqual(client.group_requests, 0)
+        self.assertEqual(client.user_query_params["filter[username]"], "iganapolsky@gmail.com")
+        self.assertEqual(client.user_query_params["fields[users]"], "username,roles,allAppsVisible")
 
     def test_pseudo_group_fails_when_required_tester_is_missing(self) -> None:
         client = FakeClient(user_exists=False)
@@ -134,6 +142,24 @@ class TestInternalPseudoGroups(unittest.TestCase):
         self.assertEqual(result["status"], "VISIBLE")
         self.assertEqual(result["required_testers_assigned"], 0)
         self.assertEqual(client.assigned_builds, [])
+
+    def test_summarizes_app_store_connect_error_body(self) -> None:
+        body = """
+        {
+          "errors": [
+            {
+              "status": "400",
+              "code": "PARAMETER_ERROR.INVALID",
+              "title": "A parameter has an invalid value",
+              "detail": "filter[email] is not a valid filter"
+            }
+          ]
+        }
+        """
+        summary = summarize_asc_error(body)
+        self.assertIn("400", summary)
+        self.assertIn("PARAMETER_ERROR.INVALID", summary)
+        self.assertIn("filter[email] is not a valid filter", summary)
 
 
 if __name__ == "__main__":
