@@ -252,7 +252,8 @@ async function bestEffortPostHogIdentify(
     await identifyUserInPostHog(userId, properties);
   } catch (error) {
     console.warn(
-      `[Analytics] PostHog identify skipped for user ${userId}:`,
+      '[Analytics] PostHog identify skipped for user:',
+      userId,
       error instanceof Error ? error.message : 'unknown error'
     );
   }
