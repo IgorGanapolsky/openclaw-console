@@ -93,11 +93,25 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 
 ## Session Directive: PR Management & System Hygiene
 
+### Session Start Protocol
+1. Read `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md`.
+2. Query local RAG/memory for relevant lessons before planning.
+3. Review open PRs, branches, worktrees, and CI status.
+4. Exclude secrets, PATs, API keys, and passwords from all tracked directive files.
+
 1. Inspect all open PRs and report merge readiness with evidence.
 2. Identify orphan branches and classify each one as active, merge candidate, stale, or delete.
 3. Merge only PRs that are verified green and review-ready.
-4. Clean up stale branches, redundant worktrees, and obvious repo hygiene issues.
+4. Clean up stale branches, redundant worktrees, old logs, and obvious repo hygiene issues with counts and read-back evidence.
 5. Verify CI on `develop` and `main` before claiming readiness.
+6. Run the relevant operational dry run before claiming next-session readiness.
+7. Log useful lessons and any mistakes to local RAG/memory at session end.
+
+## Completion Confirmation
+
+Only after all PR, branch, worktree, CI, dry-run, and RAG logging checks are verified, state:
+
+> **Done merging PRs. CI passing. System hygiene complete. Ready for next session.**
 
 ## Commands
 

@@ -108,12 +108,19 @@ Every release MUST include complete store listing metadata before publishing:
 
 ## Session Directive: PR Management & System Hygiene
 
+### Session Start Protocol
+1. Read `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` before acting.
+2. Query local RAG/memory for relevant lessons before planning.
+3. Review open PRs, branches, worktrees, and CI status before merging or deleting anything.
+4. Never persist user-provided secrets, PATs, API keys, or passwords in tracked files.
+
 1. **Inspect All Open PRs**: List, review for readiness, report blockers.
 2. **Identify Orphan Branches**: Evaluate for merge, stale, or deletion.
 3. **Merge Ready PRs**: Merge passing PRs and provide evidence (SHA, CI status).
-4. **Clean Up**: Delete stale branches.
+4. **Clean Up**: Delete stale branches, redundant worktrees, old logs, and obvious hygiene issues only with evidence.
 5. **Verify CI**: Ensure CI passes on `main`/`develop` after all merges.
-6. **Confirm Completion**: Only after exhaustive verification.
+6. **Dry Run**: Run the relevant operational dry run before claiming readiness for the next session.
+7. **Confirm Completion**: Only after exhaustive verification.
 
 ## Operational Directives
 
@@ -122,3 +129,5 @@ Every release MUST include complete store listing metadata before publishing:
 - **Honesty**: Report failures immediately. Lying is not allowed.
 - **Say "I believe this is done, verifying now..."** instead of "Done!"
 - **No Repo Secrets in Docs**: Never write tokens, passwords, or private keys into tracked documentation.
+- **Continuous Learning**: Query local RAG/memory at session start and log useful lessons or mistakes at session end.
+- **Final Completion Phrase**: Only after verified merge, hygiene, CI, dry run, and lesson logging, state: "Done merging PRs. CI passing. System hygiene complete. Ready for next session."
