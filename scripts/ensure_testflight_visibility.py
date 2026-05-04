@@ -175,17 +175,33 @@ class TestFlightVisibility:
             if tester.get("attributes", {}).get("email")
         }
 
-    def beta_tester_exists(self, email: str) -> bool:
+    def beta_tester(self, email: str) -> dict[str, Any] | None:
         payload = self.client.request(
             "GET",
             "/betaTesters",
             params={
                 "filter[email]": email,
-                "fields[betaTesters]": "email",
+                "fields[betaTesters]": "email,firstName,lastName,inviteType",
                 "limit": "1",
             },
         )
-        return bool(payload.get("data", []))
+        testers = payload.get("data", [])
+        return testers[0] if testers else None
+
+    def beta_tester_build_ids(self, tester_id: str) -> set[str]:
+        builds = self.client.get_all(f"/betaTesters/{tester_id}/relationships/builds", params={"limit": "200"})
+        return {build["id"] for build in builds}
+
+    def attach_beta_tester_build(self, tester_id: str, build_id: str) -> None:
+        try:
+            self.client.request(
+                "POST",
+                f"/betaTesters/{tester_id}/relationships/builds",
+                payload={"data": [{"type": "builds", "id": build_id}]},
+            )
+        except Exception as exc:
+            if "409" not in str(exc):
+                raise
 
     def attach_external_group_build(self, group_id: str, build_id: str) -> None:
         try:
@@ -198,7 +214,14 @@ class TestFlightVisibility:
             if "409" not in str(exc):
                 raise
 
-    def ensure(self, version: str, groups: list[str], required_testers: list[str]) -> dict[str, Any]:
+    def ensure(
+        self,
+        version: str,
+        groups: list[str],
+        required_testers: list[str],
+        *,
+        assign_required_testers: bool = False,
+    ) -> dict[str, Any]:
         app_id = self.app_id()
         build = self.latest_build(app_id, version)
         build_id = build["id"]
@@ -215,6 +238,7 @@ class TestFlightVisibility:
         verified_groups: list[str] = []
         missing_groups: list[str] = []
         missing_testers: list[str] = []
+        assigned_required_testers: list[str] = []
 
         for name in groups:
             if is_internal_pseudo_group(name):
@@ -244,11 +268,36 @@ class TestFlightVisibility:
             raise RuntimeError("Missing TestFlight groups: " + ", ".join(missing_groups))
 
         if groups and all(is_internal_pseudo_group(name) for name in groups):
-            missing = [email for email in required_testers if not self.beta_tester_exists(email.lower())]
+            missing: list[str] = []
+            missing_build_access: list[str] = []
+            for email in required_testers:
+                normalized_email = email.lower()
+                tester = self.beta_tester(normalized_email)
+                if not tester:
+                    missing.append(normalized_email)
+                    continue
+
+                tester_id = tester["id"]
+                if build_id in self.beta_tester_build_ids(tester_id):
+                    continue
+
+                if assign_required_testers:
+                    self.attach_beta_tester_build(tester_id, build_id)
+                    if build_id in self.beta_tester_build_ids(tester_id):
+                        assigned_required_testers.append(normalized_email)
+                        continue
+
+                missing_build_access.append(normalized_email)
+
             if missing:
                 raise RuntimeError(
                     "Required internal TestFlight testers missing from App Store Connect beta testers: "
                     + ", ".join(missing)
+                )
+            if missing_build_access:
+                raise RuntimeError(
+                    "Required internal TestFlight testers are not assigned to build "
+                    f"{version} ({build_number}): " + ", ".join(missing_build_access)
                 )
 
         if missing_testers:
@@ -261,6 +310,7 @@ class TestFlightVisibility:
             "processing_state": processing_state,
             "groups": verified_groups,
             "required_testers_checked": len(required_testers),
+            "required_testers_assigned": len(assigned_required_testers),
         }
 
 
@@ -270,6 +320,7 @@ def main() -> int:
     parser.add_argument("--bundle-id", default=IOS_BUNDLE_ID)
     parser.add_argument("--groups", default="")
     parser.add_argument("--required-testers", default="")
+    parser.add_argument("--assign-required-testers", action="store_true")
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--poll-interval", type=int, default=60)
@@ -284,6 +335,7 @@ def main() -> int:
                 args.version,
                 csv(args.groups),
                 [email.lower() for email in csv(args.required_testers)],
+                assign_required_testers=args.assign_required_testers,
             )
             print(json.dumps(result, sort_keys=True))
             return 0
