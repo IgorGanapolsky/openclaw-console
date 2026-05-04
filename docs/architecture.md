@@ -13,6 +13,7 @@ The OpenClaw Work Console is a mobile-first monitoring and control system for Op
 - **Server-side intelligence, client-side display.** The mobile apps never call GitHub, trading APIs, or any external service directly. Everything goes through OpenClaw skills.
 - **Task-centric, not chat-centric.** The primary unit of work is a Task with a timeline of Steps, not a stream of chat messages.
 - **Secure by default.** Tokens in platform-secure storage, biometric-gated approvals, TLS enforced, VPN-friendly.
+- **Supply-chain aware.** Dependency installs, remote scripts, container image execution, credential commands, secret file access, and agent tooling changes are explicit approval events with credential-rotation context.
 - **Single-purpose.** No social features, no feeds, no media sharing. This is a work tool.
 
 ## System Diagram
@@ -172,3 +173,6 @@ These assumptions are documented here so they can be adjusted as OpenClaw's actu
 - Approval requests expire (configurable, default 5 minutes)
 - Full command/endpoint displayed to user before approval
 - All decisions are audit-logged server-side
+- Supply-chain guardrails classify risky commands and repo changes before policy auto-approval is evaluated
+- Sanitized secret inventory reports key names, file paths, GitHub Actions secret references, and package manifests without exposing values
+- Supply-chain incidents include containment, credential rotation, recovery, and evidence requirements
