@@ -24,6 +24,7 @@ branches:
         # Production mirror - only accepts trusted Dependabot, develop, release/*, or hotfix/* merges
         contexts:
           - "Skills Tests"
+          - "Flaky Test Guardrails"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
           - "Android Build Check"
@@ -53,6 +54,7 @@ branches:
         # Integration branch - all feature work merges here first
         contexts:
           - "Skills Tests"
+          - "Flaky Test Guardrails"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
       enforce_admins: true

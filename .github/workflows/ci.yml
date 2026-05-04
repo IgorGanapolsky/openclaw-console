@@ -66,6 +66,15 @@ jobs:
       - name: Verify Android agent workflow guardrails
         run: python3 scripts/check_android_agent_guardrails.py
 
+  flaky-test-guardrails:
+    name: Flaky Test Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate flaky test quarantine manifest
+        run: python3 scripts/check_flaky_quarantine.py
+
   icon-parity:
     name: App Icon Parity
     runs-on: ubuntu-latest
@@ -211,6 +220,16 @@ jobs:
       - name: Build and validate Android app
         working-directory: android
         run: ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug --no-daemon
+
+      - name: Upload Android diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+          if-no-files-found: ignore
 
   ios-build:
     name: iOS Build Check

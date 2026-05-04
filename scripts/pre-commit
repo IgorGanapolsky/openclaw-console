@@ -31,6 +31,7 @@ STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js)
 STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACM || true)
 STAGED_ANDROID_GUARDRAILS=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^\.agents/skills/android-agent-workflow/SKILL\.md$|^\.github/instructions/android\.instructions\.md$|^AGENTS\.md$|^CLAUDE\.md$|^GEMINI\.md$|^\.github/workflows/(ci|pr-state-machine)\.yml$|^scripts/check_android_(agent_guardrails|cli)\.py$|^scripts/pre-commit$|^scripts/pre-push$)' || true)
 STAGED_RELEASE_CONTRACT=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^|/)(AppIcon\.appiconset/|mipmap-(anydpi-v26|mdpi|hdpi|xhdpi|xxhdpi|xxxhdpi)/|values/ic_launcher_background\.xml$|android/fastlane/metadata/|ios/OpenClawConsole/fastlane/metadata/|PRIVACY_POLICY\.md$|scripts/sync_app_icons\.py$|scripts/validate_release_contract\.py$|scripts/preflight-release\.sh$|\.github/workflows/(ci|store-listing-parity|native-release|internal-distribution)\.yml$)' || true)
+STAGED_FLAKY_GUARDRAILS=$(printf '%s\n' "$STAGED_ALL" | grep -E '(^\.github/flaky-tests\.json$|^scripts/check_flaky_quarantine\.py$|^scripts/tests/test_check_flaky_quarantine\.py$|^scripts/ci/run-with-retry\.sh$|^docs/ci-flake-management\.md$|^\.github/workflows/(ci|device-tests)\.yml$|^scripts/pre-commit$|^scripts/pre-push$)' || true)
 
 if [ -n "$STAGED_ALL" ] && echo "$STAGED_ALL" | grep -qE '^(android/|ios/OpenClawConsole/OpenClawConsole/Assets\.xcassets/AppIcon\.appiconset/|scripts/check-brand-parity\.sh|scripts/sync-android-launcher-icon\.sh|scripts/android-launcher-icon\.manifest)'; then
   if ! "$(cd "$(dirname "$0")" && pwd)/check-brand-parity.sh"; then
@@ -57,6 +58,12 @@ if [ -n "$STAGED_RELEASE_CONTRACT" ]; then
     err "python3 is required to validate the release contract"
   elif ! python3 scripts/validate_release_contract.py --platform both; then
     err "Release contract validation failed"
+  fi
+fi
+
+if [ -n "$STAGED_FLAKY_GUARDRAILS" ]; then
+  if ! python3 scripts/check_flaky_quarantine.py; then
+    err "Flaky test quarantine validation failed"
   fi
 fi
 
