@@ -16,10 +16,19 @@ from urllib.request import Request, urlopen
 
 APP_STORE_CONNECT_API = "https://api.appstoreconnect.apple.com/v1"
 IOS_BUNDLE_ID = "com.openclaw.console"
+INTERNAL_PSEUDO_GROUPS = {
+    "app store connect users",
+    "appstore connect users",
+    "asc users",
+}
 
 
 def csv(raw: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+def is_internal_pseudo_group(name: str) -> bool:
+    return " ".join(name.strip().lower().split()) in INTERNAL_PSEUDO_GROUPS
 
 
 def private_key_from_env() -> str:
@@ -166,6 +175,18 @@ class TestFlightVisibility:
             if tester.get("attributes", {}).get("email")
         }
 
+    def beta_tester_exists(self, email: str) -> bool:
+        payload = self.client.request(
+            "GET",
+            "/betaTesters",
+            params={
+                "filter[email]": email,
+                "fields[betaTesters]": "email",
+                "limit": "1",
+            },
+        )
+        return bool(payload.get("data", []))
+
     def attach_external_group_build(self, group_id: str, build_id: str) -> None:
         try:
             self.client.request(
@@ -189,12 +210,17 @@ class TestFlightVisibility:
                 f"Latest TestFlight build {version} ({build_number}) is not VALID; processingState={processing_state}"
             )
 
-        app_groups = self.groups(app_id)
+        real_groups = [name for name in groups if not is_internal_pseudo_group(name)]
+        app_groups = self.groups(app_id) if real_groups else {}
         verified_groups: list[str] = []
         missing_groups: list[str] = []
         missing_testers: list[str] = []
 
         for name in groups:
+            if is_internal_pseudo_group(name):
+                verified_groups.append(name)
+                continue
+
             group = app_groups.get(name)
             if not group:
                 missing_groups.append(name)
@@ -216,6 +242,15 @@ class TestFlightVisibility:
 
         if missing_groups:
             raise RuntimeError("Missing TestFlight groups: " + ", ".join(missing_groups))
+
+        if groups and all(is_internal_pseudo_group(name) for name in groups):
+            missing = [email for email in required_testers if not self.beta_tester_exists(email.lower())]
+            if missing:
+                raise RuntimeError(
+                    "Required internal TestFlight testers missing from App Store Connect beta testers: "
+                    + ", ".join(missing)
+                )
+
         if missing_testers:
             raise RuntimeError("Required TestFlight testers missing from group membership: " + "; ".join(missing_testers))
 
