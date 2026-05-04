@@ -68,6 +68,13 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 
 ## Worktree & Branch Protocol
 
+## Open Agent Workflow
+
+- `.agents/settings.json` is the portable agent workflow settings file. Read it before planning non-trivial work.
+- GitHub issues and PRs are the source of truth for agent-directed implementation, verification, and follow-up.
+- Use `.github/ISSUE_TEMPLATE/agent_task.yml` for non-trivial agent tasks so scope, constraints, and required evidence are explicit.
+- Multiple harnesses are allowed (Codex, Claude Code, Gemini CLI, Android CLI, GitHub CLI), but all must follow the same worktree, verification, and evidence rules.
+
 ### Mandatory for ALL Agents
 1. **Use `isolation: "worktree"` for any code modification.** No exceptions.
 2. **Never commit directly to `develop`, `main`, or the user's active branch.**
