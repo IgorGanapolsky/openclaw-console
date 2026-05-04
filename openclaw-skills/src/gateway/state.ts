@@ -26,6 +26,7 @@ import type {
   ResourceLink,
   BridgeSession,
   RecurringTask,
+  SkillWorkflowSystem,
   AgentGovernanceState,
   AgentPlanStep,
   AgentPlanStepStatus,
@@ -52,6 +53,7 @@ export interface StateEvents {
   bridge_session_new: [session: BridgeSession];
   bridge_session_update: [session: BridgeSession];
   recurring_task_updated: [task: RecurringTask];
+  skill_workflow_updated: [workflow: SkillWorkflowSystem];
   governance_event: [event: GovernanceEvent];
 }
 
@@ -99,6 +101,7 @@ export class StateManager implements IStateManager {
   private approvals: Map<string, PendingApproval> = new Map();
   private bridgeSessions: Map<string, BridgeSession> = new Map();
   private recurringTasks: Map<string, RecurringTask> = new Map();
+  private skillWorkflowSystems: Map<string, SkillWorkflowSystem> = new Map();
   private governanceStates: Map<string, AgentGovernanceState> = new Map();
   private governanceEvents: GovernanceEvent[] = [];
   private readonly governanceEventLogPath: string | null;
@@ -464,6 +467,40 @@ export class StateManager implements IStateManager {
 
   public listRecurringTasks(): RecurringTask[] {
     return Array.from(this.recurringTasks.values());
+  }
+
+  // ── Skill Workflow Systems ───────────────────────────────────────────────
+
+  public async upsertSkillWorkflowSystem(workflow: SkillWorkflowSystem): Promise<SkillWorkflowSystem> {
+    this.skillWorkflowSystems.set(workflow.id, workflow);
+    this.events.emit('skill_workflow_updated', workflow);
+    await this.recordGovernanceEvent({
+      agent_id: workflow.agent_id,
+      type: 'skill_workflow_registered',
+      title: workflow.name,
+      summary: workflow.validation.valid
+        ? `Registered skill workflow with ${workflow.steps.length} step(s)`
+        : `Registered invalid skill workflow with ${workflow.validation.errors.length} validation error(s)`,
+      actor: 'gateway',
+      risk_level: workflow.validation.valid ? 'high' : 'critical',
+      metadata: {
+        workflow_id: workflow.id,
+        status: workflow.status,
+        validation: workflow.validation,
+        checkpoints: workflow.checkpoints.length,
+        artifacts: workflow.artifacts.length,
+      },
+    });
+    return workflow;
+  }
+
+  public listSkillWorkflowSystems(agentId?: string): SkillWorkflowSystem[] {
+    const workflows = Array.from(this.skillWorkflowSystems.values());
+    return agentId ? workflows.filter((workflow) => workflow.agent_id === agentId) : workflows;
+  }
+
+  public getSkillWorkflowSystem(id: string): SkillWorkflowSystem | undefined {
+    return this.skillWorkflowSystems.get(id);
   }
 
   // ── Governance ───────────────────────────────────────────────────────────

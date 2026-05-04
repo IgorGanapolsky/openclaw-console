@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { normalizeProjectBridgeSession } from '../src/gateway/project-session.js';
+import { applyBridgeSessionControl, normalizeProjectBridgeSession } from '../src/gateway/project-session.js';
 import type { BridgeSession } from '../src/types/protocol.js';
 
 function bridge(overrides: Partial<BridgeSession> = {}): BridgeSession {
@@ -36,5 +36,35 @@ describe('project-scoped bridge sessions', () => {
 
     expect(repoA.id).not.toBe(repoB.id);
     expect(repoB.metadata['project_name']).toBe('repo-b');
+  });
+
+  test('tracks background agent lifecycle controls', () => {
+    const session = normalizeProjectBridgeSession(bridge({
+      type: 'background_agent',
+      execution: {
+        provider: 'vercel_open_agents',
+        workflow_id: 'wf_123',
+        sandbox_id: 'sbx_123',
+        sandbox_state: 'running',
+        repository: 'IgorGanapolsky/openclaw-console',
+        branch: 'feat/background-agent',
+      },
+    }));
+
+    const paused = applyBridgeSessionControl(session, 'pause', { actor: 'human' });
+    expect(paused.lifecycle).toBe('paused');
+    expect(paused.execution?.sandbox_state).toBe('paused');
+    expect(paused.controls?.can_resume).toBe(true);
+
+    const shared = applyBridgeSessionControl(paused, 'share_readonly', {
+      actor: 'human',
+      readOnlyShareUrl: 'https://example.com/share/session',
+    });
+    expect(shared.execution?.read_only_share_url).toBe('https://example.com/share/session');
+
+    const cancelled = applyBridgeSessionControl(shared, 'cancel', { actor: 'human' });
+    expect(cancelled.closed).toBe(true);
+    expect(cancelled.lifecycle).toBe('cancelled');
+    expect(cancelled.controls?.can_cancel).toBe(false);
   });
 });
