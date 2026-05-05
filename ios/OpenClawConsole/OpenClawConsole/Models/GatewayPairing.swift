@@ -39,6 +39,10 @@ struct GatewayPairing: Equatable {
             throw ParseError.unsupportedFormat
         }
 
+        if url.scheme == "http" || url.scheme == "https" {
+            return try parseGatewayURL(components)
+        }
+
         let isPairingLink = url.scheme == "openclaw" && url.host == "pair"
         guard isPairingLink else { throw ParseError.unsupportedFormat }
 
@@ -46,7 +50,7 @@ struct GatewayPairing: Equatable {
         return try build(
             name: items["name"],
             baseURL: items["base_url"] ?? items["baseUrl"] ?? items["baseURL"],
-            token: items["token"]
+            token: items["token"] ?? items["tkn"]
         )
     }
 
@@ -57,6 +61,23 @@ struct GatewayPairing: Equatable {
             throw ParseError.unsupportedFormat
         }
         return try build(name: payload.name, baseURL: payload.baseURL, token: payload.token)
+    }
+
+    private static func parseGatewayURL(_ components: URLComponents) throws -> GatewayPairing {
+        var baseComponents = components
+        baseComponents.query = nil
+        baseComponents.fragment = nil
+        if baseComponents.path.hasSuffix("/api/health") {
+            baseComponents.path.removeLast("/api/health".count)
+        }
+
+        let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        let host = components.host ?? ""
+        return try build(
+            name: host.isEmpty ? nil : "OpenClaw \(host)",
+            baseURL: baseComponents.url?.absoluteString,
+            token: items["token"] ?? items["tkn"]
+        )
     }
 
     private static func build(name: String?, baseURL: String?, token: String?) throws -> GatewayPairing {

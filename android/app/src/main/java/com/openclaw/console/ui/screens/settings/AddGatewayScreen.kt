@@ -28,8 +28,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun AddGatewayScreen(
     appViewModel: AppViewModel,
     onBack: () -> Unit,
+    onScanQr: () -> Unit,
     pendingPairingLink: String? = null,
     onPairingLinkConsumed: () -> Unit = {},
+    scannedPairingCode: String? = null,
+    onScannedPairingCodeConsumed: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
@@ -46,6 +49,12 @@ fun AddGatewayScreen(
         val link = pendingPairingLink?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
         viewModel.importPairing(link, onSuccess = onBack)
         onPairingLinkConsumed()
+    }
+
+    LaunchedEffect(scannedPairingCode) {
+        val code = scannedPairingCode?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        viewModel.applyScannedPairingCode(code)
+        onScannedPairingCodeConsumed()
     }
 
     Scaffold(
@@ -122,6 +131,15 @@ fun AddGatewayScreen(
                         Icon(Icons.Default.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Use Pairing Link")
+                    }
+
+                    OutlinedButton(
+                        onClick = onScanQr,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scan QR Code")
                     }
                 }
             }

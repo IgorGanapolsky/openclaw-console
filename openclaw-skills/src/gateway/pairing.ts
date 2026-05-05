@@ -104,6 +104,15 @@ export async function renderPairingPage(payload: GatewayPairingPayload): Promise
 </html>`;
 }
 
+export async function renderTerminalPairingQr(payload: GatewayPairingPayload): Promise<string> {
+  return qrToString(pairingUri(payload), {
+    type: 'terminal',
+    small: true,
+    margin: 1,
+    errorCorrectionLevel: 'M',
+  });
+}
+
 export function rejectNonLocalPairing(req: Request, res: Response): boolean {
   if (isLocalPairingRequest(req)) {
     return false;
