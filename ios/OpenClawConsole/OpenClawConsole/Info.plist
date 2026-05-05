@@ -26,6 +26,19 @@
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 
+	<!-- Gateway pairing deep links -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.openclaw.console.pairing</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>openclaw</string>
+			</array>
+		</dict>
+	</array>
+
 	<!-- Minimum OS -->
 	<key>MinimumOSVersion</key>
 	<string>17.0</string>
