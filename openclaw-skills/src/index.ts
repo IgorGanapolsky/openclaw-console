@@ -18,8 +18,10 @@ import { GitClawAgentSkill } from './skills/gitclaw-agent.js';
 import { AGENT_IDS } from './config/agents.js';
 
 async function main(): Promise<void> {
+  const pairingMode = process.env['OPENCLAW_PAIRING_MODE'] === 'true';
+
   console.info('='.repeat(60));
-  console.info('  OpenClaw Work Console Gateway');
+  console.info(pairingMode ? '  OpenClaw Gateway Pairing' : '  OpenClaw Work Console Gateway');
   console.info(`  Version: ${DEFAULT_CONFIG.version}`);
   console.info('='.repeat(60));
 
@@ -31,7 +33,9 @@ async function main(): Promise<void> {
 
   // ── 2. Register configured agents ───────────────────────────────────────
 
-  if (DEFAULT_CONFIG.loadSeedData) {
+  if (pairingMode) {
+    console.info('[startup] Pairing-only mode: demo data and autonomous skills disabled.');
+  } else if (DEFAULT_CONFIG.loadSeedData) {
     console.info('[startup] Loading seed data...');
     state.bulkLoad({
       agents: SEED_AGENTS,
@@ -79,7 +83,17 @@ async function main(): Promise<void> {
 
   // Print dev token for easy curl testing
   const devToken = gateway.tokenManager.getDefaultDevToken();
-  if (devToken) {
+  if (pairingMode) {
+    const publicUrl = process.env['OPENCLAW_PUBLIC_URL']?.trim() || `http://localhost:${DEFAULT_CONFIG.port}`;
+    const pairPageUrl = `http://127.0.0.1:${DEFAULT_CONFIG.port}/pair`;
+    console.info('');
+    console.info('Pair your phone:');
+    console.info('  1. In OpenClaw Console, tap Add Gateway');
+    console.info('  2. Tap Scan QR Code');
+    console.info(`  3. Scan the QR page opened on this Mac: ${pairPageUrl}`);
+    console.info(`  Gateway URL encoded for the phone: ${publicUrl}`);
+    console.info('');
+  } else if (devToken) {
     console.info('');
     console.info('Quick-start:');
     console.info(`  curl -H "Authorization: Bearer ${devToken}" http://localhost:${DEFAULT_CONFIG.port}/api/health`);
@@ -98,6 +112,9 @@ async function main(): Promise<void> {
   // ── 5. Register and start skills ────────────────────────────────────────
 
   const enabledSkills = new Set(DEFAULT_CONFIG.enabledSkills);
+  if (enabledSkills.size === 0) {
+    console.info('[startup] No autonomous skills enabled.');
+  }
 
   // --- CI Monitor ---
   if (enabledSkills.has('ci-monitor')) {
@@ -169,12 +186,14 @@ async function main(): Promise<void> {
   }
 
   // --- Daily Brief Agent ---
-  const dailyBrief = new DailyBriefSkill(state, {
-    agentId: AGENT_IDS.DEPLOY_MANAGER, // Reuse deploy manager as the executive assistant for now
-    agentName: 'Executive Assistant',
-    intervalMs: 86400000 // 24 hours
-  });
-  void dailyBrief.start();
+  if (!pairingMode && enabledSkills.has('daily-brief')) {
+    const dailyBrief = new DailyBriefSkill(state, {
+      agentId: AGENT_IDS.DEPLOY_MANAGER, // Reuse deploy manager as the executive assistant for now
+      agentName: 'Executive Assistant',
+      intervalMs: 86400000 // 24 hours
+    });
+    void dailyBrief.start();
+  }
 
   // --- Simulated Bridge Sessions (Demo) ---
   if (DEFAULT_CONFIG.simulateBridges) {
@@ -206,7 +225,7 @@ async function main(): Promise<void> {
     });
   }
 
-  console.info('[startup] All skills initialized. Gateway ready.');
+  console.info(pairingMode ? '[startup] Pairing gateway ready.' : '[startup] All skills initialized. Gateway ready.');
   console.info('');
 
   // ── 6. Graceful shutdown ─────────────────────────────────────────────────
