@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -111,6 +112,11 @@ fun SettingsScreen(
 
             item {
                 HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
+                UpgradeToProRow(onUpgradeClick = onUpgradeClick)
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "OpenClaw Console",
@@ -124,6 +130,47 @@ fun SettingsScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun UpgradeToProRow(onUpgradeClick: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onUpgradeClick),
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "OpenClaw Pro",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Unlock advanced analytics, integrations, webhooks, and unlimited agents.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
