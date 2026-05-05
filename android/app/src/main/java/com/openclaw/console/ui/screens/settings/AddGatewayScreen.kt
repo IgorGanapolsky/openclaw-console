@@ -105,6 +105,21 @@ fun AddGatewayScreen(
                         )
                     }
 
+                    Button(
+                        onClick = onScanQr,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scan QR Code")
+                    }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.18f)
+                    )
+
                     OutlinedTextField(
                         value = uiState.pairingCode,
                         onValueChange = viewModel::onPairingCodeChange,
@@ -123,7 +138,7 @@ fun AddGatewayScreen(
                         )
                     )
 
-                    Button(
+                    OutlinedButton(
                         onClick = viewModel::applyPairingCode,
                         enabled = uiState.pairingCode.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
@@ -131,15 +146,6 @@ fun AddGatewayScreen(
                         Icon(Icons.Default.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Use Pairing Link")
-                    }
-
-                    OutlinedButton(
-                        onClick = onScanQr,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Scan QR Code")
                     }
                 }
             }
