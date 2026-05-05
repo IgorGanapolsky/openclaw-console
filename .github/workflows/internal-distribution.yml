@@ -40,7 +40,7 @@ jobs:
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           ALLOWED_BRANCHES: "develop main"
           INPUT_REF: ${{ inputs.ref }}
-          DISTRIBUTION_PATH_REGEX: '^(android/|ios/|scripts/(preflight-release\.sh|sync_app_icons\.py|sync-android-launcher-icon\.sh|validate_release_contract\.py)|\.github/workflows/(internal-distribution|native-release|android|ios)\.yml$)'
+          DISTRIBUTION_PATH_REGEX: '^(android/|ios/)'
         run: |
           set -euo pipefail
 
