@@ -67,7 +67,7 @@ struct GatewayPairing: Equatable {
 
         guard !cleanedURL.isEmpty else { throw ParseError.missingField("base_url") }
         guard !cleanedToken.isEmpty else { throw ParseError.missingField("token") }
-        guard cleanedURL.hasPrefix("https://") || cleanedURL.hasPrefix("http://") else {
+        guard cleanedURL.hasPrefix("https://") || cleanedURL.hasPrefix("http://") else { // allow-http: local gateway pairing.
             throw ParseError.invalidURL
         }
 
