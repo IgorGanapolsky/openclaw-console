@@ -243,7 +243,7 @@ jobs:
   ios-build:
     name: iOS Build Check
     needs: [ios-changes]
-    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && 'macos-14' || 'ubuntu-latest' }}
+    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && (vars.IOS_CI_RUNS_ON || 'macos-26') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -252,8 +252,21 @@ jobs:
         run: echo "No iOS files changed; skipping macOS simulator build."
 
       - name: Select Xcode
-        if: needs.ios-changes.outputs.ios_changed == 'true'
+        if: needs.ios-changes.outputs.ios_changed == 'true' && runner.environment != 'self-hosted'
         run: sudo xcode-select -s /Applications/Xcode_15.2.app
+
+      - name: Resolve simulator destination
+        if: needs.ios-changes.outputs.ios_changed == 'true'
+        id: simulator
+        run: |
+          SIMULATOR_NAME=$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*/\1/p' | head -n 1)
+          if [ -n "$SIMULATOR_NAME" ]; then
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          else
+            DESTINATION="generic/platform=iOS Simulator"
+          fi
+          echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
+          echo "Using destination: $DESTINATION"
 
       - name: Resolve and build for simulator
         if: needs.ios-changes.outputs.ios_changed == 'true'
@@ -267,7 +280,7 @@ jobs:
           # Build with the same derivedDataPath and disable auto-resolution
           xcodebuild build \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -destination '${{ steps.simulator.outputs.destination }}' \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -disableAutomaticPackageResolution \
