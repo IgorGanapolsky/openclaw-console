@@ -62,5 +62,7 @@ export function registerRemoteApi(app: Express, state: StateManager): void {
     }
   });
 
-  console.info('[remote-api] Registered routes for isolated skills');
+  if (process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
+    console.info('[remote-api] Registered routes for isolated skills');
+  }
 }
