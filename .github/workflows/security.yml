@@ -12,8 +12,10 @@ on:
       - "openclaw-skills/package-lock.json"
       - ".claude/skills/teams-rag-connector/scripts/package.json"
       - ".claude/skills/teams-rag-connector/scripts/package-lock.json"
-      - "android/app/build.gradle.kts"
-      - "android/build.gradle.kts"
+      - "android/**"
+      - "ios/**"
+      - "Package.swift"
+      - "Package.resolved"
       - ".github/workflows/security.yml"
 
 permissions:
@@ -22,6 +24,83 @@ permissions:
   actions: read
 
 jobs:
+  security-scope:
+    name: Security Scope
+    runs-on: ubuntu-latest
+    outputs:
+      android_changed: ${{ steps.scope.outputs.android_changed }}
+      ios_changed: ${{ steps.scope.outputs.ios_changed }}
+      all_languages: ${{ steps.scope.outputs.all_languages }}
+      codeql_matrix: ${{ steps.scope.outputs.codeql_matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed security surfaces
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            {
+              echo "android_changed=true"
+              echo "ios_changed=true"
+              echo "all_languages=true"
+              echo 'codeql_matrix=[{"language":"javascript-typescript","os":"ubuntu-latest"},{"language":"java-kotlin","os":"ubuntu-latest"},{"language":"swift","os":"macos-26"}]'
+            } >> "$GITHUB_OUTPUT"
+            echo "security-scope: full scan for ${{ github.event_name }}"
+            exit 0
+          fi
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+            git diff --name-only "origin/${{ github.base_ref }}"...HEAD > changed-files.txt
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" > changed-files.txt
+          else
+            git diff --name-only HEAD~1 HEAD > changed-files.txt
+          fi
+
+          cat changed-files.txt
+
+          android_changed=false
+          ios_changed=false
+          all_languages=false
+
+          if grep -Eq '^android/' changed-files.txt; then
+            android_changed=true
+          fi
+
+          if grep -Eq '^(ios/|Package\.swift$|Package\.resolved$)' changed-files.txt; then
+            ios_changed=true
+          fi
+
+          if grep -Eq '^\.github/workflows/security\.yml$' changed-files.txt; then
+            all_languages=true
+            android_changed=true
+            ios_changed=true
+          fi
+
+          codeql_matrix='[{"language":"javascript-typescript","os":"ubuntu-latest"}'
+          if [[ "$android_changed" == "true" ]]; then
+            codeql_matrix="${codeql_matrix},{\"language\":\"java-kotlin\",\"os\":\"ubuntu-latest\"}"
+          fi
+          if [[ "$ios_changed" == "true" ]]; then
+            codeql_matrix="${codeql_matrix},{\"language\":\"swift\",\"os\":\"macos-26\"}"
+          fi
+          codeql_matrix="${codeql_matrix}]"
+
+          {
+            echo "android_changed=$android_changed"
+            echo "ios_changed=$ios_changed"
+            echo "all_languages=$all_languages"
+            echo "codeql_matrix=$codeql_matrix"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "security-scope: android_changed=$android_changed ios_changed=$ios_changed all_languages=$all_languages codeql_matrix=$codeql_matrix"
+
   dependency-scan:
     name: Dependency Audit
     runs-on: ubuntu-latest
@@ -49,12 +128,13 @@ jobs:
 
   codeql:
     name: CodeQL Analysis (${{ matrix.language }})
+    needs: security-scope
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"language":"javascript-typescript","os":"ubuntu-latest"}]' || '[{"language":"javascript-typescript","os":"ubuntu-latest"},{"language":"java-kotlin","os":"ubuntu-latest"},{"language":"swift","os":"macos-26"}]') }}
+        include: ${{ fromJSON(needs.security-scope.outputs.codeql_matrix) }}
     permissions:
       security-events: write
       actions: read
