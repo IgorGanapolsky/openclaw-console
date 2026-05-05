@@ -18,6 +18,17 @@ class GatewayPairingTest {
     }
 
     @Test
+    fun `parses gateway health pairing link printed by remote control`() {
+        val raw = "http://192.168.1.5:18789/api/health?tkn=abc123"
+
+        val pairing = GatewayPairing.parse(raw).getOrThrow()
+
+        assertEquals("OpenClaw 192.168.1.5", pairing.name)
+        assertEquals("http://192.168.1.5:18789", pairing.baseUrl)
+        assertEquals("abc123", pairing.token)
+    }
+
+    @Test
     fun `parses pairing json`() {
         val raw = """
             {

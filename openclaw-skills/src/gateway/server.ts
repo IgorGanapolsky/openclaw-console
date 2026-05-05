@@ -51,6 +51,7 @@ import {
   pairingUri,
   rejectNonLocalPairing,
   renderPairingPage,
+  renderTerminalPairingQr,
 } from './pairing.js';
 import { normalizeSkillWorkflowSystem } from './skill-workflow.js';
 import { buildOperatorSummary } from './operator-summary.js';
@@ -602,17 +603,23 @@ export function createGatewayServer(
     });
   });
 
-  app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
-    const devToken = tokenManager.getDefaultDevToken();
-    // Development-only URL with temporary access token for mobile testing
-    const baseUrl = `http://${config.host}:${config.port}/api/health`;
-    const sessionUrl = `${baseUrl}?tkn=${devToken}`;
+  app.post('/api/remote-control', auth, async (req: Request, res: Response) => {
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    const pairingLink = pairingUri(payload);
+    const pairingPage = `${payload.base_url}/pair`;
+    const terminalQr = await renderTerminalPairingQr(payload);
     console.info('\n' + '='.repeat(40));
     console.info('📱 REMOTE CONTROL ACTIVE');
-    console.info('Scan to access from mobile:');
-    console.info(`URL: ${sessionUrl}`);
+    console.info('Scan this QR in OpenClaw Console:');
+    console.info(terminalQr);
+    console.info(`QR page: ${pairingPage}`);
+    console.info(`Pairing link: ${pairingLink}`);
     console.info('='.repeat(40) + '\n');
-    res.json({ url: sessionUrl, expires_in: 600 });
+    res.json({
+      url: pairingLink,
+      pairing_uri: pairingLink,
+      pairing_page: pairingPage,
+    });
   });
 
   // ── Revenue Infrastructure ────────────────────────────────────────────────
