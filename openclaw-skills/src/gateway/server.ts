@@ -46,6 +46,12 @@ import {
   isBridgeSessionControlAction,
   normalizeProjectBridgeSession,
 } from './project-session.js';
+import {
+  buildGatewayPairingPayload,
+  pairingUri,
+  rejectNonLocalPairing,
+  renderPairingPage,
+} from './pairing.js';
 import { normalizeSkillWorkflowSystem } from './skill-workflow.js';
 import { buildOperatorSummary } from './operator-summary.js';
 import { presentTaskForOperator } from '../utils/response-style.js';
@@ -123,6 +129,23 @@ export function createGatewayServer(
       local_model: getConfiguredLocalModel(config),
     };
     res.json(body);
+  });
+
+  app.get('/api/pairing', (req: Request, res: Response) => {
+    if (rejectNonLocalPairing(req, res)) return;
+
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    res.json({
+      ...payload,
+      pairing_uri: pairingUri(payload),
+    });
+  });
+
+  app.get('/pair', async (req: Request, res: Response) => {
+    if (rejectNonLocalPairing(req, res)) return;
+
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    res.type('html').send(await renderPairingPage(payload));
   });
 
   app.get('/api/runtime/status', auth, (_req: Request, res: Response) => {

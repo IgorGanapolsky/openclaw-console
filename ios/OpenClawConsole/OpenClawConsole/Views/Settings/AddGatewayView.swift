@@ -13,6 +13,7 @@ struct AddGatewayView: View {
     @State private var name: String = ""
     @State private var baseURL: String = ""
     @State private var token: String = ""
+    @State private var pairingCode: String = ""
     @State private var isTesting: Bool = false
     @State private var isSaving: Bool = false
     @State private var testResult: TestResult? = nil
@@ -44,6 +45,32 @@ struct AddGatewayView: View {
 
     var body: some View {
         Form {
+            if !isEditing {
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label("Pair by QR or Link", systemImage: "qrcode.viewfinder")
+                            .font(.headline)
+
+                        TextField("openclaw://pair?...", text: $pairingCode, axis: .vertical)
+                            .autocorrectionDisabled()
+                            .autocapitalization(.none)
+                            .keyboardType(.URL)
+                            .lineLimit(2...4)
+                            .frame(minHeight: 44)
+
+                        Button(action: applyPairingCode) {
+                            Label("Use Pairing Link", systemImage: "link.badge.plus")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(pairingCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(.vertical, 4)
+                } footer: {
+                    Text("Scan the QR shown by the gateway, or paste the pairing link here. Manual fields remain available below.")
+                }
+            }
+
             // MARK: Identity Section
             Section("Gateway Details") {
                 TextField("Name", text: $name)
@@ -148,6 +175,19 @@ struct AddGatewayView: View {
     }
 
     // MARK: - Test & Save Logic
+
+    func applyPairingCode() {
+        do {
+            let pairing = try GatewayPairing.parse(pairingCode)
+            name = pairing.name
+            baseURL = pairing.baseURL
+            token = pairing.token
+            testResult = nil
+            errorMessage = nil
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
 
     func testAndSave() {
         testResult = nil
