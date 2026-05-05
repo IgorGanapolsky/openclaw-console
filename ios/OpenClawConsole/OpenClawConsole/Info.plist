@@ -71,6 +71,10 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>OpenClaw Console connects to OpenClaw gateway servers on your local network to monitor and control agents.</string>
 
+	<!-- Privacy - required for gateway QR scanning -->
+	<key>NSCameraUsageDescription</key>
+	<string>OpenClaw Console uses the camera to scan gateway pairing QR codes.</string>
+
 	<!-- App Transport Security - enforce HTTPS by default -->
 	<!-- To allow HTTP for local development, add NSExceptionDomains with NSAllowsInsecureHTTPLoads -->
 	<key>NSAppTransportSecurity</key>
