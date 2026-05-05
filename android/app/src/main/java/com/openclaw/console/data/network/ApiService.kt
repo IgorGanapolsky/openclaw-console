@@ -200,6 +200,19 @@ class ApiService(
     private data class GenerateSkillRequest(val prompt: String, val agentId: String)
 
     @Serializable
+    private data class TrackAnalyticsRequest(
+        val event: String,
+        val userId: String,
+        val properties: Map<String, String> = emptyMap()
+    )
+
+    @Serializable
+    data class TrackAnalyticsResponse(
+        val success: Boolean,
+        val message: String? = null
+    )
+
+    @Serializable
     data class GenerateSkillResponse(
         val success: Boolean,
         val skillName: String? = null,
@@ -216,6 +229,28 @@ class ApiService(
             .build()
         return executeRequest(request) { body ->
             json.decodeFromString<GenerateSkillResponse>(body)
+        }
+    }
+
+    suspend fun trackAnalyticsEvent(
+        event: String,
+        userId: String,
+        properties: Map<String, String> = emptyMap()
+    ): Result<TrackAnalyticsResponse> {
+        val payload = json.encodeToString(
+            TrackAnalyticsRequest(
+                event = event,
+                userId = userId,
+                properties = properties
+            )
+        )
+        val requestBody = payload.toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("${normalizedBase()}/api/analytics/track")
+            .post(requestBody)
+            .build()
+        return executeRequest(request) { body ->
+            json.decodeFromString<TrackAnalyticsResponse>(body)
         }
     }
 

@@ -1,6 +1,12 @@
 import SwiftUI
 import RevenueCat
 import LocalAuthentication
+import os
+
+private let subscriptionViewLogger = Logger(
+    subsystem: "com.openclaw.console",
+    category: "SubscriptionView"
+)
 
 /// Subscription management view for OpenClaw Console
 /// Provides paywall, purchase flows, and subscription status management
@@ -43,6 +49,19 @@ struct SubscriptionView: View {
                 Button("OK") { }
             } message: {
                 Text(errorMessage)
+            }
+            .onAppear {
+                trackPaywallEvent(
+                    "paywall_viewed",
+                    properties: [
+                        "source": "settings",
+                        "is_configured": (subscriptionService.currentOfferings != nil).description
+                    ]
+                )
+                if !subscriptionService.subscriptionStatus.hasProEntitlement &&
+                    subscriptionService.currentOfferings?.current == nil {
+                    trackPaywallEvent("paywall_offerings_unavailable")
+                }
             }
         }
     }
@@ -148,20 +167,39 @@ struct SubscriptionView: View {
         isProcessing = true
         defer { isProcessing = false }
 
+        let productId = yearly ? "com.openclaw.console.pro.yearly" : "com.openclaw.console.pro.monthly"
+        trackPaywallEvent(
+            "paywall_purchase_tapped",
+            properties: ["product_id": productId]
+        )
+
         let result = await subscriptionService.purchaseProSubscription(yearly: yearly)
 
         switch result {
         case .success:
             // Purchase successful - UI will update automatically via @Observable
-            break
+            trackPaywallEvent(
+                "paywall_purchase_succeeded",
+                properties: ["product_id": productId]
+            )
 
         case .error(let message):
+            trackPaywallEvent(
+                "paywall_purchase_failed",
+                properties: [
+                    "product_id": productId,
+                    "error_message": message
+                ]
+            )
             errorMessage = message
             showingErrorAlert = true
 
         case .userCancelled:
             // User cancelled - no action needed
-            break
+            trackPaywallEvent(
+                "paywall_purchase_cancelled",
+                properties: ["product_id": productId]
+            )
         }
     }
 
@@ -170,20 +208,46 @@ struct SubscriptionView: View {
         isProcessing = true
         defer { isProcessing = false }
 
+        trackPaywallEvent("paywall_restore_tapped")
+
         let result = await subscriptionService.restorePurchases()
 
         switch result {
         case .success:
             // Success message will be shown by subscription status update
-            break
+            trackPaywallEvent("paywall_restore_succeeded")
 
         case .error(let message):
+            trackPaywallEvent(
+                "paywall_restore_failed",
+                properties: ["error_message": message]
+            )
             errorMessage = message
             showingErrorAlert = true
 
         case .userCancelled:
             // Shouldn't happen for restore, but handle gracefully
-            break
+            trackPaywallEvent("paywall_restore_cancelled")
+        }
+    }
+
+    private func trackPaywallEvent(
+        _ event: String,
+        properties: [String: String] = [:]
+    ) {
+        guard let gatewayId = APIService.shared.activeGateway?.id else { return }
+        Task {
+            do {
+                _ = try await APIService.shared.trackAnalyticsEvent(
+                    event: event,
+                    userId: gatewayId,
+                    properties: properties.merging(["platform": "ios"]) { current, _ in current }
+                )
+            } catch {
+                subscriptionViewLogger.debug(
+                    "Analytics event skipped: \(event, privacy: .public) \(error.localizedDescription, privacy: .public)"
+                )
+            }
         }
     }
 }

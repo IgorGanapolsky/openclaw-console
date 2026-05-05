@@ -43,23 +43,31 @@ class SubscriptionViewModel(
         }
     }
 
-    fun purchase(activity: Activity, productId: String) {
+    fun purchase(
+        activity: Activity,
+        productId: String,
+        onResult: (PurchaseResult) -> Unit = {}
+    ) {
         viewModelScope.launch {
-            when (val result = service.purchase(activity, productId)) {
+            val result = service.purchase(activity, productId)
+            when (result) {
                 is PurchaseResult.Success -> _justPurchased.value = true
                 is PurchaseResult.UserCancelled -> Unit
                 is PurchaseResult.Error -> _errorMessage.value = result.message
             }
+            onResult(result)
         }
     }
 
-    fun restore() {
+    fun restore(onResult: (PurchaseResult) -> Unit = {}) {
         viewModelScope.launch {
-            when (val result = service.restore()) {
+            val result = service.restore()
+            when (result) {
                 is PurchaseResult.Success -> _justPurchased.value = true
                 is PurchaseResult.UserCancelled -> Unit
                 is PurchaseResult.Error -> _errorMessage.value = result.message
             }
+            onResult(result)
         }
     }
 
