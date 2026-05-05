@@ -109,6 +109,27 @@ class SettingsViewModel : ViewModel() {
             }
     }
 
+    fun applyScannedPairingCode(rawValue: String) {
+        GatewayPairing.parse(rawValue)
+            .onSuccess { pairing ->
+                _addGatewayUiState.value = _addGatewayUiState.value.copy(
+                    name = pairing.name,
+                    baseUrl = pairing.baseUrl,
+                    token = pairing.token,
+                    pairingCode = rawValue,
+                    testResult = null,
+                    error = null,
+                    showHttpWarning = pairing.baseUrl.startsWith("http://")
+                )
+            }
+            .onFailure { error ->
+                _addGatewayUiState.value = _addGatewayUiState.value.copy(
+                    testResult = null,
+                    error = error.message ?: "Invalid QR code"
+                )
+            }
+    }
+
     fun testAndSave(onSuccess: () -> Unit) {
         val state = _addGatewayUiState.value
         if (state.name.isBlank() || state.baseUrl.isBlank() || state.token.isBlank()) {
