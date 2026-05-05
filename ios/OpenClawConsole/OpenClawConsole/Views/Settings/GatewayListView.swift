@@ -27,6 +27,24 @@ struct GatewayListView: View {
                     OperatorResponseSettingsView(gateway: activeGateway)
                 }
             }
+
+            Section("Subscription") {
+                NavigationLink {
+                    SubscriptionView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("OpenClaw Pro")
+                            Text("Unlock advanced analytics, integrations, webhooks, and unlimited agents.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
         }
         .navigationTitle("Gateways")
         .task(id: gatewayManager.activeGatewayId) {
