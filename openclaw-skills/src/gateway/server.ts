@@ -693,9 +693,11 @@ export function createGatewayServer(
           console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
           // Dev hint: connect via WebSocket using your dev auth bearer credential
           const wsEndpoint = `ws://${config.host}:${config.port}/ws`; // local-dev-only
-          console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          if (process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
+            console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          }
           const devToken = tokenManager.getDefaultDevToken();
-          if (devToken) {
+          if (devToken && process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
             console.info(`[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`);
           }
           resolve();

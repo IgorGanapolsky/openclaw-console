@@ -82,6 +82,12 @@ describe('gateway pairing', () => {
     expect(inferGatewayBaseUrl(mockReq(), DEFAULT_CONFIG)).toBe('https://gateway.example.com');
   });
 
+  test('ignores malformed OPENCLAW_PUBLIC_URL values', () => {
+    process.env['OPENCLAW_PUBLIC_URL'] = 'http://:18789';
+
+    expect(inferGatewayBaseUrl(mockReq(), DEFAULT_CONFIG)).toBe('http://192.168.1.5:18789');
+  });
+
   test('builds stable mobile pairing payload and URI', () => {
     const { manager, filePath } = makeTokenManager();
     process.env['OPENCLAW_GATEWAY_NAME'] = 'Mac Mini';
