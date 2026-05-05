@@ -85,6 +85,18 @@ final class GatewayManager {
         }
     }
 
+    func add(pairing: GatewayPairing) throws {
+        try add(name: pairing.name, baseURL: pairing.baseURL, token: pairing.token)
+    }
+
+    func addAndSelect(pairing: GatewayPairing) throws {
+        let beforeIds = Set(gateways.map(\.id))
+        try add(pairing: pairing)
+        if let gateway = gateways.first(where: { !beforeIds.contains($0.id) }) {
+            activeGatewayId = gateway.id
+        }
+    }
+
     func update(gateway: GatewayConnection, name: String, baseURL: String, token: String?) throws {
         guard let index = gateways.firstIndex(where: { $0.id == gateway.id }) else { return }
         let cleaned = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
