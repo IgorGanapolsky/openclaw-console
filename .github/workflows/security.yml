@@ -77,12 +77,6 @@ jobs:
             ios_changed=true
           fi
 
-          if grep -Eq '^\.github/workflows/security\.yml$' changed-files.txt; then
-            all_languages=true
-            android_changed=true
-            ios_changed=true
-          fi
-
           codeql_matrix='[{"language":"javascript-typescript","os":"ubuntu-latest"}'
           if [[ "$android_changed" == "true" ]]; then
             codeql_matrix="${codeql_matrix},{\"language\":\"java-kotlin\",\"os\":\"ubuntu-latest\"}"
