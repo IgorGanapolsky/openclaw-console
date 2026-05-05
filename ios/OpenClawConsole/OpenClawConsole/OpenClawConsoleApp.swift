@@ -10,6 +10,9 @@
 
 import SwiftUI
 import UserNotifications
+import os
+
+private let appLogger = Logger(subsystem: "com.openclaw.console", category: "App")
 
 @main
 @available(iOS 17.0, *)
@@ -33,6 +36,14 @@ struct OpenClawConsoleApp: App {
                 .environmentObject(services.webSocket)
                 .environment(services.approvalViewModel)
                 .environment(services.subscriptionService)
+                .onOpenURL { url in
+                    do {
+                        let pairing = try GatewayPairing.parse(url.absoluteString)
+                        try gatewayManager.addAndSelect(pairing: pairing)
+                    } catch {
+                        appLogger.error("Failed to import gateway link: \(error.localizedDescription, privacy: .public)")
+                    }
+                }
         }
     }
 }
@@ -61,9 +72,9 @@ private final class AppServices {
 
         if !apiKey.isEmpty {
             subscriptionService.configure(apiKey: apiKey)
-            print("[AppServices] RevenueCat initialized successfully")
+            appLogger.info("RevenueCat initialized successfully")
         } else {
-            print("[AppServices] RevenueCat API key not configured - subscription features disabled")
+            appLogger.info("RevenueCat API key not configured - subscription features disabled")
         }
     }
 

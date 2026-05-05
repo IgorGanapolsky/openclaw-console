@@ -77,7 +77,11 @@ private data class BottomNavItem(
 )
 
 @Composable
-fun NavGraph(appViewModel: AppViewModel = viewModel()) {
+fun NavGraph(
+    appViewModel: AppViewModel = viewModel(),
+    pendingPairingLink: String? = null,
+    onPairingLinkConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val colors = LocalOpenClawColors.current
     val savedGateways by appViewModel.gatewayRepository.gateways.collectAsStateWithLifecycle()
@@ -122,6 +126,15 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                 popUpTo(Screen.Welcome.route) {
                     inclusive = true
                 }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(pendingPairingLink, currentRoute) {
+        val link = pendingPairingLink?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        if (currentRoute != Screen.AddGateway.route) {
+            navController.navigate(Screen.AddGateway.route) {
                 launchSingleTop = true
             }
         }
@@ -304,7 +317,9 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
             composable(Screen.AddGateway.route) {
                 AddGatewayScreen(
                     appViewModel = appViewModel,
-                    onBack = { navController.navigateUp() }
+                    onBack = { navController.navigateUp() },
+                    pendingPairingLink = pendingPairingLink,
+                    onPairingLinkConsumed = onPairingLinkConsumed
                 )
             }
 
