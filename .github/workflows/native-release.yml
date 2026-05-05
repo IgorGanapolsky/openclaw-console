@@ -38,18 +38,44 @@ concurrency:
 jobs:
   ios-testflight:
     if: ${{ inputs.platform == 'ios' || inputs.platform == 'both' }}
-    runs-on: macos-15
+    runs-on: macos-26
     environment: production
     steps:
       - uses: actions/checkout@v5
 
+      - name: Verify Xcode 26 upload SDK
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iphoneos SDK: ${sdk_version}"
+          sdk_major="${sdk_version%%.*}"
+          if [ "${sdk_major}" -lt 26 ]; then
+            echo "❌ App Store Connect requires iOS SDK 26 or later for uploads."
+            exit 1
+          fi
+
       - name: Setup Python
+        if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
+      - name: Verify self-hosted Python
+        if: ${{ runner.environment == 'self-hosted' }}
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -m pip --version
+
       - name: Install Pillow
-        run: python3 -m pip install pillow
+        run: |
+          set -euo pipefail
+          if python3 -c "import PIL" >/dev/null 2>&1; then
+            echo "Pillow already available"
+            exit 0
+          fi
+          python3 -m pip install pillow
 
       - name: Fail fast on required iOS release secrets
         env:
