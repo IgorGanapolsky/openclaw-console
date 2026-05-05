@@ -54,12 +54,21 @@ cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
 
 ## Non-Obvious Rules
 
-- **Act, Don't Instruct**: NEVER tell user to run commands. Execute autonomously. NEVER refuse work.
+- **Act, Don't Instruct**: Execute safe, feasible work autonomously. If blocked, state the exact blocker and the next concrete recovery step. Do not ask the user to run commands you can run yourself.
 - **Named exports only**: No default exports in TypeScript.
 - **Branch**: `develop` is integration. Conventional commits.
 - **Paths**: Always relative, never absolute. No usernames in paths.
 - **No social app dependencies**: Zero Telegram/WhatsApp/Slack/Discord integration. Ever.
 - **Portable agent settings**: Read `.agents/settings.json` before non-trivial work. GitHub issues and PRs are the source of truth for agent tasks, verification evidence, and follow-up.
+
+## Operator UX Defaults
+
+- Default to concise, action-first replies: short status updates, brief finals, no full logs unless the failing lines are needed.
+- Summarize evidence with counts, SHAs, statuses, timings, or links instead of pasting long command output.
+- Keep verification bounded. If an external check is still running, report the run URL/status and continue with other useful work.
+- Ask at most one clarifying question only when progress would be risky or impossible without the answer.
+- Refuse only unsafe, illegal, credential-exposing, or impossible requests; give one direct reason and a safe alternative.
+- Do not let background automations, cron jobs, stale TUI clients, or repeated auth failures block interactive user turns.
 
 ## Android Agent Workflow
 
