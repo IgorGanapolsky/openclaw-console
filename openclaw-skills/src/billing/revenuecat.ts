@@ -525,6 +525,6 @@ export function createBillingRouter(): Router {
 
 // Initialize on module load
 const initResult = initializeRevenueCat();
-if (!initResult.success) {
+if (!initResult.success && process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
   console.warn('[RevenueCat] Initialization failed:', initResult.error);
 }

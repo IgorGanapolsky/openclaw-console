@@ -139,7 +139,9 @@ const AB_TESTS: { [testName: string]: ABTestConfig } = {
  */
 function initializeFirebaseAnalytics(): { success: boolean; error?: string } {
   if (!FIREBASE_PROJECT_ID) {
-    console.warn('[Analytics] Firebase not configured - using in-memory storage only');
+    if (process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
+      console.warn('[Analytics] Firebase not configured - using in-memory storage only');
+    }
     return { success: true }; // Not an error, just local mode
   }
 
