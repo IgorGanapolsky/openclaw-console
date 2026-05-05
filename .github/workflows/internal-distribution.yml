@@ -25,6 +25,12 @@ jobs:
       sha: ${{ steps.decide.outputs.sha }}
       reason: ${{ steps.decide.outputs.reason }}
     steps:
+      - uses: actions/checkout@v5
+        if: github.event_name == 'workflow_run'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
       - name: Decide whether to run
         id: decide
         env:
@@ -34,6 +40,7 @@ jobs:
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           ALLOWED_BRANCHES: "develop main"
           INPUT_REF: ${{ inputs.ref }}
+          DISTRIBUTION_PATH_REGEX: '^(android/|ios/|scripts/(preflight-release\.sh|sync_app_icons\.py|sync-android-launcher-icon\.sh|validate_release_contract\.py)|\.github/workflows/(internal-distribution|native-release|android|ios)\.yml$)'
         run: |
           set -euo pipefail
 
@@ -61,6 +68,26 @@ jobs:
 
             REF="$WORKFLOW_SHA"
             SHA="$WORKFLOW_SHA"
+
+            if git rev-parse "${WORKFLOW_SHA}^" >/dev/null 2>&1; then
+              CHANGED_FILES="$(git diff --name-only "${WORKFLOW_SHA}^" "$WORKFLOW_SHA")"
+            else
+              CHANGED_FILES="$(git diff-tree --no-commit-id --name-only -r "$WORKFLOW_SHA" || true)"
+            fi
+
+            if ! grep -Eq "$DISTRIBUTION_PATH_REGEX" <<< "$CHANGED_FILES"; then
+              REASON="no_distribution_paths_changed"
+              echo "gate: skipping internal distribution; changed files do not affect mobile release artifacts"
+              printf '%s\n' "$CHANGED_FILES" | sed 's/^/gate: changed: /'
+              {
+                echo "should_run=$SHOULD_RUN"
+                echo "ref=$REF"
+                echo "sha=$SHA"
+                echo "reason=$REASON"
+              } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
             SHOULD_RUN="true"
             REASON="ci_green_on_${WORKFLOW_BRANCH}"
           fi
