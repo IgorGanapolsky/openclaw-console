@@ -62,8 +62,8 @@ const DEFAULT_CONFIG: GatewayConfig = {
   wsPongTimeout: 10_000,
   approvalTimeoutMs: 5 * 60 * 1000, // 5 minutes
   requireBiometric: process.env['REQUIRE_BIOMETRIC'] !== 'false',
-  enabledSkills: ['ci-monitor', 'incident-manager', 'approval-gate', 'task-manager', 'trading-monitor', 'gitclaw-agent'],
-  isolatedSkills: process.env['ISOLATED_SKILLS']?.split(',') ?? [],
+  enabledSkills: parseList(process.env['ENABLED_SKILLS'], ['ci-monitor', 'incident-manager', 'approval-gate', 'task-manager', 'trading-monitor', 'gitclaw-agent', 'daily-brief']),
+  isolatedSkills: parseList(process.env['ISOLATED_SKILLS'], []),
   loadSeedData: process.env['LOAD_SEED_DATA'] !== 'false',
   simulateBridges: process.env['SIMULATE_BRIDGES'] !== 'false',
   mcpServers: process.env['MCP_SERVERS']?.split(';') ?? [],
@@ -77,6 +77,16 @@ const DEFAULT_CONFIG: GatewayConfig = {
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
   governanceEventLogPath: process.env['OPENCLAW_GOVERNANCE_EVENT_LOG'] ?? './data/governance-events.jsonl',
 };
+
+function parseList(raw: string | undefined, fallback: string[]): string[] {
+  if (raw === undefined) {
+    return fallback;
+  }
+  return raw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export function isApprovalPolicyPreset(raw: string): raw is ApprovalPolicyPreset {
   return raw === 'manual' || raw === 'safe-yolo' || raw === 'repo-yolo' || raw === 'ci-yolo' || raw === 'danger-yolo';
