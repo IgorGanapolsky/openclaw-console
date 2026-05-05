@@ -10,6 +10,15 @@ on:
         description: "Git ref to distribute (optional, defaults to develop)"
         required: false
         type: string
+      platform:
+        description: "Platform to distribute"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
+          - ios
 
 concurrency:
   group: internal-distribution-${{ github.event.workflow_run.head_branch || github.ref_name }}
@@ -24,6 +33,8 @@ jobs:
       ref: ${{ steps.decide.outputs.ref }}
       sha: ${{ steps.decide.outputs.sha }}
       reason: ${{ steps.decide.outputs.reason }}
+      android_changed: ${{ steps.decide.outputs.android_changed }}
+      ios_changed: ${{ steps.decide.outputs.ios_changed }}
     steps:
       - uses: actions/checkout@v5
         if: github.event_name == 'workflow_run'
@@ -40,6 +51,7 @@ jobs:
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           ALLOWED_BRANCHES: "develop main"
           INPUT_REF: ${{ inputs.ref }}
+          INPUT_PLATFORM: ${{ inputs.platform }}
           DISTRIBUTION_PATH_REGEX: '^(android/|ios/)'
         run: |
           set -euo pipefail
@@ -48,11 +60,30 @@ jobs:
           REF=""
           SHA=""
           REASON="not_eligible"
+          ANDROID_CHANGED="false"
+          IOS_CHANGED="false"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             REF="${INPUT_REF:-$GITHUB_REF_NAME}"
             SHOULD_RUN="true"
             REASON="manual_dispatch"
+            PLATFORM="${INPUT_PLATFORM:-all}"
+            case "$PLATFORM" in
+              all)
+                ANDROID_CHANGED="true"
+                IOS_CHANGED="true"
+                ;;
+              android)
+                ANDROID_CHANGED="true"
+                ;;
+              ios)
+                IOS_CHANGED="true"
+                ;;
+              *)
+                echo "gate: invalid platform=$PLATFORM"
+                exit 1
+                ;;
+            esac
           elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" ]]; then
             if [[ " $ALLOWED_BRANCHES " != *" $WORKFLOW_BRANCH "* ]]; then
               REASON="branch_not_eligible_${WORKFLOW_BRANCH}"
@@ -62,6 +93,8 @@ jobs:
                 echo "ref=$REF"
                 echo "sha=$SHA"
                 echo "reason=$REASON"
+                echo "android_changed=$ANDROID_CHANGED"
+                echo "ios_changed=$IOS_CHANGED"
               } >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -84,8 +117,17 @@ jobs:
                 echo "ref=$REF"
                 echo "sha=$SHA"
                 echo "reason=$REASON"
+                echo "android_changed=$ANDROID_CHANGED"
+                echo "ios_changed=$IOS_CHANGED"
               } >> "$GITHUB_OUTPUT"
               exit 0
+            fi
+
+            if grep -Eq '^android/' <<< "$CHANGED_FILES"; then
+              ANDROID_CHANGED="true"
+            fi
+            if grep -Eq '^ios/' <<< "$CHANGED_FILES"; then
+              IOS_CHANGED="true"
             fi
 
             SHOULD_RUN="true"
@@ -97,13 +139,15 @@ jobs:
             echo "ref=$REF"
             echo "sha=$SHA"
             echo "reason=$REASON"
+            echo "android_changed=$ANDROID_CHANGED"
+            echo "ios_changed=$IOS_CHANGED"
           } >> "$GITHUB_OUTPUT"
-          echo "gate: should_run=$SHOULD_RUN reason=$REASON ref=$REF sha=$SHA"
+          echo "gate: should_run=$SHOULD_RUN reason=$REASON ref=$REF sha=$SHA android_changed=$ANDROID_CHANGED ios_changed=$IOS_CHANGED"
 
   ios-testflight-internal:
     name: iOS TestFlight (Internal)
     needs: [gate]
-    if: needs.gate.outputs.should_run == 'true'
+    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.ios_changed == 'true'
     runs-on: macos-26
     timeout-minutes: 45
     environment: production
@@ -334,7 +378,7 @@ jobs:
   android-firebase-internal:
     name: Android Firebase App Distribution (Internal)
     needs: [gate]
-    if: needs.gate.outputs.should_run == 'true'
+    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.android_changed == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
