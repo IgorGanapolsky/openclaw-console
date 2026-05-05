@@ -104,7 +104,7 @@ jobs:
     name: iOS TestFlight (Internal)
     needs: [gate]
     if: needs.gate.outputs.should_run == 'true'
-    runs-on: ${{ fromJSON(vars.IOS_TESTFLIGHT_RUNS_ON || '"macos-26"') }}
+    runs-on: macos-26
     timeout-minutes: 45
     environment: production
     steps:
@@ -143,9 +143,10 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN REVENUECAT_PUBLIC_KEY; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -244,6 +245,7 @@ jobs:
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: ${{ vars.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS || 'false' }}
           TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "true"
           TESTFLIGHT_ARCHIVE_ONLY: "true"
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -Eeuo pipefail
           bundle exec fastlane beta --verbose 2>&1 | tee fastlane-archive.log
@@ -268,6 +270,7 @@ jobs:
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: ${{ vars.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS || 'false' }}
           TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "false"
           TESTFLIGHT_UPLOAD_ONLY: "true"
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -Eeuo pipefail
           bundle exec fastlane beta --verbose 2>&1 | tee fastlane-upload.log
@@ -354,6 +357,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
@@ -362,6 +366,10 @@ jobs:
           fi
           if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          if [ -z "${REVENUECAT_PUBLIC_KEY:-}" ]; then
+            echo "❌ Missing required secret: REVENUECAT_PUBLIC_KEY"
             exit 1
           fi
 
@@ -438,6 +446,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           ./gradlew assembleRelease --no-daemon
