@@ -16,9 +16,13 @@
   "response_style": {
     "mode": "codex_concise",
     "status_update_lines": 2,
-    "final_max_lines": 70,
+    "final_max_lines": 18,
     "include_evidence": true,
-    "avoid_full_logs_unless_needed": true
+    "evidence_style": "summarized_counts_statuses_links",
+    "avoid_full_logs_unless_needed": true,
+    "max_clarifying_questions": 1,
+    "bounded_verification": true,
+    "pause_runaway_background_work": true
   },
   "agent_harnesses": [
     {
