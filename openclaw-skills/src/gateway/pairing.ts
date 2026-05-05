@@ -34,13 +34,22 @@ export function isLocalPairingRequest(req: Request): boolean {
 
 export function inferGatewayBaseUrl(req: Request, config: GatewayConfig): string {
   const explicit = process.env['OPENCLAW_PUBLIC_URL']?.trim();
-  if (explicit) {
+  if (explicit && isUsableBaseUrl(explicit)) {
     return trimTrailingSlashes(explicit);
   }
 
   const host = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? `${config.host}:${config.port}`);
   const proto = String(req.headers['x-forwarded-proto'] ?? req.protocol ?? 'http').split(',')[0]?.trim() || 'http';
   return trimTrailingSlashes(`${proto}://${host}`);
+}
+
+function isUsableBaseUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.hostname.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function buildGatewayPairingPayload(

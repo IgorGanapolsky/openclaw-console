@@ -8,6 +8,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
+    "pair": "node scripts/pair.mjs",
+    "pair:server": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests",
     "lint": "eslint src tests --ext .ts"
