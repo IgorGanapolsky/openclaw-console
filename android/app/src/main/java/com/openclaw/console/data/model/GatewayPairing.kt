@@ -24,6 +24,10 @@ data class GatewayPairing(
             }
 
             val uri = URI(raw)
+            if (uri.scheme == "http" || uri.scheme == "https") {
+                return@runCatching parseGatewayUrl(uri)
+            }
+
             require(uri.scheme == "openclaw" && uri.host == "pair") {
                 "Paste an OpenClaw pairing link or pairing JSON."
             }
@@ -32,7 +36,7 @@ data class GatewayPairing(
             build(
                 name = query["name"],
                 baseUrl = query["base_url"] ?: query["baseUrl"] ?: query["baseURL"],
-                token = query["token"]
+                token = query["token"] ?: query["tkn"]
             )
         }
 
@@ -42,6 +46,17 @@ data class GatewayPairing(
                 "Paste an OpenClaw pairing link or pairing JSON."
             }
             return build(payload.name, payload.baseUrl, payload.token)
+        }
+
+        private fun parseGatewayUrl(uri: URI): GatewayPairing {
+            val query = parseQuery(uri.rawQuery.orEmpty())
+            val token = query["token"] ?: query["tkn"]
+            val path = uri.rawPath.orEmpty().removeSuffix("/api/health").removeSuffix("/")
+            val port = if (uri.port == -1) "" else ":${uri.port}"
+            val baseUrl = "${uri.scheme}://${uri.host}$port$path"
+            val name = uri.host?.takeIf { it.isNotBlank() }?.let { "OpenClaw $it" }
+
+            return build(name = name, baseUrl = baseUrl, token = token)
         }
 
         private fun build(name: String?, baseUrl: String?, token: String?): GatewayPairing {

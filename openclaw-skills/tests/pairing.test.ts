@@ -13,6 +13,7 @@ import {
   isLocalPairingRequest,
   pairingUri,
   renderPairingPage,
+  renderTerminalPairingQr,
 } from '../src/gateway/pairing';
 
 function mockReq(overrides: Partial<Request> = {}): Request {
@@ -116,6 +117,17 @@ describe('gateway pairing', () => {
 
     expect(html).toContain('<svg');
     expect(html).toContain('Pair OpenClaw Console');
+    fs.unlinkSync(filePath);
+  });
+
+  test('renders terminal QR pairing code', async () => {
+    const { manager, filePath } = makeTokenManager();
+    const payload = buildGatewayPairingPayload(mockReq(), DEFAULT_CONFIG, manager);
+
+    const terminalQr = await renderTerminalPairingQr(payload);
+
+    expect(terminalQr).toContain('\u001B[');
+    expect(terminalQr.length).toBeGreaterThan(100);
     fs.unlinkSync(filePath);
   });
 

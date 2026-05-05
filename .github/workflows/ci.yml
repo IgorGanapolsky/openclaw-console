@@ -243,7 +243,7 @@ jobs:
   ios-build:
     name: iOS Build Check
     needs: [ios-changes]
-    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && (vars.IOS_CI_RUNS_ON || 'macos-26') || 'ubuntu-latest' }}
+    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && (vars.IOS_CI_RUNS_ON || 'macos-15') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -253,7 +253,13 @@ jobs:
 
       - name: Select Xcode
         if: needs.ios-changes.outputs.ios_changed == 'true' && runner.environment != 'self-hosted'
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+        run: |
+          if [ -d /Applications/Xcode_15.2.app ]; then
+            sudo xcode-select -s /Applications/Xcode_15.2.app
+          else
+            echo "Xcode 15.2 not installed; using current Xcode: $(xcode-select -p)"
+            xcodebuild -version
+          fi
 
       - name: Resolve simulator destination
         if: needs.ios-changes.outputs.ios_changed == 'true'
