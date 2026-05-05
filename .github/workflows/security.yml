@@ -54,7 +54,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"language":"javascript-typescript","os":"ubuntu-latest"}]' || '[{"language":"javascript-typescript","os":"ubuntu-latest"},{"language":"java-kotlin","os":"ubuntu-latest"},{"language":"swift","os":"macos-latest"}]') }}
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"language":"javascript-typescript","os":"ubuntu-latest"}]' || '[{"language":"javascript-typescript","os":"ubuntu-latest"},{"language":"java-kotlin","os":"ubuntu-latest"},{"language":"swift","os":"macos-26"}]') }}
     permissions:
       security-events: write
       actions: read
