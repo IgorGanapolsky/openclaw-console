@@ -8,6 +8,7 @@
 import DEFAULT_CONFIG from './config/default.js';
 import { StateManager } from './gateway/state.js';
 import { createGatewayServer } from './gateway/server.js';
+import { pairingUri } from './gateway/pairing.js';
 import { AGENT_CONFIGS, agentConfigToAgent } from './config/agents.js';
 import { SEED_AGENTS, SEED_TASKS, SEED_INCIDENTS } from './config/seed-data.js';
 import { CiMonitorSkill } from './skills/ci-monitor.js';
@@ -83,6 +84,14 @@ async function main(): Promise<void> {
     console.info('Quick-start:');
     console.info(`  curl -H "Authorization: Bearer ${devToken}" http://localhost:${DEFAULT_CONFIG.port}/api/health`);
     console.info(`  curl -H "Authorization: Bearer ${devToken}" http://localhost:${DEFAULT_CONFIG.port}/api/agents`);
+    console.info(`  pairing QR: http://localhost:${DEFAULT_CONFIG.port}/pair`);
+    console.info(`  pairing link: ${pairingUri({
+      type: 'openclaw.gateway.pairing.v1',
+      name: process.env['OPENCLAW_GATEWAY_NAME']?.trim() || 'OpenClaw Gateway',
+      base_url: process.env['OPENCLAW_PUBLIC_URL']?.trim() || `http://localhost:${DEFAULT_CONFIG.port}`,
+      token: gateway.tokenManager.getOrCreateToken('mobile-pairing'),
+      issued_at: new Date().toISOString(),
+    })}`);
     console.info('');
   }
 
