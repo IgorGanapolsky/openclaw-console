@@ -12,7 +12,8 @@ platform :android do
 
     gradle(task: "bundleRelease")
 
-    aab_path = "app/build/outputs/bundle/release/app-release.aab"
+    aab_path = lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH] ||
+      File.expand_path("../app/build/outputs/bundle/release/app-release.aab", __dir__)
     UI.user_error!("Release bundle not found at #{aab_path}") unless File.exist?(aab_path)
 
     upload_to_play_store(
