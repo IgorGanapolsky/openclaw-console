@@ -1,307 +1,259 @@
 // Tests/ApprovalViewModelTests.swift
 // OpenClaw Work Console
-// Critical path tests for approval flow - the core of Daily Active Approvers metric.
+// Critical path tests for approval flow, the core Daily Active Approver loop.
 
-import XCTest
 import Combine
+import XCTest
 @testable import OpenClawConsole
 
 final class ApprovalViewModelTests: XCTestCase {
 
-    var viewModel: ApprovalViewModel!
-    var mockWebSocketService: MockWebSocketService!
-    var mockAPIService: MockAPIService!
-    var mockBiometricService: MockBiometricService!
-    var mockNotificationService: MockNotificationService!
-    var cancellables: Set<AnyCancellable>!
+    private var viewModel: ApprovalViewModel!
+    private var webSocket: MockApprovalWebSocket!
+    private var api: MockApprovalAPI!
+    private var biometric: MockBiometricAuthenticator!
+    private var notifications: MockApprovalNotifications!
 
     override func setUp() {
         super.setUp()
-        mockWebSocketService = MockWebSocketService()
-        mockAPIService = MockAPIService()
-        mockBiometricService = MockBiometricService()
-        mockNotificationService = MockNotificationService()
-        viewModel = ApprovalViewModel(webSocket: mockWebSocketService)
-        cancellables = Set<AnyCancellable>()
-
-        // Override global services for testing
-        APIService.shared = mockAPIService
-        BiometricService.shared = mockBiometricService
-        NotificationService.shared = mockNotificationService
+        webSocket = MockApprovalWebSocket()
+        api = MockApprovalAPI()
+        biometric = MockBiometricAuthenticator()
+        notifications = MockApprovalNotifications()
+        viewModel = ApprovalViewModel(
+            webSocket: webSocket,
+            apiService: api,
+            biometricService: biometric,
+            notificationService: notifications
+        )
     }
 
     override func tearDown() {
-        cancellables = nil
         viewModel = nil
-        mockWebSocketService = nil
-        mockAPIService = nil
-        mockBiometricService = nil
-        mockNotificationService = nil
+        webSocket = nil
+        api = nil
+        biometric = nil
+        notifications = nil
         super.tearDown()
     }
 
-    // MARK: - WebSocket Event Handling Tests
+    func testReceivesApprovalRequestViaWebSocket() async throws {
+        let approval = createApproval()
 
-    func testReceivesApprovalRequestViaWebSocket() throws {
-        // Given: A fresh viewModel with no pending approvals
-        XCTAssertEqual(viewModel.pendingApprovals.count, 0)
-        XCTAssertFalse(viewModel.hasPendingApprovals)
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
 
-        // When: WebSocket receives an approval request
-        let approval = createMockApproval()
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
-
-        // Then: Approval appears in pending list
-        XCTAssertEqual(viewModel.pendingApprovals.count, 1)
+        XCTAssertEqual(viewModel.pendingApprovals.map(\.id), [approval.id])
         XCTAssertTrue(viewModel.hasPendingApprovals)
-        XCTAssertEqual(viewModel.pendingApprovals.first?.id, approval.id)
         XCTAssertEqual(viewModel.pendingCount, 1)
-
-        // And: Notification was scheduled
-        XCTAssertEqual(mockNotificationService.scheduledApprovals.count, 1)
-        XCTAssertEqual(mockNotificationService.scheduledApprovals.first?.id, approval.id)
+        XCTAssertEqual(notifications.scheduledApprovals.map(\.id), [approval.id])
+        XCTAssertEqual(notifications.lastBadgeCount, 1)
     }
 
-    func testIgnoresDuplicateApprovalRequests() throws {
-        // Given: An approval already in the pending list
-        let approval = createMockApproval()
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
-        XCTAssertEqual(viewModel.pendingApprovals.count, 1)
+    func testIgnoresDuplicateApprovalRequests() async throws {
+        let approval = createApproval()
 
-        // When: Same approval is received again
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
+        webSocket.simulateEvent(.approvalRequest(approval))
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
 
-        // Then: No duplicate is added
         XCTAssertEqual(viewModel.pendingApprovals.count, 1)
-        XCTAssertEqual(mockNotificationService.scheduledApprovals.count, 1)
+        XCTAssertEqual(notifications.scheduledApprovals.count, 1)
     }
 
-    // MARK: - Approval Flow Tests
+    func testSuccessfulApprovalRequiresBiometricAndSubmitsApprovedDecision() async throws {
+        let approval = createApproval()
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
 
-    func testSuccessfulApprovalWithBiometric() async throws {
-        // Given: A pending approval and biometric succeeds
-        let approval = createMockApproval()
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
-        mockBiometricService.shouldSucceed = true
-        mockAPIService.shouldSucceed = true
-
-        XCTAssertFalse(viewModel.isProcessing)
-        XCTAssertNil(viewModel.lastDecision)
-
-        // When: User approves
         try await viewModel.approve(approval: approval)
 
-        // Then: Approval is processed successfully
-        XCTAssertFalse(viewModel.isProcessing)
         XCTAssertEqual(viewModel.lastDecision, .approved)
-        XCTAssertEqual(viewModel.pendingApprovals.count, 0)
-        XCTAssertFalse(viewModel.hasPendingApprovals)
-
-        // And: API was called with correct parameters
-        XCTAssertEqual(mockAPIService.lastApprovalResponse?.decision, .approved)
-        XCTAssertEqual(mockAPIService.lastApprovalResponse?.biometricVerified, true)
-
-        // And: Notification was removed
-        XCTAssertEqual(mockNotificationService.removedApprovalIds.count, 1)
-        XCTAssertEqual(mockNotificationService.removedApprovalIds.first, approval.id)
-
-        // And: Badge count was updated
-        XCTAssertEqual(mockNotificationService.lastBadgeCount, 0)
+        XCTAssertTrue(viewModel.pendingApprovals.isEmpty)
+        XCTAssertEqual(api.lastApprovalResponse?.decision, .approved)
+        XCTAssertEqual(api.lastApprovalResponse?.biometricVerified, true)
+        XCTAssertEqual(biometric.authenticationReasons, ["Approve: \(approval.title)"])
+        XCTAssertEqual(notifications.removedApprovalIds, [approval.id])
+        XCTAssertEqual(notifications.lastBadgeCount, 0)
     }
 
-    func testApprovalFailsWhenBiometricFails() async throws {
-        // Given: A pending approval but biometric fails
-        let approval = createMockApproval()
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
-        mockBiometricService.shouldSucceed = false
+    func testApprovalFailsBeforeApiWhenBiometricFails() async throws {
+        let approval = createApproval()
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
+        biometric.errorToThrow = BiometricError.authFailed("Mock biometric failure")
 
-        // When: User attempts to approve
         do {
             try await viewModel.approve(approval: approval)
-            XCTFail("Should have thrown biometric error")
-        } catch {
-            // Then: Biometric error is thrown
-            XCTAssertTrue(error is BiometricError)
-
-            // And: Approval remains in pending list
-            XCTAssertEqual(viewModel.pendingApprovals.count, 1)
-            XCTAssertNil(viewModel.lastDecision)
-
-            // And: API was not called
-            XCTAssertNil(mockAPIService.lastApprovalResponse)
+            XCTFail("Expected biometric failure")
+        } catch let error as BiometricError {
+            guard case .authFailed = error else {
+                return XCTFail("Expected authFailed, got \(error)")
+            }
         }
+
+        XCTAssertEqual(viewModel.pendingApprovals.map(\.id), [approval.id])
+        XCTAssertNil(viewModel.lastDecision)
+        XCTAssertNil(api.lastApprovalResponse)
     }
 
     func testApprovalFailsWhenExpired() async throws {
-        // Given: An expired approval
-        let approval = createMockApproval(expired: true)
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
+        let approval = createApproval(expired: true)
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
 
-        // When: User attempts to approve
         do {
             try await viewModel.approve(approval: approval)
-            XCTFail("Should have thrown expiry error")
+            XCTFail("Expected expiry failure")
         } catch let error as OpenClawError {
-            // Then: Expiry error is thrown
-            XCTAssertEqual(error.code, 1003)
-
-            // And: Approval processing didn't proceed
-            XCTAssertNil(mockAPIService.lastApprovalResponse)
+            guard case .serverError(let code, _) = error else {
+                return XCTFail("Expected serverError, got \(error)")
+            }
+            XCTAssertEqual(code, 1003)
         }
+
+        XCTAssertNil(api.lastApprovalResponse)
+        XCTAssertTrue(biometric.authenticationReasons.isEmpty)
     }
 
     func testDenyDoesNotRequireBiometric() async throws {
-        // Given: A pending approval
-        let approval = createMockApproval()
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
-        mockAPIService.shouldSucceed = true
+        let approval = createApproval()
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
 
-        // When: User denies (no biometric prompt should occur)
         try await viewModel.deny(approval: approval)
 
-        // Then: Denial is processed successfully
         XCTAssertEqual(viewModel.lastDecision, .denied)
-        XCTAssertEqual(viewModel.pendingApprovals.count, 0)
-
-        // And: API was called with correct parameters
-        XCTAssertEqual(mockAPIService.lastApprovalResponse?.decision, .denied)
-        XCTAssertEqual(mockAPIService.lastApprovalResponse?.biometricVerified, false)
-
-        // And: Biometric service was never called
-        XCTAssertFalse(mockBiometricService.wasAuthenticated)
+        XCTAssertTrue(viewModel.pendingApprovals.isEmpty)
+        XCTAssertEqual(api.lastApprovalResponse?.decision, .denied)
+        XCTAssertEqual(api.lastApprovalResponse?.biometricVerified, false)
+        XCTAssertTrue(biometric.authenticationReasons.isEmpty)
     }
-
-    // MARK: - Expiry Management Tests
 
     func testExpiredApprovalsAreRemoved() async throws {
-        // Given: Mix of active and expired approvals
-        let activeApproval = createMockApproval(id: "active", expired: false)
-        let expiredApproval = createMockApproval(id: "expired", expired: true)
+        let activeApproval = createApproval(id: "active")
+        let expiredApproval = createApproval(id: "expired", expired: true)
 
-        mockWebSocketService.simulateEvent(.approvalRequest(activeApproval))
-        mockWebSocketService.simulateEvent(.approvalRequest(expiredApproval))
+        webSocket.simulateEvent(.approvalRequest(activeApproval))
+        webSocket.simulateEvent(.approvalRequest(expiredApproval))
+        await settleAsyncWork()
 
-        XCTAssertEqual(viewModel.pendingApprovals.count, 2)
-
-        // When: Expiry monitor runs (simulate via manual purge)
         await viewModel.purgeExpired()
 
-        // Then: Only active approval remains
-        XCTAssertEqual(viewModel.pendingApprovals.count, 1)
-        XCTAssertEqual(viewModel.pendingApprovals.first?.id, "active")
+        XCTAssertEqual(viewModel.pendingApprovals.map(\.id), ["active"])
     }
 
-    // MARK: - Error Handling Tests
+    func testApiErrorDuringApprovalLeavesApprovalPending() async throws {
+        let approval = createApproval()
+        webSocket.simulateEvent(.approvalRequest(approval))
+        await settleAsyncWork()
+        api.errorToThrow = NSError(
+            domain: "MockApprovalAPI",
+            code: 500,
+            userInfo: [NSLocalizedDescriptionKey: "Network error"]
+        )
 
-    func testAPIErrorDuringApproval() async throws {
-        // Given: A pending approval but API fails
-        let approval = createMockApproval()
-        mockWebSocketService.simulateEvent(.approvalRequest(approval))
-        mockBiometricService.shouldSucceed = true
-        mockAPIService.shouldSucceed = false
-        mockAPIService.errorMessage = "Network error"
-
-        // When: User approves
         do {
             try await viewModel.approve(approval: approval)
-            XCTFail("Should have thrown API error")
+            XCTFail("Expected API failure")
         } catch {
-            // Then: Error is propagated
             XCTAssertNotNil(error)
-
-            // But: Approval is still removed optimistically
-            XCTAssertEqual(viewModel.pendingApprovals.count, 0)
         }
+
+        XCTAssertEqual(viewModel.pendingApprovals.map(\.id), [approval.id])
+        XCTAssertNil(viewModel.lastDecision)
     }
 
-    // MARK: - Test Helpers
-
-    private func createMockApproval(id: String = "test-approval", expired: Bool = false) -> ApprovalRequest {
-        let expiresAt = expired ?
-            Date().addingTimeInterval(-3600).ISO8601Format() : // 1 hour ago
-            Date().addingTimeInterval(3600).ISO8601Format()    // 1 hour from now
+    private func createApproval(id: String = "test-approval", expired: Bool = false) -> ApprovalRequest {
+        let expiresAt: Date = expired
+            ? Date().addingTimeInterval(-3600)
+            : Date().addingTimeInterval(3600)
 
         return ApprovalRequest(
             id: id,
             agentId: "test-agent",
             agentName: "Test Agent",
-            actionType: "deploy",
+            actionType: .deploy,
             title: "Deploy to production",
             description: "Deploy version 1.2.3 to production environment",
             command: "kubectl apply -f deployment.yaml",
-            context: ApprovalRequest.Context(
+            context: ApprovalContext(
                 service: "api-server",
                 environment: "production",
                 repository: "company/api",
-                riskLevel: "high"
+                riskLevel: .high,
+                gitOperation: nil
             ),
-            createdAt: Date().ISO8601Format(),
+            createdAt: Date(),
             expiresAt: expiresAt
         )
     }
+
+    private func settleAsyncWork() async {
+        await MainActor.run {}
+        try? await Task.sleep(nanoseconds: 50_000_000)
+    }
 }
 
-// MARK: - Mock Services
+private final class MockApprovalWebSocket: WebSocketEventPublishing {
+    private let subject = PassthroughSubject<InboundEvent, Never>()
 
-class MockWebSocketService: WebSocketService {
-    override init() {
-        super.init()
+    var eventPublisher: AnyPublisher<InboundEvent, Never> {
+        subject.eraseToAnyPublisher()
     }
 
     func simulateEvent(_ event: InboundEvent) {
-        eventSubject.send(event)
-        lastEvent = event
+        subject.send(event)
     }
 }
 
-class MockAPIService: APIService {
-    var shouldSucceed = true
-    var errorMessage = "Mock error"
+private final class MockApprovalAPI: ApprovalAPIProviding {
+    var pendingApprovals: [ApprovalRequest] = []
     var lastApprovalResponse: ApprovalResponse?
+    var errorToThrow: Error?
 
-    override func submitApprovalResponse(_ response: ApprovalResponse) async throws {
+    func fetchPendingApprovals() async throws -> [ApprovalRequest] {
+        if let errorToThrow {
+            throw errorToThrow
+        }
+        return pendingApprovals
+    }
+
+    func submitApprovalResponse(_ response: ApprovalResponse) async throws {
+        if let errorToThrow {
+            throw errorToThrow
+        }
         lastApprovalResponse = response
-        if !shouldSucceed {
-            throw NSError(domain: "MockAPI", code: 500, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-        }
-    }
-
-    override func fetchPendingApprovals() async throws -> [ApprovalRequest] {
-        if !shouldSucceed {
-            throw NSError(domain: "MockAPI", code: 500, userInfo: [NSLocalizedDescriptionKey: errorMessage])
-        }
-        return []
     }
 }
 
-class MockBiometricService: BiometricService {
-    var shouldSucceed = true
-    var wasAuthenticated = false
+private final class MockBiometricAuthenticator: BiometricAuthenticating {
+    var authenticationReasons: [String] = []
+    var errorToThrow: Error?
 
-    override func authenticate(reason: String) async throws -> Bool {
-        wasAuthenticated = true
-        if shouldSucceed {
-            return true
-        } else {
-            throw BiometricError.authFailed("Mock biometric failure")
+    func authenticate(reason: String) async throws -> Bool {
+        authenticationReasons.append(reason)
+        if let errorToThrow {
+            throw errorToThrow
         }
+        return true
     }
 }
 
-class MockNotificationService: NotificationService {
+private final class MockApprovalNotifications: ApprovalNotificationManaging {
     var scheduledApprovals: [ApprovalRequest] = []
     var removedApprovalIds: [String] = []
     var lastBadgeCount: Int?
 
-    override func scheduleApprovalNotification(for approval: ApprovalRequest) async {
+    func scheduleApprovalNotification(for approval: ApprovalRequest) async {
         scheduledApprovals.append(approval)
     }
 
-    override func removeDelivered(approvalId: String) {
+    func removeDelivered(approvalId: String) {
         removedApprovalIds.append(approvalId)
     }
 
-    override func updateBadge(count: Int) async {
+    func updateBadge(count: Int) async {
         lastBadgeCount = count
     }
 }
