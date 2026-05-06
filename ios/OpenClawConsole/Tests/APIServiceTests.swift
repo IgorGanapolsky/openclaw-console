@@ -306,7 +306,7 @@ final class APIServiceTests: XCTestCase {
     }
 
     func testThrowsInvalidURLForBadBaseURL() async {
-        let badGateway = GatewayConnection(id: "gw-bad", name: "Bad", baseURL: "not a url with spaces")
+        let badGateway = GatewayConnection(id: "gw-bad", name: "Bad", baseURL: "http://%zz") // allow-http: invalid local URL fixture
         sut.tokenForAccount = { _ in "some-token" }
 
         do {

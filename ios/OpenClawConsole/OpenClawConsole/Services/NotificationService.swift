@@ -29,7 +29,7 @@ enum NotificationAction: String {
 // MARK: - NotificationService
 
 @Observable
-final class NotificationService {
+final class NotificationService: ApprovalNotificationManaging {
 
     static let shared = NotificationService()
     private let center = UNUserNotificationCenter.current()
