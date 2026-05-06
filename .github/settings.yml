@@ -26,6 +26,7 @@ branches:
           - "Skills Tests"
           - "Agent Workflow Guardrails"
           - "Flaky Test Guardrails"
+          - "Architecture Context Guardrails"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
           - "Android Build Check"
@@ -57,6 +58,7 @@ branches:
           - "Skills Tests"
           - "Agent Workflow Guardrails"
           - "Flaky Test Guardrails"
+          - "Architecture Context Guardrails"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
       enforce_admins: true

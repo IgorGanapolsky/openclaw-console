@@ -84,6 +84,15 @@ jobs:
       - name: Validate portable agent workflow settings
         run: python3 scripts/check_agent_workflow_settings.py
 
+  architecture-context-guardrails:
+    name: Architecture Context Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify architecture context workflow guardrails
+        run: python3 scripts/check_architecture_context_guardrails.py
+
   icon-parity:
     name: App Icon Parity
     runs-on: ubuntu-latest
