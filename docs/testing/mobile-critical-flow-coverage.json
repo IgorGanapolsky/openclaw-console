@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "policy": {
+    "description": "Every critical Mobile Console flow must have Android unit coverage, Android E2E coverage, iOS unit coverage, and iOS E2E coverage before release readiness can be claimed.",
+    "required_surfaces": [
+      "android.unit",
+      "android.e2e",
+      "ios.unit",
+      "ios.e2e"
+    ]
+  },
+  "critical_flows": [
+    {
+      "id": "crash_free_launch",
+      "name": "App launches without crash",
+      "android": {
+        "unit": [
+          "android/app/src/androidTest/java/com/openclaw/console/MainActivityLaunchTest.kt"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-android.yaml"
+        ]
+      },
+      "ios": {
+        "unit": [
+          "ios/OpenClawConsole/Tests/AppLaunchContractTests.swift"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-ios.yaml"
+        ]
+      }
+    },
+    {
+      "id": "gateway_pairing_qr_or_link",
+      "name": "Gateway can be paired by QR code or pairing link",
+      "android": {
+        "unit": [
+          "android/app/src/test/java/com/openclaw/console/data/model/GatewayPairingTest.kt"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-android.yaml"
+        ]
+      },
+      "ios": {
+        "unit": [
+          "ios/OpenClawConsole/Tests/GatewayPairingTests.swift"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-ios.yaml"
+        ]
+      }
+    },
+    {
+      "id": "secure_gateway_storage",
+      "name": "Gateway tokens are stored in platform secure storage",
+      "android": {
+        "unit": [
+          "android/app/src/test/java/com/openclaw/console/data/local/SecureStorageTest.kt",
+          "android/app/src/test/java/com/openclaw/console/data/repository/GatewayRepositoryTest.kt"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-android.yaml"
+        ]
+      },
+      "ios": {
+        "unit": [
+          "ios/OpenClawConsole/Tests/KeychainServiceTests.swift"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-ios.yaml"
+        ]
+      }
+    },
+    {
+      "id": "gateway_health_and_auth",
+      "name": "Gateway health requests include bearer auth and parse responses",
+      "android": {
+        "unit": [
+          "android/app/src/test/java/com/openclaw/console/data/network/ApiServiceTest.kt"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-android.yaml"
+        ]
+      },
+      "ios": {
+        "unit": [
+          "ios/OpenClawConsole/Tests/APIServiceTests.swift"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-ios.yaml"
+        ]
+      }
+    },
+    {
+      "id": "websocket_approval_delivery",
+      "name": "Approval requests arrive through the Gateway WebSocket stream",
+      "android": {
+        "unit": [
+          "android/app/src/test/java/com/openclaw/console/data/network/WebSocketClientTest.kt",
+          "android/app/src/test/java/com/openclaw/console/ui/screens/approvals/ApprovalViewModelTest.kt"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-android.yaml"
+        ]
+      },
+      "ios": {
+        "unit": [
+          "ios/OpenClawConsole/Tests/ApprovalViewModelTests.swift"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-ios.yaml"
+        ]
+      }
+    },
+    {
+      "id": "biometric_approval_decision",
+      "name": "Dangerous approval decisions require biometric verification",
+      "android": {
+        "unit": [
+          "android/app/src/test/java/com/openclaw/console/ui/screens/approvals/ApprovalViewModelTest.kt"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-android.yaml"
+        ]
+      },
+      "ios": {
+        "unit": [
+          "ios/OpenClawConsole/Tests/ApprovalViewModelTests.swift",
+          "ios/OpenClawConsole/Tests/BiometricServiceTests.swift"
+        ],
+        "e2e": [
+          ".maestro/smoke-test-ios.yaml"
+        ]
+      }
+    }
+  ]
+}

@@ -32,6 +32,15 @@
 4. Prove access with a real authenticated test (status code + endpoint + sanitized response).
 5. Never claim "no access" until steps 1-4 are completed with evidence.
 
+## Operator UX Defaults
+
+1. Default to concise, action-first replies. Status updates should be one or two useful sentences; final reports should be short unless the user asks for a full audit.
+2. Evidence is required, but summarize it: counts, SHAs, CI states, health results, timings, and links. Do not paste full logs unless exact failing lines are needed.
+3. Keep checks bounded. If CI or an external service is still running, report the current state and URL instead of freezing the conversation.
+4. Ask at most one clarifying question only when the next action is unsafe, impossible, or likely to waste significant work.
+5. Refuse only unsafe, illegal, credential-exposing, or impossible requests. Include one direct reason and a safe alternative.
+6. Prefer interactive responsiveness over background autonomy: stale TUI clients, cron storms, repeated auth failures, and runaway subagents must be stopped or paused before more automation is started.
+
 ## North Star
 
 **Daily Active Approvers (DAA)**: unique users who approve at least one agent action per day via the console.
@@ -68,6 +77,13 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 
 ## Worktree & Branch Protocol
 
+## Open Agent Workflow
+
+- `.agents/settings.json` is the portable agent workflow settings file. Read it before planning non-trivial work.
+- GitHub issues and PRs are the source of truth for agent-directed implementation, verification, and follow-up.
+- Use `.github/ISSUE_TEMPLATE/agent_task.yml` for non-trivial agent tasks so scope, constraints, and required evidence are explicit.
+- Multiple harnesses are allowed (Codex, Claude Code, Gemini CLI, Android CLI, GitHub CLI), but all must follow the same worktree, verification, and evidence rules.
+
 ### Mandatory for ALL Agents
 1. **Use `isolation: "worktree"` for any code modification.** No exceptions.
 2. **Never commit directly to `develop`, `main`, or the user's active branch.**
@@ -91,13 +107,35 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 - Keep Android agent responses concise: outcome, evidence, changed files, and next fix only. Do not paste full Gradle logs unless the exact failing lines are needed.
 - iOS/TestFlight app icon remains the canonical launcher icon source. Android launcher assets must be regenerated with `python3 scripts/sync_app_icons.py`, never hand-edited.
 
+## Architecture Agent Workflow
+
+- Use `.agents/skills/improve-codebase-architecture/SKILL.md` before architecture refactors, module consolidation, testability work, gateway seam changes, or agent navigability improvements.
+- Read `CONTEXT.md` first and use its OpenClaw domain language: Gateway, Mobile Console, Skill, Task, Incident, Approval Request, Gateway Connection, Store Release, and Daily Active Approver.
+- Read relevant records in `docs/adr/` before changing stable architecture decisions.
+- Favor deeper modules: smaller interfaces with more behavior behind them, better locality, clearer leverage, and stronger test surfaces.
+- Run `python3 scripts/check_architecture_context_guardrails.py` after touching architecture docs, ADRs, agent skills, workflow instructions, or guardrail wiring.
+
 ## Session Directive: PR Management & System Hygiene
+
+### Session Start Protocol
+1. Read `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md`.
+2. Query local RAG/memory for relevant lessons before planning.
+3. Review open PRs, branches, worktrees, and CI status.
+4. Exclude secrets, PATs, API keys, and passwords from all tracked directive files.
 
 1. Inspect all open PRs and report merge readiness with evidence.
 2. Identify orphan branches and classify each one as active, merge candidate, stale, or delete.
 3. Merge only PRs that are verified green and review-ready.
-4. Clean up stale branches, redundant worktrees, and obvious repo hygiene issues.
+4. Clean up stale branches, redundant worktrees, old logs, and obvious repo hygiene issues with counts and read-back evidence.
 5. Verify CI on `develop` and `main` before claiming readiness.
+6. Run the relevant operational dry run before claiming next-session readiness.
+7. Log useful lessons and any mistakes to local RAG/memory at session end.
+
+## Completion Confirmation
+
+Only after all PR, branch, worktree, CI, dry-run, and RAG logging checks are verified, state:
+
+> **Done merging PRs. CI passing. System hygiene complete. Ready for next session.**
 
 ## Commands
 

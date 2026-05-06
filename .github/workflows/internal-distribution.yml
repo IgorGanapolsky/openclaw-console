@@ -10,6 +10,15 @@ on:
         description: "Git ref to distribute (optional, defaults to develop)"
         required: false
         type: string
+      platform:
+        description: "Platform to distribute"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
+          - ios
 
 concurrency:
   group: internal-distribution-${{ github.event.workflow_run.head_branch || github.ref_name }}
@@ -24,7 +33,15 @@ jobs:
       ref: ${{ steps.decide.outputs.ref }}
       sha: ${{ steps.decide.outputs.sha }}
       reason: ${{ steps.decide.outputs.reason }}
+      android_changed: ${{ steps.decide.outputs.android_changed }}
+      ios_changed: ${{ steps.decide.outputs.ios_changed }}
     steps:
+      - uses: actions/checkout@v5
+        if: github.event_name == 'workflow_run'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
       - name: Decide whether to run
         id: decide
         env:
@@ -34,6 +51,8 @@ jobs:
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           ALLOWED_BRANCHES: "develop main"
           INPUT_REF: ${{ inputs.ref }}
+          INPUT_PLATFORM: ${{ inputs.platform }}
+          DISTRIBUTION_PATH_REGEX: '^(android/|ios/)'
         run: |
           set -euo pipefail
 
@@ -41,11 +60,30 @@ jobs:
           REF=""
           SHA=""
           REASON="not_eligible"
+          ANDROID_CHANGED="false"
+          IOS_CHANGED="false"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             REF="${INPUT_REF:-$GITHUB_REF_NAME}"
             SHOULD_RUN="true"
             REASON="manual_dispatch"
+            PLATFORM="${INPUT_PLATFORM:-all}"
+            case "$PLATFORM" in
+              all)
+                ANDROID_CHANGED="true"
+                IOS_CHANGED="true"
+                ;;
+              android)
+                ANDROID_CHANGED="true"
+                ;;
+              ios)
+                IOS_CHANGED="true"
+                ;;
+              *)
+                echo "gate: invalid platform=$PLATFORM"
+                exit 1
+                ;;
+            esac
           elif [[ "$EVENT_NAME" == "workflow_run" && "$WORKFLOW_CONCLUSION" == "success" ]]; then
             if [[ " $ALLOWED_BRANCHES " != *" $WORKFLOW_BRANCH "* ]]; then
               REASON="branch_not_eligible_${WORKFLOW_BRANCH}"
@@ -55,12 +93,43 @@ jobs:
                 echo "ref=$REF"
                 echo "sha=$SHA"
                 echo "reason=$REASON"
+                echo "android_changed=$ANDROID_CHANGED"
+                echo "ios_changed=$IOS_CHANGED"
               } >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
             REF="$WORKFLOW_SHA"
             SHA="$WORKFLOW_SHA"
+
+            if git rev-parse "${WORKFLOW_SHA}^" >/dev/null 2>&1; then
+              CHANGED_FILES="$(git diff --name-only "${WORKFLOW_SHA}^" "$WORKFLOW_SHA")"
+            else
+              CHANGED_FILES="$(git diff-tree --no-commit-id --name-only -r "$WORKFLOW_SHA" || true)"
+            fi
+
+            if ! grep -Eq "$DISTRIBUTION_PATH_REGEX" <<< "$CHANGED_FILES"; then
+              REASON="no_distribution_paths_changed"
+              echo "gate: skipping internal distribution; changed files do not affect mobile release artifacts"
+              printf '%s\n' "$CHANGED_FILES" | sed 's/^/gate: changed: /'
+              {
+                echo "should_run=$SHOULD_RUN"
+                echo "ref=$REF"
+                echo "sha=$SHA"
+                echo "reason=$REASON"
+                echo "android_changed=$ANDROID_CHANGED"
+                echo "ios_changed=$IOS_CHANGED"
+              } >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            if grep -Eq '^android/' <<< "$CHANGED_FILES"; then
+              ANDROID_CHANGED="true"
+            fi
+            if grep -Eq '^ios/' <<< "$CHANGED_FILES"; then
+              IOS_CHANGED="true"
+            fi
+
             SHOULD_RUN="true"
             REASON="ci_green_on_${WORKFLOW_BRANCH}"
           fi
@@ -70,13 +139,15 @@ jobs:
             echo "ref=$REF"
             echo "sha=$SHA"
             echo "reason=$REASON"
+            echo "android_changed=$ANDROID_CHANGED"
+            echo "ios_changed=$IOS_CHANGED"
           } >> "$GITHUB_OUTPUT"
-          echo "gate: should_run=$SHOULD_RUN reason=$REASON ref=$REF sha=$SHA"
+          echo "gate: should_run=$SHOULD_RUN reason=$REASON ref=$REF sha=$SHA android_changed=$ANDROID_CHANGED ios_changed=$IOS_CHANGED"
 
   ios-testflight-internal:
     name: iOS TestFlight (Internal)
     needs: [gate]
-    if: needs.gate.outputs.should_run == 'true'
+    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.ios_changed == 'true'
     runs-on: macos-26
     timeout-minutes: 45
     environment: production
@@ -86,9 +157,20 @@ jobs:
           ref: ${{ needs.gate.outputs.ref }}
 
       - name: Setup Python
+        if: runner.environment != 'self-hosted'
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+
+      - name: Configure self-hosted Python
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -m venv .venv-internal-distribution
+          echo "$PWD/.venv-internal-distribution/bin" >> "$GITHUB_PATH"
+          .venv-internal-distribution/bin/python -m pip install --upgrade pip
+          .venv-internal-distribution/bin/python -m pip --version
 
       - name: Install Pillow
         run: python3 -m pip install pillow
@@ -105,9 +187,10 @@ jobs:
           APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
           APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN; do
+          for name in MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID ADMIN_TOKEN REVENUECAT_PUBLIC_KEY; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -118,14 +201,30 @@ jobs:
         run: bash scripts/preflight-release.sh --platform ios --layer 1
 
       - name: Setup Ruby
+        if: runner.environment != 'self-hosted'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
           bundler-cache: true
           working-directory: ios/OpenClawConsole
 
+      - name: Setup Ruby (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: |
+          set -euo pipefail
+          echo "/opt/homebrew/opt/ruby@3.2/bin" >> "$GITHUB_PATH"
+          /opt/homebrew/opt/ruby@3.2/bin/ruby --version
+          /opt/homebrew/opt/ruby@3.2/bin/bundle install --jobs 4 --retry 3
+        working-directory: ios/OpenClawConsole
+
       - name: Install Fastlane
+        if: runner.environment != 'self-hosted'
         run: gem install fastlane
+        working-directory: ios/OpenClawConsole
+
+      - name: Verify Fastlane (self-hosted)
+        if: runner.environment == 'self-hosted'
+        run: bundle exec fastlane --version
         working-directory: ios/OpenClawConsole
 
       - name: Write App Store Connect key
@@ -190,6 +289,7 @@ jobs:
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: ${{ vars.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS || 'false' }}
           TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "true"
           TESTFLIGHT_ARCHIVE_ONLY: "true"
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -Eeuo pipefail
           bundle exec fastlane beta --verbose 2>&1 | tee fastlane-archive.log
@@ -214,6 +314,7 @@ jobs:
           TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS: ${{ vars.TESTFLIGHT_NOTIFY_EXTERNAL_TESTERS || 'false' }}
           TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "false"
           TESTFLIGHT_UPLOAD_ONLY: "true"
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -Eeuo pipefail
           bundle exec fastlane beta --verbose 2>&1 | tee fastlane-upload.log
@@ -277,7 +378,7 @@ jobs:
   android-firebase-internal:
     name: Android Firebase App Distribution (Internal)
     needs: [gate]
-    if: needs.gate.outputs.should_run == 'true'
+    if: needs.gate.outputs.should_run == 'true' && needs.gate.outputs.android_changed == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -300,6 +401,7 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           if [ -z "${GOOGLE_SERVICES_JSON:-}" ]; then
@@ -308,6 +410,10 @@ jobs:
           fi
           if [ -z "${ANDROID_KEYSTORE_BASE64:-}" ]; then
             echo "❌ Missing required secret: ANDROID_KEYSTORE_BASE64"
+            exit 1
+          fi
+          if [ -z "${REVENUECAT_PUBLIC_KEY:-}" ]; then
+            echo "❌ Missing required secret: REVENUECAT_PUBLIC_KEY"
             exit 1
           fi
 
@@ -384,6 +490,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
           ./gradlew assembleRelease --no-daemon

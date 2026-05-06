@@ -10,6 +10,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -21,6 +22,12 @@ INTERNAL_PSEUDO_GROUPS = {
     "appstore connect users",
     "asc users",
 }
+INTERNAL_TESTER_ROLES = {
+    "ADMIN",
+    "APP_MANAGER",
+    "DEVELOPER",
+    "MARKETING",
+}
 
 
 def csv(raw: str) -> list[str]:
@@ -29,6 +36,32 @@ def csv(raw: str) -> list[str]:
 
 def is_internal_pseudo_group(name: str) -> bool:
     return " ".join(name.strip().lower().split()) in INTERNAL_PSEUDO_GROUPS
+
+
+def summarize_asc_error(body: str) -> str:
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return body.strip()[:1000] if body.strip() else "empty response body"
+
+    errors = payload.get("errors")
+    if not isinstance(errors, list):
+        return json.dumps(payload, sort_keys=True)[:1000]
+
+    summaries: list[str] = []
+    for error in errors:
+        if not isinstance(error, dict):
+            continue
+        parts = [
+            str(error.get("status") or "").strip(),
+            str(error.get("code") or "").strip(),
+            str(error.get("title") or "").strip(),
+            str(error.get("detail") or "").strip(),
+        ]
+        summary = " ".join(part for part in parts if part)
+        if summary:
+            summaries.append(summary)
+    return "; ".join(summaries)[:1000] if summaries else json.dumps(payload, sort_keys=True)[:1000]
 
 
 def private_key_from_env() -> str:
@@ -102,9 +135,16 @@ class ASCClient:
                 "Content-Type": "application/json",
             },
         )
-        with urlopen(req, timeout=30) as response:
-            body = response.read().decode("utf-8")
-            return json.loads(body) if body else {}
+        try:
+            with urlopen(req, timeout=30) as response:
+                body = response.read().decode("utf-8")
+                return json.loads(body) if body else {}
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"App Store Connect API {method} {path} failed: "
+                f"HTTP {exc.code} {exc.reason}: {summarize_asc_error(body)}"
+            ) from exc
 
     def get_all(self, path: str, *, params: dict[str, str] | None = None) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
@@ -112,8 +152,15 @@ class ASCClient:
         while True:
             if next_url:
                 req = Request(next_url, headers={"Authorization": f"Bearer {self.token}"})
-                with urlopen(req, timeout=30) as response:
-                    payload = json.loads(response.read().decode("utf-8"))
+                try:
+                    with urlopen(req, timeout=30) as response:
+                        payload = json.loads(response.read().decode("utf-8"))
+                except HTTPError as exc:
+                    body = exc.read().decode("utf-8", errors="replace")
+                    raise RuntimeError(
+                        f"App Store Connect API GET {path} page failed: "
+                        f"HTTP {exc.code} {exc.reason}: {summarize_asc_error(body)}"
+                    ) from exc
             else:
                 payload = self.request("GET", path, params=params)
             items.extend(payload.get("data", []))
@@ -187,6 +234,23 @@ class TestFlightVisibility:
         )
         testers = payload.get("data", [])
         return testers[0] if testers else None
+
+    def app_store_user(self, username: str) -> dict[str, Any] | None:
+        payload = self.client.request(
+            "GET",
+            "/users",
+            params={
+                "filter[username]": username,
+                "fields[users]": "username,roles,allAppsVisible",
+                "limit": "1",
+            },
+        )
+        users = payload.get("data", [])
+        return users[0] if users else None
+
+    def user_visible_app_ids(self, user_id: str) -> set[str]:
+        apps = self.client.get_all(f"/users/{user_id}/visibleApps", params={"limit": "200"})
+        return {app["id"] for app in apps}
 
     def beta_tester_build_ids(self, tester_id: str) -> set[str]:
         builds = self.client.get_all(f"/betaTesters/{tester_id}/relationships/builds", params={"limit": "200"})
@@ -269,35 +333,38 @@ class TestFlightVisibility:
 
         if groups and all(is_internal_pseudo_group(name) for name in groups):
             missing: list[str] = []
-            missing_build_access: list[str] = []
+            ineligible: list[str] = []
+            missing_app_access: list[str] = []
             for email in required_testers:
                 normalized_email = email.lower()
-                tester = self.beta_tester(normalized_email)
-                if not tester:
+                user = self.app_store_user(normalized_email)
+                if not user:
                     missing.append(normalized_email)
                     continue
 
-                tester_id = tester["id"]
-                if build_id in self.beta_tester_build_ids(tester_id):
+                attrs = user.get("attributes", {})
+                roles = set(attrs.get("roles") or [])
+                if not roles.intersection(INTERNAL_TESTER_ROLES):
+                    ineligible.append(f"{normalized_email} roles={sorted(roles)}")
                     continue
 
-                if assign_required_testers:
-                    self.attach_beta_tester_build(tester_id, build_id)
-                    if build_id in self.beta_tester_build_ids(tester_id):
-                        assigned_required_testers.append(normalized_email)
-                        continue
-
-                missing_build_access.append(normalized_email)
+                if not bool(attrs.get("allAppsVisible")) and app_id not in self.user_visible_app_ids(user["id"]):
+                    missing_app_access.append(normalized_email)
 
             if missing:
                 raise RuntimeError(
-                    "Required internal TestFlight testers missing from App Store Connect beta testers: "
+                    "Required internal TestFlight testers missing from App Store Connect users: "
                     + ", ".join(missing)
                 )
-            if missing_build_access:
+            if ineligible:
                 raise RuntimeError(
-                    "Required internal TestFlight testers are not assigned to build "
-                    f"{version} ({build_number}): " + ", ".join(missing_build_access)
+                    "Required internal TestFlight testers do not have an internal testing role: "
+                    + "; ".join(ineligible)
+                )
+            if missing_app_access:
+                raise RuntimeError(
+                    "Required internal TestFlight testers do not have access to app "
+                    f"{self.bundle_id}: " + ", ".join(missing_app_access)
                 )
 
         if missing_testers:
