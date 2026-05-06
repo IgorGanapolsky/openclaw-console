@@ -27,12 +27,48 @@ enum KeychainError: LocalizedError {
 
 // MARK: - KeychainService
 
+protocol KeychainItemManaging: AnyObject {
+    func update(_ query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus
+    func add(_ query: CFDictionary) -> OSStatus
+    func copyMatching(_ query: CFDictionary, result: UnsafeMutablePointer<AnyObject?>?) -> OSStatus
+    func delete(_ query: CFDictionary) -> OSStatus
+}
+
+final class SecurityKeychainItemManager: KeychainItemManaging {
+    func update(_ query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
+        SecItemUpdate(query, attributesToUpdate)
+    }
+
+    func add(_ query: CFDictionary) -> OSStatus {
+        SecItemAdd(query, nil)
+    }
+
+    func copyMatching(_ query: CFDictionary, result: UnsafeMutablePointer<AnyObject?>?) -> OSStatus {
+        SecItemCopyMatching(query, result)
+    }
+
+    func delete(_ query: CFDictionary) -> OSStatus {
+        SecItemDelete(query)
+    }
+}
+
 public final class KeychainService {
 
     public static let shared = KeychainService()
-    private let service = "com.openclaw.console.gateway-tokens"
+    private let service: String
+    private let itemManager: any KeychainItemManaging
 
-    private init() {}
+    private convenience init() {
+        self.init(itemManager: SecurityKeychainItemManager())
+    }
+
+    init(
+        itemManager: any KeychainItemManaging,
+        service: String = "com.openclaw.console.gateway-tokens"
+    ) {
+        self.itemManager = itemManager
+        self.service = service
+    }
 
     // MARK: Save
 
@@ -47,7 +83,10 @@ public final class KeychainService {
         let updateAttributes: [CFString: Any] = [
             kSecValueData: data
         ]
-        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, updateAttributes as CFDictionary)
+        let updateStatus = itemManager.update(
+            updateQuery as CFDictionary,
+            attributesToUpdate: updateAttributes as CFDictionary
+        )
 
         if updateStatus == errSecSuccess {
             return
@@ -62,7 +101,7 @@ public final class KeychainService {
                 kSecValueData: data,
                 kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
             ]
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            let addStatus = itemManager.add(addQuery as CFDictionary)
             if addStatus != errSecSuccess {
                 throw KeychainError.unexpectedStatus(addStatus)
             }
@@ -93,7 +132,7 @@ public final class KeychainService {
         ]
 
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = itemManager.copyMatching(query as CFDictionary, result: &result)
 
         guard status == errSecSuccess,
               let data = result as? Data else {
@@ -124,7 +163,7 @@ public final class KeychainService {
             kSecAttrAccount: account
         ]
 
-        let status = SecItemDelete(query as CFDictionary)
+        let status = itemManager.delete(query as CFDictionary)
         if status != errSecSuccess && status != errSecItemNotFound {
             throw KeychainError.unexpectedStatus(status)
         }
