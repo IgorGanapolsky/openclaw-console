@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "workflow": {
+    "source_of_truth": "github_issues_and_pull_requests",
+    "isolation": "worktree",
+    "base_branch": "develop",
+    "default_target_branch": "develop",
+    "completion_requires": [
+      "direct_state_readback",
+      "local_validation",
+      "pushed_branch",
+      "pull_request",
+      "ci_status_readback"
+    ]
+  },
+  "response_style": {
+    "mode": "codex_concise",
+    "status_update_lines": 2,
+    "final_max_lines": 18,
+    "include_evidence": true,
+    "evidence_style": "summarized_counts_statuses_links",
+    "avoid_full_logs_unless_needed": true,
+    "max_clarifying_questions": 1,
+    "bounded_verification": true,
+    "pause_runaway_background_work": true
+  },
+  "agent_harnesses": [
+    {
+      "name": "Codex",
+      "role": "implementation_and_verification",
+      "command": "codex"
+    },
+    {
+      "name": "Claude Code",
+      "role": "planning_and_review",
+      "command": "claude"
+    },
+    {
+      "name": "Gemini CLI",
+      "role": "fast_analysis_and_scaffolding",
+      "command": "gemini"
+    },
+    {
+      "name": "Android CLI",
+      "role": "android_agent_workflows_when_available",
+      "command": "android"
+    },
+    {
+      "name": "GitHub CLI",
+      "role": "pull_requests_ci_and_release_readback",
+      "command": "gh"
+    }
+  ],
+  "required_context_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    ".github/pull_request_template.md",
+    ".github/ISSUE_TEMPLATE/agent_task.yml"
+  ],
+  "verification_commands": {
+    "agent_workflow": "python3 scripts/check_agent_workflow_settings.py",
+    "flaky_quarantine": "python3 scripts/check_flaky_quarantine.py",
+    "android_guardrails": "python3 scripts/check_android_agent_guardrails.py",
+    "release_contract": "python3 scripts/validate_release_contract.py --platform both"
+  }
+}

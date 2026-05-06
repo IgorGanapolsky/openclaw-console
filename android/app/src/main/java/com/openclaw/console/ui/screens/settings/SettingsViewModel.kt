@@ -3,6 +3,7 @@ package com.openclaw.console.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openclaw.console.data.model.GatewayConnection
+import com.openclaw.console.data.model.GatewayPairing
 import com.openclaw.console.data.model.ResponseProfile
 import com.openclaw.console.data.model.ResponseVerbosity
 import com.openclaw.console.data.model.RuntimeConfig
@@ -22,6 +23,7 @@ data class AddGatewayUiState(
     val name: String = "",
     val baseUrl: String = "",
     val token: String = "",
+    val pairingCode: String = "",
     val isLoading: Boolean = false,
     val testResult: TestResult? = null,
     val error: String? = null,
@@ -81,6 +83,53 @@ class SettingsViewModel : ViewModel() {
         _addGatewayUiState.value = _addGatewayUiState.value.copy(token = token, testResult = null)
     }
 
+    fun onPairingCodeChange(pairingCode: String) {
+        _addGatewayUiState.value = _addGatewayUiState.value.copy(
+            pairingCode = pairingCode,
+            error = null,
+            testResult = null
+        )
+    }
+
+    fun applyPairingCode() {
+        val state = _addGatewayUiState.value
+        GatewayPairing.parse(state.pairingCode)
+            .onSuccess { pairing ->
+                _addGatewayUiState.value = state.copy(
+                    name = pairing.name,
+                    baseUrl = pairing.baseUrl,
+                    token = pairing.token,
+                    error = null,
+                    showHttpWarning = pairing.baseUrl.startsWith("http://"),
+                    testResult = null
+                )
+            }
+            .onFailure { error ->
+                _addGatewayUiState.value = state.copy(error = error.message ?: "Invalid pairing code")
+            }
+    }
+
+    fun applyScannedPairingCode(rawValue: String) {
+        GatewayPairing.parse(rawValue)
+            .onSuccess { pairing ->
+                _addGatewayUiState.value = _addGatewayUiState.value.copy(
+                    name = pairing.name,
+                    baseUrl = pairing.baseUrl,
+                    token = pairing.token,
+                    pairingCode = rawValue,
+                    testResult = null,
+                    error = null,
+                    showHttpWarning = pairing.baseUrl.startsWith("http://")
+                )
+            }
+            .onFailure { error ->
+                _addGatewayUiState.value = _addGatewayUiState.value.copy(
+                    testResult = null,
+                    error = error.message ?: "Invalid QR code"
+                )
+            }
+    }
+
     fun testAndSave(onSuccess: () -> Unit) {
         val state = _addGatewayUiState.value
         if (state.name.isBlank() || state.baseUrl.isBlank() || state.token.isBlank()) {
@@ -120,6 +169,25 @@ class SettingsViewModel : ViewModel() {
                     )
                 }
         }
+    }
+
+    fun importPairing(rawValue: String, onSuccess: () -> Unit) {
+        GatewayPairing.parse(rawValue)
+            .onSuccess { pairing ->
+                _addGatewayUiState.value = AddGatewayUiState(
+                    name = pairing.name,
+                    baseUrl = pairing.baseUrl,
+                    token = pairing.token,
+                    pairingCode = rawValue,
+                    showHttpWarning = pairing.baseUrl.startsWith("http://")
+                )
+                testAndSave(onSuccess)
+            }
+            .onFailure { error ->
+                _addGatewayUiState.value = _addGatewayUiState.value.copy(
+                    error = error.message ?: "Invalid pairing code"
+                )
+            }
     }
 
     fun deleteGateway(gatewayId: String) {

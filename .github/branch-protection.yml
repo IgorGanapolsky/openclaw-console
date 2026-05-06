@@ -6,8 +6,14 @@ main:
     strict: true
     contexts:
       - "Skills Tests"
+      - "Agent Workflow Guardrails"
+      - "Flaky Test Guardrails"
+      - "Architecture Context Guardrails"
+      - "Mobile Test Coverage Policy"
       - "Architecture Lint (Kotlin)"
       - "Architecture Lint (Swift)"
+      - "Android Emulator + Maestro Tests"
+      - "iOS Simulator Tests"
       - "Android Build Check"
       - "iOS Build Check"
       - "Secrets Scan"
@@ -34,8 +40,24 @@ develop:
     strict: true
     contexts:
       - "Skills Tests"
+      - "Agent Workflow Guardrails"
+      - "Flaky Test Guardrails"
+      - "Architecture Context Guardrails"
+      - "Mobile Test Coverage Policy"
       - "Architecture Lint (Kotlin)"
       - "Architecture Lint (Swift)"
+      - "Android Emulator + Maestro Tests"
+      - "iOS Simulator Tests"
+      - "Android Build Check"
+      - "Android Agent Guardrails"
+      - "App Icon Parity"
+      - "Brand Parity"
+      - "Release Contract"
+      - "Secrets Scan"
+      - "Dependency Audit"
+      - "CodeQL Analysis (javascript-typescript)"
+      - "Claude Review"
+      - "reconcile-pr-state"
   enforce_admins: true
   required_pull_request_reviews:
     dismiss_stale_reviews: true

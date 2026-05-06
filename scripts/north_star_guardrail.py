@@ -91,14 +91,22 @@ def _outside_grace(campaigns: List[Dict[str, Any]], grace_days: int, now: dt.dat
 
 
 def _query_posthog_daa_1d(api_key: str, project_id: str) -> int:
+    approval_events = (
+        "first_approval",
+        "approval_completed",
+        "approval_submitted",
+        "approval_approved",
+        "approval_action_taken",
+    )
+    quoted_events = ",".join(f"'{event}'" for event in approval_events)
     query = {
         "query": {
             "kind": "HogQLQuery",
             "query": (
-                "SELECT count(DISTINCT person_id) AS daa_1d "
+                "SELECT count(DISTINCT distinct_id) AS daa_1d "
                 "FROM events "
                 "WHERE timestamp > now() - interval 1 day "
-                "AND event IN ('approval_submitted','approval_approved','approval_action_taken')"
+                f"AND event IN ({quoted_events})"
             ),
         }
     }
@@ -139,7 +147,6 @@ def run(repo_root: Path, lookback_days: int, grace_days: int, active_statuses: L
 
     api_key = (
         os.getenv("POSTHOG_PERSONAL_API_KEY", "").strip()
-        or os.getenv("POSTHOG_API_KEY", "").strip()
         or os.getenv("posthog_api_key", "").strip()
     )
     project_id = os.getenv("POSTHOG_PROJECT_ID", "").strip()
@@ -161,7 +168,7 @@ def run(repo_root: Path, lookback_days: int, grace_days: int, active_statuses: L
             errors.append(status_reason)
     else:
         status = "skipped"
-        status_reason = "missing POSTHOG_PERSONAL_API_KEY/POSTHOG_API_KEY or POSTHOG_PROJECT_ID"
+        status_reason = "missing POSTHOG_PERSONAL_API_KEY or POSTHOG_PROJECT_ID"
 
     guardrail_violated = (
         len(active_campaigns) > 0 and daa_1d == 0 and active_outside_grace > 0

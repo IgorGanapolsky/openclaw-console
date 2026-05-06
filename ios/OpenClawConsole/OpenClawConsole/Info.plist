@@ -26,6 +26,19 @@
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 
+	<!-- Gateway pairing deep links -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.openclaw.console.pairing</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>openclaw</string>
+			</array>
+		</dict>
+	</array>
+
 	<!-- Minimum OS -->
 	<key>MinimumOSVersion</key>
 	<string>17.0</string>
@@ -57,6 +70,10 @@
 	<!-- Privacy - required if connecting to local network gateways -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>OpenClaw Console connects to OpenClaw gateway servers on your local network to monitor and control agents.</string>
+
+	<!-- Privacy - required for gateway QR scanning -->
+	<key>NSCameraUsageDescription</key>
+	<string>OpenClaw Console uses the camera to scan gateway pairing QR codes.</string>
 
 	<!-- App Transport Security - enforce HTTPS by default -->
 	<!-- To allow HTTP for local development, add NSExceptionDomains with NSAllowsInsecureHTTPLoads -->

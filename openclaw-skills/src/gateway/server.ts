@@ -41,9 +41,27 @@ import {
   isResponseProfile,
   isResponseVerbosity,
 } from '../config/default.js';
-import { normalizeProjectBridgeSession } from './project-session.js';
+import {
+  applyBridgeSessionControl,
+  isBridgeSessionControlAction,
+  normalizeProjectBridgeSession,
+} from './project-session.js';
+import {
+  buildGatewayPairingPayload,
+  pairingUri,
+  rejectNonLocalPairing,
+  renderPairingPage,
+  renderTerminalPairingQr,
+} from './pairing.js';
+import { normalizeSkillWorkflowSystem } from './skill-workflow.js';
 import { buildOperatorSummary } from './operator-summary.js';
 import { presentTaskForOperator } from '../utils/response-style.js';
+import {
+  assessAgentCommerceRisk,
+  assessSupplyChainRisk,
+  scanSecretExposureInventory,
+} from '../security/supply-chain-guardrails.js';
+import { IncidentManagerSkill } from '../skills/incident-manager.js';
 
 export interface GatewayServer {
   httpServer: http.Server;
@@ -69,6 +87,7 @@ export function createGatewayServer(
   const containerManager = new DockerContainerManager(config);
   const mcpManager = new McpManager();
   const skillGenerator = new SkillGenerator(containerManager, mcpManager, state);
+  const incidentManager = new IncidentManagerSkill(state);
 
   // ── Middleware ───────────────────────────────────────────────────────────
 
@@ -111,6 +130,23 @@ export function createGatewayServer(
       local_model: getConfiguredLocalModel(config),
     };
     res.json(body);
+  });
+
+  app.get('/api/pairing', (req: Request, res: Response) => {
+    if (rejectNonLocalPairing(req, res)) return;
+
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    res.json({
+      ...payload,
+      pairing_uri: pairingUri(payload),
+    });
+  });
+
+  app.get('/pair', async (req: Request, res: Response) => {
+    if (rejectNonLocalPairing(req, res)) return;
+
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    res.type('html').send(await renderPairingPage(payload));
   });
 
   app.get('/api/runtime/status', auth, (_req: Request, res: Response) => {
@@ -359,6 +395,79 @@ export function createGatewayServer(
     res.json(state.listIncidents());
   });
 
+  // ── Supply-Chain Guardrails ──────────────────────────────────────────────
+
+  app.post('/api/security/supply-chain/assess', auth, (req: Request, res: Response) => {
+    const command = typeof req.body?.command === 'string' ? req.body.command : '';
+    const fileChanges = Array.isArray(req.body?.file_changes)
+      ? req.body.file_changes.filter((item: unknown): item is string => typeof item === 'string')
+      : undefined;
+    const actionType = isActionType(req.body?.action_type) ? req.body.action_type : 'shell_command';
+    if (!command && (!fileChanges || fileChanges.length === 0)) {
+      res.status(400).json({ error: { code: 4000, message: 'command or file_changes is required' } });
+      return;
+    }
+    const risk = assessSupplyChainRisk({ actionType, command, fileChanges });
+    res.json({
+      checked_at: new Date().toISOString(),
+      detected: risk !== null,
+      risk,
+    });
+  });
+
+  app.post('/api/security/agent-commerce/assess', auth, (req: Request, res: Response) => {
+    const command = typeof req.body?.command === 'string' ? req.body.command : '';
+    const actionType = isActionType(req.body?.action_type) ? req.body.action_type : 'shell_command';
+    const estimatedMonthlyUsd = parseOptionalUsd(req.body?.estimated_monthly_usd);
+    const monthlyBudgetLimitUsd = parseOptionalUsd(req.body?.monthly_budget_limit_usd);
+    if (!command) {
+      res.status(400).json({ error: { code: 4000, message: 'command is required' } });
+      return;
+    }
+    const risk = assessAgentCommerceRisk({
+      actionType,
+      command,
+      estimatedMonthlyUsd,
+      monthlyBudgetLimitUsd,
+    });
+    res.json({
+      checked_at: new Date().toISOString(),
+      detected: risk !== null,
+      risk,
+    });
+  });
+
+  app.get('/api/security/secret-inventory', auth, (_req: Request, res: Response) => {
+    res.json(scanSecretExposureInventory({ rootDir: process.cwd() }));
+  });
+
+  app.post('/api/security/supply-chain/incidents', auth, async (req: Request, res: Response) => {
+    const agentId = typeof req.body?.agent_id === 'string' ? req.body.agent_id : '';
+    const agent = agentId ? state.getAgent(agentId) : null;
+    if (!agent) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    const title = typeof req.body?.title === 'string' && req.body.title.trim()
+      ? req.body.title.trim()
+      : 'Suspected developer-machine supply-chain exposure';
+    const command = typeof req.body?.command === 'string' ? req.body.command : undefined;
+    const repository = typeof req.body?.repository === 'string' ? req.body.repository : undefined;
+    const inventory = scanSecretExposureInventory({ rootDir: process.cwd() });
+    const incident = await incidentManager.createSupplyChainIncident({
+      agentId,
+      agentName: agent.name,
+      title,
+      command,
+      repository,
+      inventory,
+    });
+    res.json({
+      incident,
+      inventory_counts: inventory.counts,
+    });
+  });
+
   // ── Approvals ─────────────────────────────────────────────────────────────
 
   app.get('/api/approvals/pending', auth, (_req: Request, res: Response) => {
@@ -374,6 +483,62 @@ export function createGatewayServer(
   app.post('/api/bridges/upsert', auth, async (req: Request, res: Response) => {
     const session = await state.upsertBridgeSession(normalizeProjectBridgeSession(req.body));
     res.json(session);
+  });
+
+  app.post('/api/bridges/:id/control', auth, async (req: Request, res: Response) => {
+    const bridgeId = String(req.params['id'] ?? '');
+    const session = state.listBridgeSessions().find((item) => item.id === bridgeId);
+    if (!session) {
+      res.status(404).json({ error: { code: 4040, message: 'Bridge session not found' } });
+      return;
+    }
+    if (!isBridgeSessionControlAction(req.body?.action)) {
+      res.status(400).json({ error: { code: 4000, message: 'action must be cancel, pause, resume, hibernate, or share_readonly' } });
+      return;
+    }
+    const actor = parseActor(req.body?.actor);
+    const updated = applyBridgeSessionControl(session, req.body.action, {
+      actor,
+      readOnlyShareUrl: typeof req.body?.read_only_share_url === 'string' ? req.body.read_only_share_url : undefined,
+    });
+    const stored = await state.upsertBridgeSession(updated);
+    await state.recordGovernanceEvent?.({
+      agent_id: stored.agent_id,
+      type: 'environment_observed',
+      title: `Bridge session ${req.body.action}`,
+      summary: `Applied ${req.body.action} to ${stored.title}`,
+      actor,
+      risk_level: 'high',
+      metadata: {
+        bridge_id: stored.id,
+        lifecycle: stored.lifecycle,
+        execution: stored.execution,
+      },
+    });
+    res.json(stored);
+  });
+
+  // ── Skill Workflow Systems ───────────────────────────────────────────────
+
+  app.get('/api/skill-workflows', auth, (req: Request, res: Response) => {
+    const agentId = typeof req.query['agent_id'] === 'string' ? req.query['agent_id'] : undefined;
+    res.json(state.listSkillWorkflowSystems(agentId));
+  });
+
+  app.post('/api/skill-workflows/upsert', auth, async (req: Request, res: Response) => {
+    const agentId = typeof req.body?.agent_id === 'string' ? req.body.agent_id : '';
+    if (!agentId || !state.getAgent(agentId)) {
+      res.status(404).json({ error: { code: ERROR_CODES.AGENT_NOT_FOUND, message: 'Agent not found' } });
+      return;
+    }
+    if (typeof req.body?.name !== 'string' || typeof req.body?.trigger_prompt !== 'string' || !Array.isArray(req.body?.steps)) {
+      res.status(400).json({ error: { code: 4000, message: 'agent_id, name, trigger_prompt, and steps are required' } });
+      return;
+    }
+    const existing = typeof req.body?.id === 'string' ? state.getSkillWorkflowSystem(req.body.id) : undefined;
+    const workflow = normalizeSkillWorkflowSystem(req.body, existing);
+    const stored = await state.upsertSkillWorkflowSystem(workflow);
+    res.status(stored.validation.valid ? 200 : 422).json(stored);
   });
 
   // ── Recurring Tasks (Loops) ───────────────────────────────────────────────
@@ -438,17 +603,23 @@ export function createGatewayServer(
     });
   });
 
-  app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
-    const devToken = tokenManager.getDefaultDevToken();
-    // Development-only URL with temporary access token for mobile testing
-    const baseUrl = `http://${config.host}:${config.port}/api/health`;
-    const sessionUrl = `${baseUrl}?tkn=${devToken}`;
+  app.post('/api/remote-control', auth, async (req: Request, res: Response) => {
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    const pairingLink = pairingUri(payload);
+    const pairingPage = `${payload.base_url}/pair`;
+    const terminalQr = await renderTerminalPairingQr(payload);
     console.info('\n' + '='.repeat(40));
     console.info('📱 REMOTE CONTROL ACTIVE');
-    console.info('Scan to access from mobile:');
-    console.info(`URL: ${sessionUrl}`);
+    console.info('Scan this QR in OpenClaw Console:');
+    console.info(terminalQr);
+    console.info(`QR page: ${pairingPage}`);
+    console.info(`Pairing link: ${pairingLink}`);
     console.info('='.repeat(40) + '\n');
-    res.json({ url: sessionUrl, expires_in: 600 });
+    res.json({
+      url: pairingLink,
+      pairing_uri: pairingLink,
+      pairing_page: pairingPage,
+    });
   });
 
   // ── Revenue Infrastructure ────────────────────────────────────────────────
@@ -522,9 +693,11 @@ export function createGatewayServer(
           console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
           // Dev hint: connect via WebSocket using your dev auth bearer credential
           const wsEndpoint = `ws://${config.host}:${config.port}/ws`; // local-dev-only
-          console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          if (process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
+            console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          }
           const devToken = tokenManager.getDefaultDevToken();
-          if (devToken) {
+          if (devToken && process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
             console.info(`[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`);
           }
           resolve();
@@ -569,4 +742,11 @@ export function createGatewayServer(
 
   function parseActor(value: unknown): GovernanceEvent['actor'] {
     return value === 'human' || value === 'gateway' || value === 'policy' ? value : 'agent';
+  }
+
+  function parseOptionalUsd(value: unknown): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const parsed = typeof value === 'number' ? value : Number.parseFloat(String(value));
+    if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+    return Math.round(parsed * 100) / 100;
   }

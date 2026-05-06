@@ -8,6 +8,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from collections import deque
 from typing import Iterable
 
 try:
@@ -35,8 +36,9 @@ ANDROID_DENSITIES = {
     "mipmap-xxhdpi": 144,
     "mipmap-xxxhdpi": 192,
 }
-ANDROID_BACKGROUND = (0, 0, 0)
+ANDROID_BACKGROUND = (255, 255, 255)
 ADAPTIVE_SCALE = 108 / 48
+ADAPTIVE_SAFE_ZONE_SCALE = 72 / 48
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,6 +65,41 @@ def flatten(image: Image.Image, background: tuple[int, int, int], size: int) -> 
     canvas = Image.new("RGB", (size, size), background)
     canvas.paste(image, mask=image)
     return canvas
+
+
+def clear_edge_background(
+    image: Image.Image,
+    background: tuple[int, int, int] = (255, 255, 255),
+    tolerance: int = 8,
+) -> Image.Image:
+    """Make the edge-connected iOS white canvas transparent for Android launchers."""
+    rgba = image.convert("RGBA")
+    pixels = rgba.load()
+    width, height = rgba.size
+    seen: set[tuple[int, int]] = set()
+    queue: deque[tuple[int, int]] = deque()
+
+    for x in range(width):
+        queue.append((x, 0))
+        queue.append((x, height - 1))
+    for y in range(height):
+        queue.append((0, y))
+        queue.append((width - 1, y))
+
+    def matches(pixel: tuple[int, int, int, int]) -> bool:
+        return pixel[3] > 0 and all(abs(pixel[i] - background[i]) <= tolerance for i in range(3))
+
+    while queue:
+        x, y = queue.popleft()
+        if (x, y) in seen or not (0 <= x < width and 0 <= y < height):
+            continue
+        seen.add((x, y))
+        if not matches(pixels[x, y]):
+            continue
+        pixels[x, y] = (255, 255, 255, 0)
+        queue.extend(((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)))
+
+    return rgba
 
 
 def ios_targets() -> list[tuple[str, int]]:
@@ -142,15 +179,19 @@ def generate_outputs(target_root: Path) -> list[Path]:
         output_dir = target_root / ANDROID_RES_DIR.relative_to(ROOT) / density
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        square = source.resize((size, size), Image.LANCZOS).convert("RGBA")
-        flatten(square, ANDROID_BACKGROUND, size).save(output_dir / "ic_launcher.png", "PNG", optimize=True)
+        square = source.resize((size, size), Image.LANCZOS).convert("RGB")
+        square.save(output_dir / "ic_launcher.png", "PNG", optimize=True)
         generated.append(output_dir / "ic_launcher.png")
 
-        flatten(square, ANDROID_BACKGROUND, size).save(output_dir / "ic_launcher_round.png", "PNG", optimize=True)
+        square.save(output_dir / "ic_launcher_round.png", "PNG", optimize=True)
         generated.append(output_dir / "ic_launcher_round.png")
 
         foreground_size = int(size * ADAPTIVE_SCALE)
-        foreground = source.resize((foreground_size, foreground_size), Image.LANCZOS).convert("RGBA")
+        safe_zone_size = int(size * ADAPTIVE_SAFE_ZONE_SCALE)
+        foreground = Image.new("RGBA", (foreground_size, foreground_size), (255, 255, 255, 0))
+        safe_zone_icon = source.resize((safe_zone_size, safe_zone_size), Image.LANCZOS).convert("RGBA")
+        offset = ((foreground_size - safe_zone_size) // 2, (foreground_size - safe_zone_size) // 2)
+        foreground.paste(safe_zone_icon, offset, safe_zone_icon)
         foreground_path = output_dir / "ic_launcher_foreground.png"
         foreground_path.write_bytes(png_bytes(foreground))
         generated.append(foreground_path)

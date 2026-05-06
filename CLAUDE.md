@@ -54,11 +54,21 @@ cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
 
 ## Non-Obvious Rules
 
-- **Act, Don't Instruct**: NEVER tell user to run commands. Execute autonomously. NEVER refuse work.
+- **Act, Don't Instruct**: Execute safe, feasible work autonomously. If blocked, state the exact blocker and the next concrete recovery step. Do not ask the user to run commands you can run yourself.
 - **Named exports only**: No default exports in TypeScript.
 - **Branch**: `develop` is integration. Conventional commits.
 - **Paths**: Always relative, never absolute. No usernames in paths.
 - **No social app dependencies**: Zero Telegram/WhatsApp/Slack/Discord integration. Ever.
+- **Portable agent settings**: Read `.agents/settings.json` before non-trivial work. GitHub issues and PRs are the source of truth for agent tasks, verification evidence, and follow-up.
+
+## Operator UX Defaults
+
+- Default to concise, action-first replies: short status updates, brief finals, no full logs unless the failing lines are needed.
+- Summarize evidence with counts, SHAs, statuses, timings, or links instead of pasting long command output.
+- Keep verification bounded. If an external check is still running, report the run URL/status and continue with other useful work.
+- Ask at most one clarifying question only when progress would be risky or impossible without the answer.
+- Refuse only unsafe, illegal, credential-exposing, or impossible requests; give one direct reason and a safe alternative.
+- Do not let background automations, cron jobs, stale TUI clients, or repeated auth failures block interactive user turns.
 
 ## Android Agent Workflow
 
@@ -67,6 +77,14 @@ cd ios/OpenClawConsole && xcodebuild -scheme OpenClawConsole test
 - If Android CLI is unavailable, say so and fall back to repo-native Gradle/scripts.
 - Keep Android responses concise: changed files, relevant command, exact failure or success, and next fix. Do not paste full Gradle logs.
 - Treat iOS/TestFlight app icon as canonical. Android launcher assets must come from `python3 scripts/sync_app_icons.py`.
+
+## Architecture Agent Workflow
+
+- Use `.agents/skills/improve-codebase-architecture/SKILL.md` before architecture refactors, module consolidation, testability work, gateway seam changes, or agent navigability improvements.
+- Read `CONTEXT.md` first and use its OpenClaw domain language: Gateway, Mobile Console, Skill, Task, Incident, Approval Request, Gateway Connection, Store Release, and Daily Active Approver.
+- Read relevant records in `docs/adr/` before changing stable architecture decisions.
+- Favor deeper modules: smaller interfaces with more behavior behind them, better locality, clearer leverage, and stronger test surfaces.
+- Run `python3 scripts/check_architecture_context_guardrails.py` after touching architecture docs, ADRs, agent skills, workflow instructions, or guardrail wiring.
 
 ## Git Flow & Branching Strategy
 
@@ -108,12 +126,19 @@ Every release MUST include complete store listing metadata before publishing:
 
 ## Session Directive: PR Management & System Hygiene
 
+### Session Start Protocol
+1. Read `CLAUDE.md`, `AGENTS.md`, and `GEMINI.md` before acting.
+2. Query local RAG/memory for relevant lessons before planning.
+3. Review open PRs, branches, worktrees, and CI status before merging or deleting anything.
+4. Never persist user-provided secrets, PATs, API keys, or passwords in tracked files.
+
 1. **Inspect All Open PRs**: List, review for readiness, report blockers.
 2. **Identify Orphan Branches**: Evaluate for merge, stale, or deletion.
 3. **Merge Ready PRs**: Merge passing PRs and provide evidence (SHA, CI status).
-4. **Clean Up**: Delete stale branches.
+4. **Clean Up**: Delete stale branches, redundant worktrees, old logs, and obvious hygiene issues only with evidence.
 5. **Verify CI**: Ensure CI passes on `main`/`develop` after all merges.
-6. **Confirm Completion**: Only after exhaustive verification.
+6. **Dry Run**: Run the relevant operational dry run before claiming readiness for the next session.
+7. **Confirm Completion**: Only after exhaustive verification.
 
 ## Operational Directives
 
@@ -122,3 +147,5 @@ Every release MUST include complete store listing metadata before publishing:
 - **Honesty**: Report failures immediately. Lying is not allowed.
 - **Say "I believe this is done, verifying now..."** instead of "Done!"
 - **No Repo Secrets in Docs**: Never write tokens, passwords, or private keys into tracked documentation.
+- **Continuous Learning**: Query local RAG/memory at session start and log useful lessons or mistakes at session end.
+- **Final Completion Phrase**: Only after verified merge, hygiene, CI, dry run, and lesson logging, state: "Done merging PRs. CI passing. System hygiene complete. Ready for next session."

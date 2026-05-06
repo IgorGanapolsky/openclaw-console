@@ -1,10 +1,32 @@
 default_platform(:android)
 
 platform :android do
+  desc "Build and upload a release bundle to Google Play"
+  lane :release do |options|
+    track = (options[:track] || ENV["ANDROID_TRACK"] || "internal").to_s
+    allowed_tracks = %w[internal alpha beta production]
+
+    unless allowed_tracks.include?(track)
+      UI.user_error!("Unsupported Google Play track '#{track}'. Expected one of: #{allowed_tracks.join(', ')}")
+    end
+
+    gradle(task: "bundleRelease")
+
+    aab_path = lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH] ||
+      File.expand_path("../app/build/outputs/bundle/release/app-release.aab", __dir__)
+    UI.user_error!("Release bundle not found at #{aab_path}") unless File.exist?(aab_path)
+
+    upload_to_play_store(
+      track: track,
+      aab: aab_path,
+      json_key: "/tmp/play-service-account.json",
+      package_name: "com.openclaw.console"
+    )
+  end
+
   desc "Submit a new Internal Build to Google Play"
   lane :internal do
-    gradle(task: "bundleRelease")
-    upload_to_play_store(track: "internal")
+    release(track: "internal")
   end
 
   desc "Promote internal to production"

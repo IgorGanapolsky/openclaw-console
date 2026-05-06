@@ -16,6 +16,8 @@ ANDROID_METADATA = ROOT / "android/fastlane/metadata/android/en-US"
 IOS_METADATA = ROOT / "ios/OpenClawConsole/fastlane/metadata/en-US"
 ANDROID_GRADLE = ROOT / "android/app/build.gradle.kts"
 IOS_PBXPROJ = ROOT / "ios/OpenClawConsole/OpenClawConsole.xcodeproj/project.pbxproj"
+IOS_FASTFILE = ROOT / "ios/OpenClawConsole/fastlane/Fastfile"
+INTERNAL_DISTRIBUTION_WORKFLOW = ROOT / ".github/workflows/internal-distribution.yml"
 PRIVACY_POLICY = ROOT / "PRIVACY_POLICY.md"
 
 
@@ -250,6 +252,42 @@ def check_cross_platform_parity(result: ValidationResult) -> None:
         )
 
 
+def check_testflight_distribution_contract(result: ValidationResult) -> None:
+    if not IOS_FASTFILE.is_file():
+        result.error("Missing iOS Fastfile for TestFlight distribution checks.")
+        return
+    if not INTERNAL_DISTRIBUTION_WORKFLOW.is_file():
+        result.error("Missing internal distribution workflow.")
+        return
+
+    fastfile = IOS_FASTFILE.read_text(encoding="utf-8")
+    workflow = INTERNAL_DISTRIBUTION_WORKFLOW.read_text(encoding="utf-8")
+
+    for fragment in (
+        'truthy_env?("TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING", default: false)',
+        'truthy_env?("TESTFLIGHT_DISTRIBUTE_EXTERNAL", default: false)',
+        'upload_options[:groups] = [configured_testflight_group]',
+        "Post-upload ASC visibility checks own group/tester verification.",
+    ):
+        if fragment not in fastfile:
+            result.error(f"iOS Fastfile TestFlight contract missing: {fragment}")
+
+    if "upload_options = {" in fastfile and "if distribute_external" in fastfile:
+        internal_upload_block = fastfile.split("upload_options = {", 1)[1].split("if distribute_external", 1)[0]
+        if "groups:" in internal_upload_block or "upload_options[:groups]" in internal_upload_block:
+            result.error("iOS Fastfile must not assign TestFlight groups before external distribution is enabled.")
+
+    for fragment in (
+        "Install App Store Connect Python dependencies",
+        "Ensure TestFlight internal visibility",
+        "scripts/ensure_testflight_visibility.py",
+        "TESTFLIGHT_REQUIRED_TESTERS",
+        'TESTFLIGHT_SKIP_WAITING_FOR_BUILD_PROCESSING: "false"',
+    ):
+        if fragment not in workflow:
+            result.error(f"Internal distribution workflow missing TestFlight read-back contract: {fragment}")
+
+
 def render(result: ValidationResult) -> int:
     print("OpenClaw release contract")
     print(f"Repo: {ROOT}")
@@ -287,6 +325,7 @@ def main() -> int:
         check_android(result, args.strict_screenshots)
     if args.platform in {"ios", "both"}:
         check_ios(result, args.strict_screenshots)
+        check_testflight_distribution_contract(result)
     if args.platform == "both":
         check_cross_platform_parity(result)
 

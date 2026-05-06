@@ -33,5 +33,20 @@ targets:
       base:
         PRODUCT_MODULE_NAME: OpenClawConsole
     scheme:
-      gatherCoverageData: false
-      testTargets: []
+      gatherCoverageData: true
+      testTargets:
+        - OpenClawConsoleTests
+  OpenClawConsoleTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: OpenClawConsole
+    settings:
+      base:
+        PRODUCT_NAME: OpenClawConsoleTests
+        PRODUCT_MODULE_NAME: OpenClawConsoleTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.openclaw.console.tests
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: ""

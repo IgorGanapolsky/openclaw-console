@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -63,10 +65,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -87,6 +85,12 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
@@ -122,7 +126,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
     implementation("com.squareup.okhttp3:logging-interceptor:5.3.2")
 
-    // Kotlinx Serialization (1.8.1 is the latest version compatible with Kotlin 2.1.x)
+    // Kotlinx Serialization runtime.
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     // Coroutines
@@ -134,6 +138,13 @@ dependencies {
     // Biometric
     implementation("androidx.biometric:biometric:1.4.0-alpha07")
     implementation("com.google.errorprone:error_prone_annotations:2.49.0")
+
+    // QR gateway pairing scanner.
+    implementation("androidx.camera:camera-camera2:1.6.0")
+    implementation("androidx.camera:camera-lifecycle:1.6.0")
+    implementation("androidx.camera:camera-view:1.6.0")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.google.guava:guava:33.5.0-android")
 
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.6.0")

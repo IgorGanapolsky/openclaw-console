@@ -59,7 +59,7 @@ enum BiometricType {
 // MARK: - BiometricService
 
 @Observable
-final class BiometricService {
+final class BiometricService: BiometricAuthenticating {
 
     static let shared = BiometricService()
     private init() {}
