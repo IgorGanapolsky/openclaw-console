@@ -1,224 +1,128 @@
 // Tests/GitViewModelTests.swift
 // OpenClaw Work Console
-// Unit tests for GitViewModel functionality.
+// Unit tests for GitViewModel state and injected Gateway APIs.
 
+import Combine
 import XCTest
 @testable import OpenClawConsole
 
 final class GitViewModelTests: XCTestCase {
 
-    private var mockWebSocket: MockWebSocketService!
-    private var gitViewModel: GitViewModel!
+    private var webSocket: MockGitWebSocket!
+    private var api: MockGitAPI!
+    private var viewModel: GitViewModel!
 
     override func setUp() {
         super.setUp()
-        mockWebSocket = MockWebSocketService()
-        gitViewModel = GitViewModel(webSocket: mockWebSocket)
+        webSocket = MockGitWebSocket()
+        api = MockGitAPI()
+        viewModel = GitViewModel(webSocket: webSocket, apiService: api)
     }
 
     override func tearDown() {
-        gitViewModel = nil
-        mockWebSocket = nil
+        viewModel = nil
+        api = nil
+        webSocket = nil
         super.tearDown()
     }
 
-    // MARK: - Computed Properties Tests
+    func testLoadGitStateCopiesAgentStateAndFetchesDetails() async {
+        api.fileChanges = [
+            GitFileChange(path: "OpenClawConsole/App.swift", status: .modified, additions: 3, deletions: 1)
+        ]
+        api.commitHistory = [
+            GitCommit(
+                sha: "abc123def456",
+                message: "Test commit",
+                author: "OpenClaw",
+                date: Date(),
+                shortSha: "abc123d"
+            )
+        ]
+        let gitState = makeGitState(hasUncommittedChanges: true, aheadBy: 2)
 
-    func testHasChanges() {
-        // Initial state - no changes
-        XCTAssertFalse(gitViewModel.hasChanges)
+        await viewModel.loadGitState(for: makeAgent(gitState: gitState))
 
-        // Set git state with uncommitted changes
-        let gitState = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: true,
-            aheadBy: 0,
-            behindBy: 0,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 0
-        )
-
-        // Create a mirror to access private properties for testing
-        let mirror = Mirror(reflecting: gitViewModel)
-        if let gitStateProperty = mirror.children.first(where: { $0.label == "gitState" }) {
-            // In real implementation, we'd need to properly set the state
-            // For now, test the logic with the public computed properties
-        }
-
-        // Test when file changes exist
-        let testAgent = createTestAgent(with: gitState)
-
-        // The hasChanges should be true when gitState.hasUncommittedChanges is true
-        // This validates our computed property logic
+        XCTAssertEqual(viewModel.gitState, gitState)
+        XCTAssertEqual(viewModel.fileChanges.map(\.path), ["OpenClawConsole/App.swift"])
+        XCTAssertEqual(viewModel.commitHistory.map(\.shortSha), ["abc123d"])
+        XCTAssertTrue(viewModel.hasChanges)
+        XCTAssertTrue(viewModel.needsSync)
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(api.fetchedFileChangeAgentIds, ["test-agent"])
+        XCTAssertEqual(api.fetchedCommitHistoryRequests.map(\.agentId), ["test-agent"])
     }
 
-    func testNeedsSync() {
-        let gitStateAhead = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: false,
+    func testRefreshGitStateUsesLoadedAgentId() async {
+        await viewModel.loadGitState(for: makeAgent(gitState: makeGitState()))
+
+        await viewModel.refreshGitState()
+
+        XCTAssertEqual(api.refreshedAgentIds, ["test-agent"])
+        XCTAssertFalse(viewModel.isLoading)
+    }
+
+    func testGitStateChangedEventUpdatesCurrentAgentOnly() async {
+        await viewModel.loadGitState(for: makeAgent(gitState: makeGitState(repository: "initial/repo")))
+
+        webSocket.simulateEvent(.gitStateChanged("other-agent", makeGitState(repository: "other/repo")))
+        await settleMainQueue()
+        XCTAssertEqual(viewModel.gitState?.repository, "initial/repo")
+
+        webSocket.simulateEvent(.gitStateChanged("test-agent", makeGitState(repository: "updated/repo")))
+        await settleMainQueue()
+        XCTAssertEqual(viewModel.gitState?.repository, "updated/repo")
+    }
+
+    func testHasConflictsAndStatusText() async {
+        await viewModel.loadGitState(for: makeAgent(gitState: makeGitState(conflictCount: 3)))
+
+        XCTAssertTrue(viewModel.hasConflicts)
+        XCTAssertTrue(viewModel.statusText.contains("3 conflicts"))
+    }
+
+    func testGitStateCodingRoundTrip() throws {
+        let originalState = makeGitState(
+            repository: "github.com/user/repo",
+            hasUncommittedChanges: true,
             aheadBy: 2,
-            behindBy: 0,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 0
-        )
-
-        let gitStateBehind = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: false,
-            aheadBy: 0,
             behindBy: 1,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 0
+            protectionEnabled: true
         )
 
-        // Test the needsSync logic with different states
-        let testAgentAhead = createTestAgent(with: gitStateAhead)
-        let testAgentBehind = createTestAgent(with: gitStateBehind)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let encodedData = try encoder.encode(originalState)
 
-        // Validate that needsSync returns true for branches that are ahead or behind
-        XCTAssertTrue(gitStateAhead.aheadBy > 0 || gitStateAhead.behindBy > 0)
-        XCTAssertTrue(gitStateBehind.aheadBy > 0 || gitStateBehind.behindBy > 0)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let decodedState = try decoder.decode(GitState.self, from: encodedData)
+
+        XCTAssertEqual(originalState, decodedState)
     }
 
-    func testHasConflicts() {
-        let gitStateWithConflicts = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: false,
-            aheadBy: 0,
-            behindBy: 0,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 3
-        )
+    func testGitFileChangeCodingRoundTrip() throws {
+        let originalChange = GitFileChange(path: "src/main.swift", status: .modified, additions: 15, deletions: 3)
 
-        XCTAssertTrue(gitStateWithConflicts.conflictCount > 0)
+        let encodedData = try JSONEncoder().encode(originalChange)
+        let decodedChange = try JSONDecoder().decode(GitFileChange.self, from: encodedData)
+
+        XCTAssertEqual(originalChange.path, decodedChange.path)
+        XCTAssertEqual(originalChange.status, decodedChange.status)
+        XCTAssertEqual(originalChange.additions, decodedChange.additions)
+        XCTAssertEqual(originalChange.deletions, decodedChange.deletions)
     }
 
-    func testStatusText() {
-        // Test status text for various git states
-        let upToDateState = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: false,
-            aheadBy: 0,
-            behindBy: 0,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 0
-        )
-
-        let conflictState = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: false,
-            aheadBy: 0,
-            behindBy: 0,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 2
-        )
-
-        // Test status text generation
-        let conflictStatusPattern = "⚠️ 2 conflicts"
-        let upToDateStatusPattern = "✅ Up to date"
-
-        // Validate that the status text patterns are generated correctly
-        XCTAssertTrue(conflictStatusPattern.contains("\(conflictState.conflictCount)"))
-        XCTAssertTrue(upToDateStatusPattern == "✅ Up to date")
+    func testGitChangeStatusProperties() {
+        for status in GitChangeStatus.allCases {
+            XCTAssertFalse(status.displayName.isEmpty)
+            XCTAssertFalse(status.symbolName.isEmpty)
+        }
     }
 
-    // MARK: - WebSocket Event Handling Tests
-
-    func testAgentUpdateEventHandling() async {
-        let gitState = GitState(
-            repository: "updated/repo",
-            currentBranch: "feature-branch",
-            hasUncommittedChanges: true,
-            aheadBy: 1,
-            behindBy: 0,
-            lastCommitSha: "def456",
-            lastCommitMessage: "Updated commit",
-            lastCommitAuthor: "Updated Author",
-            lastCommitDate: Date(),
-            protectionEnabled: true,
-            conflictCount: 0
-        )
-
-        let agentUpdate = AgentStatusUpdate(
-            id: "test-agent",
-            status: .online,
-            activeTasks: 1,
-            pendingApprovals: 0,
-            lastActive: Date(),
-            gitState: gitState
-        )
-
-        // Simulate receiving an agent update event
-        mockWebSocket.simulateEvent(.agentUpdate(agentUpdate))
-
-        // Allow time for async processing
-        try? await Task.sleep(for: .milliseconds(100))
-
-        // In a real test, we would verify that the GitViewModel properly handles
-        // the update and updates its internal state
-    }
-
-    // MARK: - Git State Loading Tests
-
-    func testLoadGitState() async {
-        let gitState = GitState(
-            repository: "test/repo",
-            currentBranch: "main",
-            hasUncommittedChanges: false,
-            aheadBy: 0,
-            behindBy: 0,
-            lastCommitSha: "abc123",
-            lastCommitMessage: "Test commit",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: false,
-            conflictCount: 0
-        )
-
-        let testAgent = createTestAgent(with: gitState)
-
-        await gitViewModel.loadGitState(for: testAgent)
-
-        // Verify that loading completed without errors
-        // In a real implementation, we would verify that the git state was loaded
-        // and file changes/commit history were fetched
-        XCTAssertFalse(gitViewModel.isLoading)
-    }
-
-    // MARK: - Helper Methods
-
-    private func createTestAgent(with gitState: GitState) -> Agent {
-        return Agent(
+    private func makeAgent(gitState: GitState?) -> Agent {
+        Agent(
             id: "test-agent",
             name: "Test Agent",
             description: "Test agent for unit tests",
@@ -231,94 +135,76 @@ final class GitViewModelTests: XCTestCase {
             gitState: gitState
         )
     }
+
+    private func makeGitState(
+        repository: String = "test/repo",
+        hasUncommittedChanges: Bool = false,
+        aheadBy: Int = 0,
+        behindBy: Int = 0,
+        protectionEnabled: Bool = false,
+        conflictCount: Int = 0
+    ) -> GitState {
+        GitState(
+            repository: repository,
+            currentBranch: "main",
+            hasUncommittedChanges: hasUncommittedChanges,
+            aheadBy: aheadBy,
+            behindBy: behindBy,
+            lastCommitSha: "abc123def456",
+            lastCommitMessage: "Test commit",
+            lastCommitAuthor: "Test Author",
+            lastCommitDate: Date(timeIntervalSince1970: 1_700_000_000),
+            protectionEnabled: protectionEnabled,
+            conflictCount: conflictCount
+        )
+    }
+
+    private func settleMainQueue() async {
+        await MainActor.run {}
+        try? await Task.sleep(nanoseconds: 50_000_000)
+    }
 }
 
-// MARK: - Mock WebSocket Service
+private final class MockGitWebSocket: WebSocketEventPublishing {
+    private let subject = PassthroughSubject<InboundEvent, Never>()
 
-private class MockWebSocketService: WebSocketService {
-    private var eventHandlers: [(InboundEvent) -> Void] = []
+    var eventPublisher: AnyPublisher<InboundEvent, Never> {
+        subject.eraseToAnyPublisher()
+    }
 
     func simulateEvent(_ event: InboundEvent) {
-        // Simulate receiving an event from the WebSocket
-        eventHandlers.forEach { handler in
-            handler(event)
-        }
+        subject.send(event)
     }
 }
 
-// MARK: - Git State Tests
+private final class MockGitAPI: GitAPIProviding {
+    var fileChanges: [GitFileChange] = []
+    var commitHistory: [GitCommit] = []
+    var errorToThrow: Error?
+    var fetchedFileChangeAgentIds: [String] = []
+    var fetchedCommitHistoryRequests: [(agentId: String, limit: Int)] = []
+    var refreshedAgentIds: [String] = []
 
-final class GitStateTests: XCTestCase {
-
-    func testGitStateCoding() throws {
-        let originalState = GitState(
-            repository: "github.com/user/repo",
-            currentBranch: "feature/test",
-            hasUncommittedChanges: true,
-            aheadBy: 2,
-            behindBy: 1,
-            lastCommitSha: "abc123def456",
-            lastCommitMessage: "Test commit message",
-            lastCommitAuthor: "Test Author",
-            lastCommitDate: Date(),
-            protectionEnabled: true,
-            conflictCount: 0
-        )
-
-        // Test encoding
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let encodedData = try encoder.encode(originalState)
-
-        // Test decoding
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let decodedState = try decoder.decode(GitState.self, from: encodedData)
-
-        // Verify all fields match
-        XCTAssertEqual(originalState.repository, decodedState.repository)
-        XCTAssertEqual(originalState.currentBranch, decodedState.currentBranch)
-        XCTAssertEqual(originalState.hasUncommittedChanges, decodedState.hasUncommittedChanges)
-        XCTAssertEqual(originalState.aheadBy, decodedState.aheadBy)
-        XCTAssertEqual(originalState.behindBy, decodedState.behindBy)
-        XCTAssertEqual(originalState.lastCommitSha, decodedState.lastCommitSha)
-        XCTAssertEqual(originalState.lastCommitMessage, decodedState.lastCommitMessage)
-        XCTAssertEqual(originalState.lastCommitAuthor, decodedState.lastCommitAuthor)
-        XCTAssertEqual(originalState.protectionEnabled, decodedState.protectionEnabled)
-        XCTAssertEqual(originalState.conflictCount, decodedState.conflictCount)
+    func fetchGitFileChanges(agentId: String) async throws -> [GitFileChange] {
+        fetchedFileChangeAgentIds.append(agentId)
+        if let errorToThrow {
+            throw errorToThrow
+        }
+        return fileChanges
     }
 
-    func testGitFileChangeCoding() throws {
-        let originalChange = GitFileChange(
-            path: "src/main.swift",
-            status: .modified,
-            additions: 15,
-            deletions: 3
-        )
-
-        // Test encoding
-        let encoder = JSONEncoder()
-        let encodedData = try encoder.encode(originalChange)
-
-        // Test decoding
-        let decoder = JSONDecoder()
-        let decodedChange = try decoder.decode(GitFileChange.self, from: encodedData)
-
-        // Verify all fields match
-        XCTAssertEqual(originalChange.path, decodedChange.path)
-        XCTAssertEqual(originalChange.status, decodedChange.status)
-        XCTAssertEqual(originalChange.additions, decodedChange.additions)
-        XCTAssertEqual(originalChange.deletions, decodedChange.deletions)
+    func fetchGitCommitHistory(agentId: String, limit: Int) async throws -> [GitCommit] {
+        fetchedCommitHistoryRequests.append((agentId, limit))
+        if let errorToThrow {
+            throw errorToThrow
+        }
+        return commitHistory
     }
 
-    func testGitChangeStatusProperties() {
-        // Test all enum cases have proper display properties
-        let allStatuses: [GitChangeStatus] = [.added, .modified, .deleted, .renamed, .copied, .untracked]
-
-        for status in allStatuses {
-            XCTAssertFalse(status.displayName.isEmpty)
-            XCTAssertFalse(status.symbolName.isEmpty)
-            XCTAssertTrue(status.symbolName.contains("circle") || status.symbolName.contains("fill"))
+    func refreshGitStatus(agentId: String) async throws {
+        refreshedAgentIds.append(agentId)
+        if let errorToThrow {
+            throw errorToThrow
         }
     }
 }

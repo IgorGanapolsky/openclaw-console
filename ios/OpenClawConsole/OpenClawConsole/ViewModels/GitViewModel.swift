@@ -53,14 +53,16 @@ final class GitViewModel {
 
     // MARK: Private
 
-    private var webSocket: WebSocketService
+    private var webSocket: any WebSocketEventPublishing
+    private let apiService: any GitAPIProviding
     private var cancellables = Set<AnyCancellable>()
     private var agentId: String?
 
     // MARK: Init
 
-    init(webSocket: WebSocketService) {
+    init(webSocket: any WebSocketEventPublishing, apiService: any GitAPIProviding = APIService.shared) {
         self.webSocket = webSocket
+        self.apiService = apiService
         subscribeToEvents()
     }
 
@@ -78,8 +80,8 @@ final class GitViewModel {
 
         do {
             // Fetch detailed file changes and commit history
-            async let fileChangesTask = APIService.shared.fetchGitFileChanges(agentId: agent.id)
-            async let commitHistoryTask = APIService.shared.fetchGitCommitHistory(agentId: agent.id, limit: 10)
+            async let fileChangesTask = apiService.fetchGitFileChanges(agentId: agent.id)
+            async let commitHistoryTask = apiService.fetchGitCommitHistory(agentId: agent.id, limit: 10)
 
             let (changes, commits) = try await (fileChangesTask, commitHistoryTask)
             self.fileChanges = changes
@@ -100,7 +102,7 @@ final class GitViewModel {
 
         do {
             // Trigger a git status refresh on the agent
-            try await APIService.shared.refreshGitStatus(agentId: agentId)
+            try await apiService.refreshGitStatus(agentId: agentId)
             // The state will be updated via WebSocket events
         } catch {
             errorMessage = (error as? OpenClawError)?.errorDescription ?? error.localizedDescription
@@ -157,7 +159,7 @@ struct GitCommit: Codable, Identifiable, Hashable {
 
 // MARK: - API Extensions (placeholder for implementation)
 
-extension APIService {
+extension APIService: GitAPIProviding {
     func fetchGitFileChanges(agentId: String) async throws -> [GitFileChange] {
         // Placeholder until the gateway exposes Git file-change endpoints.
         return []
