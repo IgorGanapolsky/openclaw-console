@@ -25,7 +25,7 @@ private struct AgentStatusChangePayload: Decodable {
     }
 }
 
-final class WebSocketService: NSObject, ObservableObject {
+final class WebSocketService: NSObject, ObservableObject, WebSocketEventPublishing {
 
     private struct ParsedEnvelope {
         let type: String
