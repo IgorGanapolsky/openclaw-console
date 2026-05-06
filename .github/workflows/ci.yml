@@ -93,6 +93,15 @@ jobs:
       - name: Verify architecture context workflow guardrails
         run: python3 scripts/check_architecture_context_guardrails.py
 
+  mobile-test-coverage-policy:
+    name: Mobile Test Coverage Policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify critical mobile flow coverage map
+        run: python3 scripts/check_mobile_test_coverage.py
+
   icon-parity:
     name: App Icon Parity
     runs-on: ubuntu-latest
@@ -183,7 +192,7 @@ jobs:
               echo ":: $f: Uses plain HTTP URL (use HTTPS)"
               ERRORS=$((ERRORS + 1))
             fi
-          done < <(find ios -name '*.swift')
+          done < <(git ls-files 'ios/**/*.swift')
           if [ "$ERRORS" -gt 0 ]; then
             echo "Found $ERRORS architecture violation(s)"
             exit 1
@@ -303,3 +312,26 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Run iOS unit tests with coverage
+        if: needs.ios-changes.outputs.ios_changed == 'true'
+        working-directory: ios/OpenClawConsole
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme OpenClawConsole \
+            -destination '${{ steps.simulator.outputs.destination }}' \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedData \
+            -disableAutomaticPackageResolution \
+            -skipPackagePluginValidation \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee /tmp/openclaw-ios-unit-tests.log
+
+          if grep -q "not currently configured for the test action" /tmp/openclaw-ios-unit-tests.log; then
+            echo "OpenClawConsole scheme has no test action configured."
+            exit 1
+          fi

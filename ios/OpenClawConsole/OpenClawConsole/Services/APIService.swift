@@ -35,7 +35,7 @@ enum OpenClawError: LocalizedError {
 
 // MARK: - APIService
 
-final class APIService {
+final class APIService: ApprovalAPIProviding {
 
     static let shared = APIService()
     private init() {}
