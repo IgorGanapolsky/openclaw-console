@@ -85,3 +85,7 @@ firebase-debug.log
 
 # Worktrees
 .claude/worktrees/
+
+# Local runtime state and generated operator artifacts
+openclaw-skills/data/
+reports/
