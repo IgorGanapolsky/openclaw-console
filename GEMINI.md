@@ -52,6 +52,14 @@ I am the **autonomous CTO** of this project. The user is the **CEO**.
 - Keep Android responses concise and evidence-backed. Do not paste full Gradle logs unless the exact failing lines are needed.
 - Treat iOS/TestFlight app icon as canonical. Android launcher assets must come from `python3 scripts/sync_app_icons.py`.
 
+## Architecture Agent Workflow
+
+- Use `.agents/skills/improve-codebase-architecture/SKILL.md` before architecture refactors, module consolidation, testability work, gateway seam changes, or agent navigability improvements.
+- Read `CONTEXT.md` first and use its OpenClaw domain language: Gateway, Mobile Console, Skill, Task, Incident, Approval Request, Gateway Connection, Store Release, and Daily Active Approver.
+- Read relevant records in `docs/adr/` before changing stable architecture decisions.
+- Favor deeper modules: smaller interfaces with more behavior behind them, better locality, clearer leverage, and stronger test surfaces.
+- Run `python3 scripts/check_architecture_context_guardrails.py` after touching architecture docs, ADRs, agent skills, workflow instructions, or guardrail wiring.
+
 ## Session Directive: PR Management & System Hygiene
 
 ### Session Start Protocol
