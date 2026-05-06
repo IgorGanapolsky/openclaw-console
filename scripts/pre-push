@@ -21,6 +21,9 @@ python3 scripts/check_agent_workflow_settings.py
 echo "==> Checking architecture context guardrails"
 python3 scripts/check_architecture_context_guardrails.py
 
+echo "==> Checking mobile test coverage policy"
+python3 scripts/check_mobile_test_coverage.py
+
 echo "==> Android unit tests + debug build"
 (
   cd android
@@ -30,20 +33,28 @@ echo "==> Android unit tests + debug build"
 IOS_DERIVED_DATA="ios/OpenClawConsole/.build/DerivedData"
 IOS_CHECKOUTS="$IOS_DERIVED_DATA/SourcePackages/checkouts"
 if [ -d "$IOS_CHECKOUTS" ] && [ -n "$(ls -A "$IOS_CHECKOUTS" 2>/dev/null)" ]; then
-  echo "==> iOS simulator build (cached packages)"
-  (
-    cd ios/OpenClawConsole
-    xcodebuild build \
-      -scheme OpenClawConsole \
-      -destination 'platform=iOS Simulator,name=iPhone 16' \
-      -configuration Debug \
-      -derivedDataPath .build/DerivedData \
-      -disableAutomaticPackageResolution \
-      -skipPackagePluginValidation \
-      CODE_SIGN_IDENTITY='' \
-      CODE_SIGNING_REQUIRED=NO \
-      CODE_SIGNING_ALLOWED=NO
-  )
+  IOS_SIMULATOR_ID="$(xcrun simctl list devices available | awk '/iPhone/ { if (match($0, /\([0-9A-F-]+\)/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit } }')"
+  if [ -z "$IOS_SIMULATOR_ID" ]; then
+    echo "==> Skipping local iOS build: no available iPhone simulator found"
+    echo "==> CI remains authoritative for iOS verification."
+  else
+    IOS_DESTINATION="platform=iOS Simulator,id=$IOS_SIMULATOR_ID"
+    echo "==> iOS simulator tests with coverage (cached packages)"
+    (
+      cd ios/OpenClawConsole
+      xcodebuild test \
+        -scheme OpenClawConsole \
+        -destination "$IOS_DESTINATION" \
+        -configuration Debug \
+        -derivedDataPath .build/DerivedData \
+        -disableAutomaticPackageResolution \
+        -skipPackagePluginValidation \
+        -enableCodeCoverage YES \
+        CODE_SIGN_IDENTITY='' \
+        CODE_SIGNING_REQUIRED=NO \
+        CODE_SIGNING_ALLOWED=NO
+    )
+  fi
 else
   echo "==> Skipping local iOS build: Swift packages are not resolved in $IOS_CHECKOUTS"
   echo "==> CI remains authoritative for iOS verification."
