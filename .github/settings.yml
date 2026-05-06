@@ -27,8 +27,11 @@ branches:
           - "Agent Workflow Guardrails"
           - "Flaky Test Guardrails"
           - "Architecture Context Guardrails"
+          - "Mobile Test Coverage Policy"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
+          - "Android Emulator + Maestro Tests"
+          - "iOS Simulator Tests"
           - "Android Build Check"
           - "iOS Build Check"
           - "Secrets Scan"
@@ -59,8 +62,11 @@ branches:
           - "Agent Workflow Guardrails"
           - "Flaky Test Guardrails"
           - "Architecture Context Guardrails"
+          - "Mobile Test Coverage Policy"
           - "Architecture Lint (Kotlin)"
           - "Architecture Lint (Swift)"
+          - "Android Emulator + Maestro Tests"
+          - "iOS Simulator Tests"
       enforce_admins: true
       required_pull_request_reviews:
         required_approving_review_count: 0

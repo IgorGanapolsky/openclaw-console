@@ -4,7 +4,6 @@ set -eu
 
 APP_ID="com.openclaw.console"
 APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
-FLOW_PATH=".maestro/smoke-test-android.yaml"
 
 echo "Waiting for emulator to be ready..."
 adb wait-for-device
@@ -15,9 +14,10 @@ adb install -r "$APK_PATH"
 
 export PATH="$HOME/.maestro/bin:$PATH"
 
-if [ -f "$FLOW_PATH" ]; then
-  echo "Running Maestro smoke tests..."
-  maestro test "$FLOW_PATH"
+FLOW_PATHS="$(find .maestro -maxdepth 1 -type f \( -name '*android*.yaml' -o -name 'smoke-test-android.yaml' \) 2>/dev/null | sort | tr '\n' ' ')"
+if [ -n "$FLOW_PATHS" ]; then
+  echo "Running Maestro smoke tests: $FLOW_PATHS"
+  maestro test $FLOW_PATHS
 else
   echo "No Maestro tests found - performing basic launch test"
   adb shell am start -n "$APP_ID/.MainActivity"
