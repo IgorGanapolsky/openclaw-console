@@ -48,6 +48,16 @@ develop:
       - "Architecture Lint (Swift)"
       - "Android Emulator + Maestro Tests"
       - "iOS Simulator Tests"
+      - "Android Build Check"
+      - "Android Agent Guardrails"
+      - "App Icon Parity"
+      - "Brand Parity"
+      - "Release Contract"
+      - "Secrets Scan"
+      - "Dependency Audit"
+      - "CodeQL Analysis (javascript-typescript)"
+      - "Claude Review"
+      - "reconcile-pr-state"
   enforce_admins: true
   required_pull_request_reviews:
     dismiss_stale_reviews: true
