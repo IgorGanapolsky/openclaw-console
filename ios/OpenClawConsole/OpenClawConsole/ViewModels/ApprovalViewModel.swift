@@ -22,14 +22,25 @@ final class ApprovalViewModel {
 
     // MARK: Private
 
-    @ObservationIgnored private var webSocket: WebSocketService
+    @ObservationIgnored private var webSocket: any WebSocketEventPublishing
+    @ObservationIgnored private let apiService: any ApprovalAPIProviding
+    @ObservationIgnored private let biometricService: any BiometricAuthenticating
+    @ObservationIgnored private let notificationService: any ApprovalNotificationManaging
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var expiryTimer: _Concurrency.Task<Void, Never>?
 
     // MARK: Init
 
-    init(webSocket: WebSocketService) {
+    init(
+        webSocket: any WebSocketEventPublishing,
+        apiService: any ApprovalAPIProviding = APIService.shared,
+        biometricService: any BiometricAuthenticating = BiometricService.shared,
+        notificationService: any ApprovalNotificationManaging = NotificationService.shared
+    ) {
         self.webSocket = webSocket
+        self.apiService = apiService
+        self.biometricService = biometricService
+        self.notificationService = notificationService
         subscribeToEvents()
         startExpiryMonitor()
     }
@@ -45,7 +56,7 @@ final class ApprovalViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            pendingApprovals = try await APIService.shared.fetchPendingApprovals()
+            pendingApprovals = try await apiService.fetchPendingApprovals()
         } catch {
             errorMessage = (error as? OpenClawError)?.errorDescription ?? error.localizedDescription
         }
@@ -61,7 +72,7 @@ final class ApprovalViewModel {
         }
 
         // Require biometric verification
-        let biometricSuccess = try await BiometricService.shared.authenticate(
+        let biometricSuccess = try await biometricService.authenticate(
             reason: "Approve: \(approval.title)"
         )
         guard biometricSuccess else {
@@ -78,13 +89,13 @@ final class ApprovalViewModel {
             respondedAt: Date()
         )
 
-        try await APIService.shared.submitApprovalResponse(response)
+        try await apiService.submitApprovalResponse(response)
         remove(approvalId: approval.id)
         lastDecision = .approved
-        NotificationService.shared.removeDelivered(approvalId: approval.id)
+        notificationService.removeDelivered(approvalId: approval.id)
 
         // Update badge
-        await NotificationService.shared.updateBadge(count: pendingApprovals.count)
+        await notificationService.updateBadge(count: pendingApprovals.count)
     }
 
     @MainActor
@@ -99,12 +110,12 @@ final class ApprovalViewModel {
             respondedAt: Date()
         )
 
-        try await APIService.shared.submitApprovalResponse(response)
+        try await apiService.submitApprovalResponse(response)
         remove(approvalId: approval.id)
         lastDecision = .denied
-        NotificationService.shared.removeDelivered(approvalId: approval.id)
+        notificationService.removeDelivered(approvalId: approval.id)
 
-        await NotificationService.shared.updateBadge(count: pendingApprovals.count)
+        await notificationService.updateBadge(count: pendingApprovals.count)
     }
 
     // MARK: - Helpers
@@ -126,7 +137,7 @@ final class ApprovalViewModel {
     }
 
     @MainActor
-    private func purgeExpired() {
+    func purgeExpired() {
         pendingApprovals.removeAll { $0.isExpired }
     }
 
@@ -147,9 +158,10 @@ final class ApprovalViewModel {
             if !pendingApprovals.contains(where: { $0.id == request.id }) {
                 pendingApprovals.append(request)
                 let pendingCount = pendingApprovals.count
+                let notifications = notificationService
                 _Concurrency.Task {
-                    await NotificationService.shared.scheduleApprovalNotification(for: request)
-                    await NotificationService.shared.updateBadge(count: pendingCount)
+                    await notifications.scheduleApprovalNotification(for: request)
+                    await notifications.updateBadge(count: pendingCount)
                 }
             }
         default:
