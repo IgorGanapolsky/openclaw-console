@@ -107,6 +107,14 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 - Keep Android agent responses concise: outcome, evidence, changed files, and next fix only. Do not paste full Gradle logs unless the exact failing lines are needed.
 - iOS/TestFlight app icon remains the canonical launcher icon source. Android launcher assets must be regenerated with `python3 scripts/sync_app_icons.py`, never hand-edited.
 
+## Architecture Agent Workflow
+
+- Use `.agents/skills/improve-codebase-architecture/SKILL.md` before architecture refactors, module consolidation, testability work, gateway seam changes, or agent navigability improvements.
+- Read `CONTEXT.md` first and use its OpenClaw domain language: Gateway, Mobile Console, Skill, Task, Incident, Approval Request, Gateway Connection, Store Release, and Daily Active Approver.
+- Read relevant records in `docs/adr/` before changing stable architecture decisions.
+- Favor deeper modules: smaller interfaces with more behavior behind them, better locality, clearer leverage, and stronger test surfaces.
+- Run `python3 scripts/check_architecture_context_guardrails.py` after touching architecture docs, ADRs, agent skills, workflow instructions, or guardrail wiring.
+
 ## Session Directive: PR Management & System Hygiene
 
 ### Session Start Protocol
