@@ -8,7 +8,7 @@ class GatewayPairingTest {
 
     @Test
     fun `parses openclaw pairing link`() {
-        val raw = "openclaw://pair?name=Mac%20Mini&base_url=http%3A%2F%2F192.168.1.5%3A18789&token=abc123"
+        val raw = "openclaw://pair?name=Mac%20Mini&base_url=http%3A%2F%2F192.168.1.5%3A18789&bootstrapToken=abc123"
 
         val pairing = GatewayPairing.parse(raw).getOrThrow()
 

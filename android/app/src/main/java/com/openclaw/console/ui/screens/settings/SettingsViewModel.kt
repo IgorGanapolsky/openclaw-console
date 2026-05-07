@@ -24,6 +24,7 @@ data class AddGatewayUiState(
     val baseUrl: String = "",
     val token: String = "",
     val pairingCode: String = "",
+    val pairingImportMessage: String? = null,
     val isLoading: Boolean = false,
     val testResult: TestResult? = null,
     val error: String? = null,
@@ -86,6 +87,7 @@ class SettingsViewModel : ViewModel() {
     fun onPairingCodeChange(pairingCode: String) {
         _addGatewayUiState.value = _addGatewayUiState.value.copy(
             pairingCode = pairingCode,
+            pairingImportMessage = null,
             error = null,
             testResult = null
         )
@@ -100,6 +102,7 @@ class SettingsViewModel : ViewModel() {
                     baseUrl = pairing.baseUrl,
                     token = pairing.token,
                     error = null,
+                    pairingImportMessage = "Setup code accepted. Review the gateway details, then test and save.",
                     showHttpWarning = pairing.baseUrl.startsWith("http://"),
                     testResult = null
                 )
@@ -117,6 +120,7 @@ class SettingsViewModel : ViewModel() {
                     baseUrl = pairing.baseUrl,
                     token = pairing.token,
                     pairingCode = rawValue,
+                    pairingImportMessage = "QR code accepted. Review the gateway details, then test and save.",
                     testResult = null,
                     error = null,
                     showHttpWarning = pairing.baseUrl.startsWith("http://")
@@ -179,6 +183,7 @@ class SettingsViewModel : ViewModel() {
                     baseUrl = pairing.baseUrl,
                     token = pairing.token,
                     pairingCode = rawValue,
+                    pairingImportMessage = "Pairing accepted. Testing the gateway connection.",
                     showHttpWarning = pairing.baseUrl.startsWith("http://")
                 )
                 testAndSave(onSuccess)

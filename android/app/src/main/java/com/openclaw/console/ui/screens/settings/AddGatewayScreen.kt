@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -37,6 +38,7 @@ fun AddGatewayScreen(
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
     val uiState by viewModel.addGatewayUiState.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
     val focusManager = LocalFocusManager.current
     var tokenVisible by remember { mutableStateOf(false) }
 
@@ -99,7 +101,7 @@ fun AddGatewayScreen(
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Pair by QR or Link",
+                            text = "Pair by QR or Code",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -123,10 +125,10 @@ fun AddGatewayScreen(
                     OutlinedTextField(
                         value = uiState.pairingCode,
                         onValueChange = viewModel::onPairingCodeChange,
-                        label = { Text("Pairing link") },
-                        placeholder = { Text("openclaw://pair?...") },
+                        label = { Text("Setup code, link, or JSON") },
+                        placeholder = { Text("Paste the code from OpenClaw") },
                         modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
                         minLines = 1,
                         maxLines = 3,
                         keyboardOptions = KeyboardOptions(
@@ -138,15 +140,61 @@ fun AddGatewayScreen(
                         )
                     )
 
-                    OutlinedButton(
-                        onClick = viewModel::applyPairingCode,
-                        enabled = uiState.pairingCode.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Link, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Use Pairing Link")
+                    uiState.pairingImportMessage?.let { message ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                clipboardManager.getText()?.text
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.let(viewModel::onPairingCodeChange)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.ContentPaste, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Paste")
+                        }
+
+                        Button(
+                            onClick = viewModel::applyPairingCode,
+                            enabled = uiState.pairingCode.isNotBlank(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Key, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Use Code")
+                        }
+                    }
+
                 }
             }
 
