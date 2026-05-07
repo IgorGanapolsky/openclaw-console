@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import java.net.URI
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 data class GatewayPairing(
     val name: String,
@@ -23,8 +24,10 @@ data class GatewayPairing(
                 return@runCatching parseJson(raw)
             }
 
+            parseSetupCode(raw)?.let { return@runCatching it }
+
             val uri = URI(raw)
-            if (uri.scheme == "http" || uri.scheme == "https") {
+            if (uri.scheme == "http" || uri.scheme == "https" || uri.scheme == "ws" || uri.scheme == "wss") {
                 return@runCatching parseGatewayUrl(uri)
             }
 
@@ -45,23 +48,45 @@ data class GatewayPairing(
             require(payload.type == "openclaw.gateway.pairing.v1") {
                 "Paste an OpenClaw pairing link or pairing JSON."
             }
-            return build(payload.name, payload.baseUrl, payload.token)
+            return build(payload.name, payload.baseUrl ?: payload.url, payload.bootstrapToken ?: payload.token)
+        }
+
+        private fun parseSetupCode(raw: String): GatewayPairing? {
+            val decoded = decodeSetupCode(raw) ?: return null
+            val payload = json.decodeFromString<SetupCodePayload>(decoded)
+            return build(
+                name = payload.name,
+                baseUrl = payload.baseUrl ?: payload.url,
+                token = payload.bootstrapToken ?: payload.token
+            )
         }
 
         private fun parseGatewayUrl(uri: URI): GatewayPairing {
             val query = parseQuery(uri.rawQuery.orEmpty())
-            val token = query["token"] ?: query["tkn"]
+            val token = query["bootstrapToken"] ?: query["token"] ?: query["tkn"]
             val path = uri.rawPath.orEmpty().removeSuffix("/api/health").removeSuffix("/")
             val port = if (uri.port == -1) "" else ":${uri.port}"
-            val baseUrl = "${uri.scheme}://${uri.host}$port$path"
+            val scheme = when (uri.scheme) {
+                "wss" -> "https"
+                "ws" -> "http"
+                else -> uri.scheme
+            }
+            val baseUrl = "$scheme://${uri.host}$port$path"
             val name = uri.host?.takeIf { it.isNotBlank() }?.let { "OpenClaw $it" }
 
             return build(name = name, baseUrl = baseUrl, token = token)
         }
 
+        private fun decodeSetupCode(raw: String): String? {
+            if (raw.any { it.isWhitespace() }) return null
+            return runCatching {
+                String(Base64.getUrlDecoder().decode(raw), StandardCharsets.UTF_8)
+            }.getOrNull()?.takeIf { it.trimStart().startsWith("{") }
+        }
+
         private fun build(name: String?, baseUrl: String?, token: String?): GatewayPairing {
             val cleanedName = name.orEmpty().trim().ifBlank { "OpenClaw Gateway" }
-            val cleanedBaseUrl = baseUrl.orEmpty().trim().trimEnd('/')
+            val cleanedBaseUrl = baseUrl.orEmpty().trim().trimEnd('/').normalizeGatewayUrl()
             val cleanedToken = token.orEmpty().trim()
 
             require(cleanedBaseUrl.isNotBlank()) { "Pairing code is missing base_url." }
@@ -92,6 +117,12 @@ data class GatewayPairing(
 
         private fun decode(value: String): String =
             URLDecoder.decode(value, StandardCharsets.UTF_8.name())
+
+        private fun String.normalizeGatewayUrl(): String = when {
+            startsWith("wss://") -> replaceFirst("wss://", "https://")
+            startsWith("ws://") -> replaceFirst("ws://", "http://")
+            else -> this
+        }
     }
 }
 
@@ -100,5 +131,16 @@ private data class PairingJsonPayload(
     val type: String,
     val name: String? = null,
     @SerialName("base_url") val baseUrl: String? = null,
-    val token: String? = null
+    val url: String? = null,
+    val token: String? = null,
+    val bootstrapToken: String? = null
+)
+
+@Serializable
+private data class SetupCodePayload(
+    val name: String? = null,
+    @SerialName("base_url") val baseUrl: String? = null,
+    val url: String? = null,
+    val token: String? = null,
+    val bootstrapToken: String? = null
 )

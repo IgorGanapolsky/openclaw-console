@@ -29,13 +29,35 @@ class GatewayPairingTest {
     }
 
     @Test
+    fun `parses cli setup code with bootstrap token`() {
+        val raw = "eyJ1cmwiOiJ3c3M6Ly9pZ29ycy1tYWMtbWluaS50YWlsMTJhYTMzLnRzLm5ldCIsImJvb3RzdHJhcFRva2VuIjoic2V0dXAtdG9rZW4ifQ"
+
+        val pairing = GatewayPairing.parse(raw).getOrThrow()
+
+        assertEquals("OpenClaw Gateway", pairing.name)
+        assertEquals("https://igors-mac-mini.tail12aa33.ts.net", pairing.baseUrl)
+        assertEquals("setup-token", pairing.token)
+    }
+
+    @Test
+    fun `parses wss gateway url with bootstrap token`() {
+        val raw = "wss://igors-mac-mini.tail12aa33.ts.net?bootstrapToken=setup-token"
+
+        val pairing = GatewayPairing.parse(raw).getOrThrow()
+
+        assertEquals("OpenClaw igors-mac-mini.tail12aa33.ts.net", pairing.name)
+        assertEquals("https://igors-mac-mini.tail12aa33.ts.net", pairing.baseUrl)
+        assertEquals("setup-token", pairing.token)
+    }
+
+    @Test
     fun `parses pairing json`() {
         val raw = """
             {
               "type": "openclaw.gateway.pairing.v1",
               "name": "Production",
-              "base_url": "https://gateway.example.com/",
-              "token": "token-value"
+              "url": "wss://gateway.example.com/",
+              "bootstrapToken": "token-value"
             }
         """.trimIndent()
 
