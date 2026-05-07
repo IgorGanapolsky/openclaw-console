@@ -367,8 +367,21 @@ class TestFlightVisibility:
                     f"{self.bundle_id}: " + ", ".join(missing_app_access)
                 )
 
+        for email in required_testers:
+            tester = self.beta_tester(email)
+            if not tester:
+                continue
+            
+            tester_id = tester["id"]
+            if build_id not in self.beta_tester_build_ids(tester_id):
+                if assign_required_testers:
+                    self.attach_beta_tester_build(tester_id, build_id)
+                    assigned_required_testers.append(email)
+                else:
+                    missing_testers.append(f"Tester {email} not assigned to build")
+
         if missing_testers:
-            raise RuntimeError("Required TestFlight testers missing from group membership: " + "; ".join(missing_testers))
+            raise RuntimeError("Required TestFlight testers missing from distribution: " + "; ".join(missing_testers))
 
         return {
             "status": "VISIBLE",
