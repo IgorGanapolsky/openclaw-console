@@ -19,7 +19,7 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
+    "BeforeAgent": [
       {
         "hooks": [
           {

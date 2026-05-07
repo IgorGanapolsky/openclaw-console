@@ -23,8 +23,6 @@ on:
     paths:
       - "openclaw-skills/package.json"
       - "openclaw-skills/package-lock.json"
-      - ".claude/skills/teams-rag-connector/scripts/package.json"
-      - ".claude/skills/teams-rag-connector/scripts/package-lock.json"
       - "android/**"
       - "ios/**"
       - "Package.swift"
@@ -127,12 +125,6 @@ jobs:
 
       - name: npm audit (OpenClaw skills)
         working-directory: openclaw-skills
-        run: |
-          npm ci
-          npm audit --audit-level=high
-
-      - name: npm audit (Teams RAG connector)
-        working-directory: .claude/skills/teams-rag-connector/scripts
         run: |
           npm ci
           npm audit --audit-level=high
