@@ -15,10 +15,11 @@ data class GatewayPairing(
 ) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
+        private const val PAIRING_FORMAT_MESSAGE = "Paste an OpenClaw setup code, pairing link, or pairing JSON."
 
         fun parse(rawValue: String): Result<GatewayPairing> = runCatching {
             val raw = rawValue.trim()
-            require(raw.isNotEmpty()) { "Paste an OpenClaw pairing link or pairing JSON." }
+            require(raw.isNotEmpty()) { PAIRING_FORMAT_MESSAGE }
 
             if (raw.startsWith("{")) {
                 return@runCatching parseJson(raw)
@@ -32,21 +33,21 @@ data class GatewayPairing(
             }
 
             require(uri.scheme == "openclaw" && uri.host == "pair") {
-                "Paste an OpenClaw pairing link or pairing JSON."
+                PAIRING_FORMAT_MESSAGE
             }
             val query = parseQuery(uri.rawQuery.orEmpty())
 
             build(
                 name = query["name"],
                 baseUrl = query["base_url"] ?: query["baseUrl"] ?: query["baseURL"],
-                token = query["token"] ?: query["tkn"]
+                token = query["bootstrapToken"] ?: query["token"] ?: query["tkn"]
             )
         }
 
         private fun parseJson(raw: String): GatewayPairing {
             val payload = json.decodeFromString<PairingJsonPayload>(raw)
             require(payload.type == "openclaw.gateway.pairing.v1") {
-                "Paste an OpenClaw pairing link or pairing JSON."
+                PAIRING_FORMAT_MESSAGE
             }
             return build(payload.name, payload.baseUrl ?: payload.url, payload.bootstrapToken ?: payload.token)
         }
