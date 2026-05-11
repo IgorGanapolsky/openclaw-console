@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "modelType": "multinomial_naive_bayes",
+  "labels": [
+    "allow",
+    "recall",
+    "verify",
+    "warn",
+    "deny"
+  ],
+  "exampleCount": 3,
+  "labelCounts": {
+    "allow": 3,
+    "recall": 0,
+    "verify": 0,
+    "warn": 0,
+    "deny": 0
+  },
+  "labelTokenTotals": {
+    "allow": 12,
+    "recall": 0,
+    "verify": 0,
+    "warn": 0,
+    "deny": 0
+  },
+  "labelTokenCounts": {
+    "allow": {
+      "kind_audit": 3,
+      "decision_allow": 3,
+      "tool_get_business_metrics": 3,
+      "source_gates-engine": 2,
+      "source_tool-latency": 1
+    },
+    "recall": {},
+    "verify": {},
+    "warn": {},
+    "deny": {}
+  },
+  "vocabularySize": 5,
+  "metrics": {
+    "trainingAccuracy": 1,
+    "holdoutAccuracy": 0,
+    "holdoutSize": 0,
+    "trainingExamples": 3
+  },
+  "sourceCounts": {
+    "feedback": 0,
+    "audit": 3,
+    "diagnostic": 0,
+    "decision": 0
+  },
+  "updatedAt": "2026-05-11T14:55:24.437Z",
+  "labelMetrics": {
+    "allow": {
+      "total": 3,
+      "correct": 3,
+      "accuracy": 1
+    },
+    "recall": {
+      "total": 0,
+      "correct": 0,
+      "accuracy": 0
+    },
+    "verify": {
+      "total": 0,
+      "correct": 0,
+      "accuracy": 0
+    },
+    "warn": {
+      "total": 0,
+      "correct": 0,
+      "accuracy": 0
+    },
+    "deny": {
+      "total": 0,
+      "correct": 0,
+      "accuracy": 0
+    }
+  },
+  "topTokens": {
+    "allow": [
+      {
+        "token": "decision_allow",
+        "count": 3
+      },
+      {
+        "token": "kind_audit",
+        "count": 3
+      },
+      {
+        "token": "tool_get_business_metrics",
+        "count": 3
+      },
+      {
+        "token": "source_gates-engine",
+        "count": 2
+      }
+    ],
+    "recall": [],
+    "verify": [],
+    "warn": [],
+    "deny": []
+  }
+}
