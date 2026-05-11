@@ -19,6 +19,7 @@ import { DockerContainerManager } from './container-manager.js';
 import { registerRemoteApi } from './remote-api.js';
 import { SkillGenerator } from './skill-generator.js';
 import { McpManager } from './mcp-manager.js';
+import { TunnelManager } from './tunnel.js';
 import type {
   ChatRequest,
   ApprovalRespondRequest,
@@ -70,6 +71,7 @@ export interface GatewayServer {
   tokenManager: TokenManager;
   containerManager: DockerContainerManager;
   mcpManager: McpManager;
+  tunnelManager: TunnelManager;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -86,6 +88,7 @@ export function createGatewayServer(
   const auth = bearerAuthMiddleware(tokenManager);
   const containerManager = new DockerContainerManager(config);
   const mcpManager = new McpManager();
+  const tunnelManager = new TunnelManager(config.port);
   const skillGenerator = new SkillGenerator(containerManager, mcpManager, state);
   const incidentManager = new IncidentManagerSkill(state);
 
@@ -135,7 +138,7 @@ export function createGatewayServer(
   app.get('/api/pairing', (req: Request, res: Response) => {
     if (rejectNonLocalPairing(req, res)) return;
 
-    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    const payload = buildGatewayPairingPayload(req, config, tokenManager, tunnelManager);
     res.json({
       ...payload,
       pairing_uri: pairingUri(payload),
@@ -145,7 +148,7 @@ export function createGatewayServer(
   app.get('/pair', async (req: Request, res: Response) => {
     if (rejectNonLocalPairing(req, res)) return;
 
-    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    const payload = buildGatewayPairingPayload(req, config, tokenManager, tunnelManager);
     res.type('html').send(await renderPairingPage(payload));
   });
 
@@ -604,7 +607,7 @@ export function createGatewayServer(
   });
 
   app.post('/api/remote-control', auth, async (req: Request, res: Response) => {
-    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    const payload = buildGatewayPairingPayload(req, config, tokenManager, tunnelManager);
     const pairingLink = pairingUri(payload);
     const pairingPage = `${payload.base_url}/pair`;
     const terminalQr = await renderTerminalPairingQr(payload);
@@ -687,7 +690,15 @@ export function createGatewayServer(
     tokenManager,
     containerManager,
     mcpManager,
+    tunnelManager,
     start(): Promise<void> {
+      if (config.autoTunnel) {
+        // Start tunnel in background, don't block server startup
+        tunnelManager.start().catch((err) => {
+          console.error('[startup] Auto-tunnel failed to start:', err);
+        });
+      }
+
       return new Promise((resolve) => {
         httpServer.listen(config.port, config.host, () => {
           console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
@@ -706,6 +717,7 @@ export function createGatewayServer(
     },
     stop(): Promise<void> {
       return new Promise((resolve, reject) => {
+        tunnelManager.stop();
         wsManager.stop();
         wss.close();
         httpServer.close((err) => {
@@ -713,9 +725,9 @@ export function createGatewayServer(
           else resolve();
         });
       });
-      },
-    };
-  }
+    },
+  };
+}
 
   function isActionType(value: unknown): value is ActionType {
     return typeof value === 'string' && [

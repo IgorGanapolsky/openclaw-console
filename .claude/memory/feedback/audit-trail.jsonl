@@ -1,0 +1,3 @@
+{"id":"audit_1778510829753_117lef","timestamp":"2026-05-11T14:47:09.753Z","toolName":"get_business_metrics","toolInput":{"window":"all"},"decision":"allow","gateId":null,"message":null,"severity":null,"latencyMs":null,"source":"gates-engine"}
+{"id":"audit_1778511324421_ls9ecn","timestamp":"2026-05-11T14:55:24.421Z","toolName":"get_business_metrics","toolInput":{"window":"30d"},"decision":"allow","gateId":null,"message":null,"severity":null,"latencyMs":null,"source":"gates-engine"}
+{"id":"audit_1778511324437_pw9gy0","timestamp":"2026-05-11T14:55:24.437Z","toolName":"get_business_metrics","toolInput":{"window":"30d"},"decision":"allow","gateId":null,"message":null,"severity":null,"latencyMs":15,"source":"tool-latency"}

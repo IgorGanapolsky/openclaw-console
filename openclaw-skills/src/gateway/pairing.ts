@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { toString as qrToString } from 'qrcode';
 import type { GatewayConfig } from '../config/default.js';
 import type { TokenManager } from './auth.js';
+import type { TunnelManager } from './tunnel.js';
 
 export interface GatewayPairingPayload {
   type: 'openclaw.gateway.pairing.v1';
@@ -56,11 +57,13 @@ export function buildGatewayPairingPayload(
   req: Request,
   config: GatewayConfig,
   tokenManager: TokenManager,
+  tunnelManager?: TunnelManager,
 ): GatewayPairingPayload {
+  const tunnelUrl = tunnelManager?.getStatus().url;
   return {
     type: 'openclaw.gateway.pairing.v1',
     name: process.env['OPENCLAW_GATEWAY_NAME']?.trim() || 'OpenClaw Gateway',
-    base_url: inferGatewayBaseUrl(req, config),
+    base_url: tunnelUrl || inferGatewayBaseUrl(req, config),
     token: tokenManager.getOrCreateToken(PAIRING_TOKEN_LABEL),
     issued_at: new Date().toISOString(),
   };

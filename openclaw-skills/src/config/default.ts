@@ -51,6 +51,8 @@ export interface GatewayConfig {
   localModelTimeoutMs: number;
   /** Append-only JSONL path for governance/audit events */
   governanceEventLogPath: string;
+  /** Whether to automatically create a secure public tunnel on startup */
+  autoTunnel: boolean;
 }
 
 const DEFAULT_CONFIG: GatewayConfig = {
@@ -76,6 +78,7 @@ const DEFAULT_CONFIG: GatewayConfig = {
   localModelName: process.env['OPENCLAW_LOCAL_MODEL_NAME'] ?? null,
   localModelTimeoutMs: parseInt(process.env['OPENCLAW_LOCAL_MODEL_TIMEOUT_MS'] ?? '2500', 10),
   governanceEventLogPath: process.env['OPENCLAW_GOVERNANCE_EVENT_LOG'] ?? './data/governance-events.jsonl',
+  autoTunnel: process.env['OPENCLAW_AUTO_TUNNEL'] !== 'false',
 };
 
 function parseList(raw: string | undefined, fallback: string[]): string[] {
