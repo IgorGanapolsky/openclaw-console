@@ -9,9 +9,21 @@
 
 A focused mobile cockpit for monitoring and controlling [OpenClaw](https://github.com/openclaw) agents. Native iOS and Android apps with zero social-app dependencies.
 
-> **Not a chat app.** This is a single-purpose work console for developers, DevOps engineers, indie hackers, and trading/infra builders who self-host OpenClaw and want to supervise agents from their phone.
+---
+
+## 🚀 Professional Managed Setup
+
+Tired of configuration hell? We build and maintain your **24/7 Mac AI Workstation** for you.
+
+- **Done-For-You Setup:** We configure your Mac Mini, OpenClaw Gateway, and model routing.
+- **Managed Revenue-Ops:** Install agent apps like the *WhatsApp Lead Responder* and *Daily Owner Briefing*.
+- **Zero-Risk Guarantee:** We deliver in 24 hours or you don't pay.
+
+[**Get the ,500 Managed Revenue System**](https://igorganapolsky.github.io/openclaw-mac-ai-workstation-setup/)
 
 ---
+
+> **Not a chat app.** This is a single-purpose work console for developers, DevOps engineers, indie hackers, and trading/infra builders who self-host OpenClaw and want to supervise agents from their phone.
 
 ## Vision
 
