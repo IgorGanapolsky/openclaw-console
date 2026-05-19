@@ -140,6 +140,10 @@ class AppViewModel(private val application: Application) : ViewModel() {
                         _lastGatewaySignal.value = java.time.Instant.now().toString()
                         _gatewaySignalSummary.value = "Disconnected"
                     }
+                    is WebSocketEvent.ConnectionError -> {
+                        _lastGatewaySignal.value = java.time.Instant.now().toString()
+                        _gatewaySignalSummary.value = event.message
+                    }
                     else -> {
                         _lastGatewaySignal.value = java.time.Instant.now().toString()
                     }
