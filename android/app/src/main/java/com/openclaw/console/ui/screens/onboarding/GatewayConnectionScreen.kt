@@ -109,7 +109,10 @@ fun GatewayConnectionScreen(
 
                 // Enhanced QR Scanner Button
                 Button(
-                    onClick = { showEnhancedScanner = true },
+                    onClick = {
+                        println("DEBUG: Enhanced QR Scanner button clicked!")
+                        showEnhancedScanner = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -483,13 +486,40 @@ fun GatewayConnectionScreen(
         }
     )
 
-    // Enhanced QR scanner dialog
+    // Debug QR scanner dialog first
+    if (showEnhancedScanner) {
+        AlertDialog(
+            onDismissRequest = { showEnhancedScanner = false },
+            confirmButton = {
+                TextButton(onClick = { showEnhancedScanner = false }) {
+                    Text("Close")
+                }
+            },
+            title = { Text("DEBUG: QR Scanner") },
+            text = {
+                Column {
+                    Text("Button click works! This means the basic UI is functional.")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            showEnhancedScanner = false
+                            onConnectionSuccess("http://test-connection.example.com")
+                        }
+                    ) {
+                        Text("Test Connection Success")
+                    }
+                }
+            }
+        )
+    }
+
+    // TODO: Replace with EnhancedQRScannerDialog when basic functionality is confirmed
+    /*
     EnhancedQRScannerDialog(
         isVisible = showEnhancedScanner,
         onDismiss = { showEnhancedScanner = false },
         onConnectionSuccess = { connectionResult ->
             showEnhancedScanner = false
-            // Extract URL from successful connection for backwards compatibility
             val url = connectionResult.endpoint.url
             onConnectionSuccess(url)
         },
@@ -499,6 +529,7 @@ fun GatewayConnectionScreen(
             showTroubleshooting = true
         }
     )
+    */
 }
 
 @Composable
