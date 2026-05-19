@@ -248,6 +248,28 @@ jobs:
         working-directory: android
         run: ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:lintDebug --no-daemon
 
+      - name: Run comprehensive Android tests with coverage
+        working-directory: android
+        run: |
+          echo "🧪 Running comprehensive test suite..."
+          ./gradlew clean testDebugUnitTest jacocoTestReport checkCoverage --no-daemon
+
+      - name: Upload code coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-coverage-reports
+          path: |
+            android/app/build/reports/jacoco/
+            android/app/build/reports/tests/
+          if-no-files-found: ignore
+
+      - name: Validate Android test compilation
+        working-directory: android
+        run: |
+          echo "🎯 Validating instrumented test compilation..."
+          ./gradlew compileDebugAndroidTestSources --no-daemon
+
       - name: Upload Android diagnostics
         if: always()
         uses: actions/upload-artifact@v4
