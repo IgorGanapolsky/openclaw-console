@@ -139,12 +139,14 @@ dependencies {
     implementation("androidx.biometric:biometric:1.4.0-alpha07")
     implementation("com.google.errorprone:error_prone_annotations:2.49.0")
 
-    // QR gateway pairing scanner.
+    // QR gateway pairing scanner & generator.
     implementation("androidx.camera:camera-camera2:1.6.1")
     implementation("androidx.camera:camera-lifecycle:1.6.1")
     implementation("androidx.camera:camera-view:1.6.1")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.google.guava:guava:33.5.0-android")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.11.0")

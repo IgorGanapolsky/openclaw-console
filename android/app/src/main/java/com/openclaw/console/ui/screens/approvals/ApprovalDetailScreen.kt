@@ -55,8 +55,9 @@ import com.openclaw.console.data.model.ActionType
 import com.openclaw.console.data.model.ApprovalDecision
 import com.openclaw.console.data.model.ApprovalRequest
 import com.openclaw.console.data.model.RiskLevel
-import com.openclaw.console.service.BiometricHelper
+import com.openclaw.console.service.BiometricService
 import com.openclaw.console.service.BiometricResult
+import com.openclaw.console.ui.components.BiometricProtectedAction
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.theme.MonospaceStyle
 import kotlinx.coroutines.delay
@@ -100,7 +101,13 @@ fun ApprovalDetailScreen(
                 "Confirm you want to deny this request"
             }
 
-            when (val result = BiometricHelper.authenticate(activity, title = title, subtitle = subtitle)) {
+            when (val result = BiometricService.authenticateForOperation(
+                activity,
+                if (decision == ApprovalDecision.APPROVED)
+                    BiometricService.AuthenticationRequest.ApproveAgentAction
+                else
+                    BiometricService.AuthenticationRequest.DenyAgentAction
+            )) {
                 BiometricResult.Success -> viewModel.onBiometricSuccess()
                 BiometricResult.UserCancelled -> viewModel.onBiometricCancelled()
                 BiometricResult.Lockout -> {
