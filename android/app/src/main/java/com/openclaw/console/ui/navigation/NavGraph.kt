@@ -29,6 +29,7 @@ import com.openclaw.console.ui.components.ApprovalBanner
 import com.openclaw.console.ui.components.EmptyState
 import com.openclaw.console.ui.screens.dashboard.FleetDashboardScreen
 import com.openclaw.console.ui.screens.onboarding.WelcomeOnboardingScreen
+import com.openclaw.console.ui.screens.onboarding.SetupWizardScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class Screen(val route: String, val label: String) {
     object Welcome : Screen("welcome", "Welcome")
+    object SetupWizard : Screen("setup-wizard", "Setup Wizard")
 
     // Bottom nav roots
     object Dashboard : Screen("dashboard", "Dashboard")
@@ -208,7 +210,20 @@ fun NavGraph(
             ) {
                 composable(Screen.Welcome.route) {
                     WelcomeOnboardingScreen(
-                        onAddGateway = { navController.navigate(Screen.AddGateway.route) }
+                        onAddGateway = { navController.navigate(Screen.SetupWizard.route) }
+                    )
+                }
+
+                composable(Screen.SetupWizard.route) {
+                    SetupWizardScreen(
+                        onNavigateToScanner = { navController.navigate(Screen.ScanGatewayQr.route) },
+                        onSetupComplete = { gatewayUrl ->
+                            // Navigate to dashboard after successful setup
+                            navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Welcome.route) { inclusive = true }
+                            }
+                        },
+                        onBack = { navController.popBackStack() }
                     )
                 }
 
