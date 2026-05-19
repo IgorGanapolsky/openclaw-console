@@ -1,8 +1,28 @@
-Initial release of OpenClaw Work Console.
+🚀 OpenClaw Console v1.0.0 - Initial Release
 
-• Gateway connection with secure token auth
-• Agent list with real-time status
-• Task feed with live timeline
-• Incidents tab with severity filtering
-• Biometric approval for dangerous actions
-• Minimal agent chat
+🔐 BIOMETRIC SECURITY FOR DEVOPS
+• Face ID/fingerprint authentication for all dangerous operations
+• Secure approval workflows preventing accidental deployments
+• Enterprise-grade security for self-hosted infrastructure
+
+🤖 AI AGENT MANAGEMENT
+• Manage multiple OpenClaw agents from your phone
+• Real-time agent status monitoring and health checks
+• Seamless switching between dev/staging/production environments
+
+📡 CROSS-NETWORK CONNECTIVITY
+• Advanced connection troubleshooting and diagnostics
+• Automatic network discovery with QR code pairing
+• Robust connectivity across VPNs, corporate networks, and Tailscale
+
+📱 PROFESSIONAL MOBILE DEVOPS
+• Approve CI/CD deployments on-the-go
+• Emergency incident response from anywhere
+• Clean, distraction-free interface built for professionals
+
+🏠 SELF-HOSTED PRIVACY
+• Complete data sovereignty - your data never leaves your infrastructure
+• Zero dependency on social messaging apps like Slack or Telegram
+• Works with your existing self-hosted OpenClaw gateway
+
+Perfect for DevOps professionals who need secure mobile access to critical infrastructure decisions.
