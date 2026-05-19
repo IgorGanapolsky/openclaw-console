@@ -19,6 +19,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import com.openclaw.console.R
 import com.openclaw.console.ui.theme.LocalOpenClawColors
 
@@ -68,36 +71,89 @@ fun WelcomeOnboardingScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Your mobile control center for OpenClaw agents, CI/CD pipelines, and infrastructure monitoring.",
+                text = "Before scanning QR codes, you need to run this command on your computer:",
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Key features
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Command card - FIRST THING USERS SEE
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
-                FeatureRow(
-                    icon = Icons.Default.Security,
-                    text = "Biometric approval for dangerous actions"
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                FeatureRow(
-                    icon = Icons.Default.Notifications,
-                    text = "Real-time mobile notifications"
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                FeatureRow(
-                    icon = Icons.Default.Analytics,
-                    text = "Monitor deployments from your pocket"
-                )
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Terminal,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(32.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "STEP 1: Run this on your computer",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "openclaw gateway start --mobile-console",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = {
+                                    val clipboardManager = LocalClipboardManager.current
+                                    clipboardManager.setText(AnnotatedString("openclaw gateway start --mobile-console"))
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy command",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "This will show a QR code that you scan with this app",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = onAddGateway,
@@ -107,12 +163,12 @@ fun WelcomeOnboardingScreen(
                     .height(56.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.RocketLaunch,
+                    imageVector = Icons.Default.QrCodeScanner,
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(
-                    text = "Get Started",
+                    text = "STEP 2: Scan QR Code",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
