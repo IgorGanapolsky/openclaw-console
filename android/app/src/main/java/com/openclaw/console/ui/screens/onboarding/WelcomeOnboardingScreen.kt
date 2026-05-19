@@ -160,7 +160,10 @@ fun WelcomeOnboardingScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = onAddGateway,
+                onClick = {
+                    println("DEBUG: STEP 2 Scan QR Code button clicked!")
+                    onAddGateway()
+                },
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
