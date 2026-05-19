@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.openclaw.console.ui.theme.LocalOpenClawColors
+import com.openclaw.console.ui.components.GatewayQRCodeDisplay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +35,8 @@ fun GatewayConnectionScreen(
     val openClaw = LocalOpenClawColors.current
     var showManualInput by remember { mutableStateOf(false) }
     var manualUrl by remember { mutableStateOf("") }
+    var showQRGenerator by remember { mutableStateOf(false) }
+    var qrGeneratorUrl by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -247,6 +250,107 @@ fun GatewayConnectionScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // QR Code Generator
+        OutlinedButton(
+            onClick = { showQRGenerator = !showQRGenerator },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.QrCode,
+                contentDescription = null
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Generate QR Code")
+        }
+
+        if (showQRGenerator) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = openClaw.cardBackground
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Generate Your Own QR Code",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "If you can't see the QR code in your terminal, enter your gateway URL here to generate one:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = qrGeneratorUrl,
+                        onValueChange = { qrGeneratorUrl = it },
+                        placeholder = { Text("http://your-machine-ip:18789") },
+                        label = { Text("Gateway URL") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (qrGeneratorUrl.isNotBlank()) {
+                        GatewayQRCodeDisplay(
+                            gatewayUrl = qrGeneratorUrl,
+                            size = 180.dp,
+                            modifier = Modifier.padding(8.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Scan this QR code with another device or use for verification",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                if (qrGeneratorUrl.isNotBlank()) {
+                                    onConnectionSuccess(qrGeneratorUrl)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Use This Gateway URL")
+                        }
+                    } else {
+                        // Show example button
+                        OutlinedButton(
+                            onClick = {
+                                qrGeneratorUrl = "http://192.168.1.100:18789"
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Fill Example URL")
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Local network discovery
         OutlinedButton(
             onClick = { /* TODO: Implement network discovery */ },
@@ -298,13 +402,16 @@ fun GatewayConnectionScreen(
                         "1. Run: openclaw gateway start --mobile-console"
                     )
                     HelpItem(
-                        "2. Look for the QR code in your terminal"
+                        "2. Look for the QR code in your terminal, or generate one in-app"
                     )
                     HelpItem(
                         "3. Gateway runs on http://localhost:18789 by default"
                     )
                     HelpItem(
                         "4. Ensure your phone and computer are on the same WiFi network"
+                    )
+                    HelpItem(
+                        "5. Find your computer's IP with 'ifconfig' (Mac/Linux) or 'ipconfig' (Windows)"
                     )
                 }
             }

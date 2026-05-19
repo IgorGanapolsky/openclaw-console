@@ -6,8 +6,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +34,7 @@ fun WelcomeOnboardingScreen(
     onAddGateway: () -> Unit
 ) {
     val openClaw = LocalOpenClawColors.current
+    val clipboardManager = LocalClipboardManager.current
 
     Box(
         modifier = Modifier
@@ -128,7 +133,6 @@ fun WelcomeOnboardingScreen(
                             )
                             IconButton(
                                 onClick = {
-                                    val clipboardManager = LocalClipboardManager.current
                                     clipboardManager.setText(AnnotatedString("openclaw gateway start --mobile-console"))
                                 },
                                 modifier = Modifier.size(32.dp)
