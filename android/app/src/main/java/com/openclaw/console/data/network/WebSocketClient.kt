@@ -102,7 +102,31 @@ open class WebSocketClient(
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 _connectionState.value = ConnectionState.DISCONNECTED
-                scope.launch { _events.emit(WebSocketEvent.Disconnected) }
+
+                // Analyze the error to provide better user guidance
+                val errorEvent = when {
+                    t.message?.contains("Unable to resolve host", ignoreCase = true) == true ||
+                    t.message?.contains("No address associated with hostname", ignoreCase = true) == true -> {
+                        WebSocketEvent.ConnectionError("Network error: Unable to reach the gateway. Make sure your phone and computer are on the same network, or use VPN if connecting remotely.")
+                    }
+                    t.message?.contains("Connection refused", ignoreCase = true) == true -> {
+                        WebSocketEvent.ConnectionError("Connection refused: The gateway is not running or is not accessible. Try running 'openclaw qr --remote' on your computer.")
+                    }
+                    t.message?.contains("timeout", ignoreCase = true) == true -> {
+                        WebSocketEvent.ConnectionError("Connection timeout: The gateway is taking too long to respond. Check your network connection and firewall settings.")
+                    }
+                    response?.code == 401 -> {
+                        WebSocketEvent.ConnectionError("Authentication failed: Invalid or expired token. Please reconnect to the gateway.")
+                    }
+                    response?.code == 404 -> {
+                        WebSocketEvent.ConnectionError("Gateway not found: The gateway endpoint is not available. Verify the gateway is running with mobile console support.")
+                    }
+                    else -> {
+                        WebSocketEvent.ConnectionError("Connection failed: ${t.message ?: "Unknown network error"}. Check that the gateway is running and accessible from this network.")
+                    }
+                }
+
+                scope.launch { _events.emit(errorEvent) }
                 if (shouldReconnect) scheduleReconnect()
             }
         })

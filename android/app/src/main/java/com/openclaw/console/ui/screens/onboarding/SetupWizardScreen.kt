@@ -198,7 +198,7 @@ private fun GatewayStep(
 
         CommandCard(
             title = "Terminal Command:",
-            command = "openclaw gateway start --mobile-console",
+            command = "openclaw qr --remote",
             onCopy = { clipboardManager.setText(AnnotatedString(it)) },
             isHighlighted = true
         )

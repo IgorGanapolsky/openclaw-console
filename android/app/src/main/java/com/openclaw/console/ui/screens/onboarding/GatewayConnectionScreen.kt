@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.openclaw.console.ui.theme.LocalOpenClawColors
 import com.openclaw.console.ui.components.GatewayQRCodeDisplay
+import com.openclaw.console.ui.components.NetworkTroubleshootingDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +38,8 @@ fun GatewayConnectionScreen(
     var manualUrl by remember { mutableStateOf("") }
     var showQRGenerator by remember { mutableStateOf(false) }
     var qrGeneratorUrl by remember { mutableStateOf("") }
+    var showTroubleshooting by remember { mutableStateOf(false) }
+    var lastError by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -399,7 +402,7 @@ fun GatewayConnectionScreen(
 
                 Column {
                     HelpItem(
-                        "1. Run: openclaw gateway start --mobile-console"
+                        "1. Run: openclaw qr --remote"
                     )
                     HelpItem(
                         "2. Look for the QR code in your terminal, or generate one in-app"
@@ -408,17 +411,50 @@ fun GatewayConnectionScreen(
                         "3. Gateway runs on http://localhost:18789 by default"
                     )
                     HelpItem(
-                        "4. Ensure your phone and computer are on the same WiFi network"
+                        "4. IMPORTANT: Phone and computer must be on the same network"
                     )
                     HelpItem(
                         "5. Find your computer's IP with 'ifconfig' (Mac/Linux) or 'ipconfig' (Windows)"
+                    )
+                    HelpItem(
+                        "6. Use VPN or port forwarding if on different networks"
                     )
                 }
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Network troubleshooting button
+        OutlinedButton(
+            onClick = {
+                lastError = "Connection troubleshooting guide"
+                showTroubleshooting = true
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.NetworkCheck,
+                contentDescription = null
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Connection Troubleshooting")
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
     }
+
+    // Network troubleshooting dialog
+    NetworkTroubleshootingDialog(
+        isVisible = showTroubleshooting,
+        errorMessage = if (lastError.isNotEmpty()) lastError else "Having trouble connecting to your gateway?",
+        onDismiss = { showTroubleshooting = false },
+        onRetry = {
+            showTroubleshooting = false
+            // Could trigger a connection retry here
+        }
+    )
 }
 
 @Composable
