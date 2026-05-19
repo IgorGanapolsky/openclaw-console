@@ -3,21 +3,75 @@ name: Device Tests
 on:
   pull_request:
     branches: [develop, main]
-    paths:
-      - 'android/**'
-      - 'ios/**'
-      - '.maestro/**'
-      - 'scripts/**'
-      - '.github/workflows/device-tests.yml'
+  push:
+    branches: [develop, main]
   workflow_dispatch:
+  schedule:
+    - cron: "17 8 * * *"
 
 concurrency:
   group: device-tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  device-test-changes:
+    name: Detect Device Test Changes
+    runs-on: ubuntu-latest
+    outputs:
+      android_changed: ${{ steps.changed.outputs.android_changed }}
+      ios_changed: ${{ steps.changed.outputs.ios_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" || "$EVENT_NAME" == "schedule" ]]; then
+            echo "android_changed=true" >> "$GITHUB_OUTPUT"
+            echo "ios_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Full run: running both platform device suites."
+            exit 0
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE="$PR_BASE_SHA"
+            HEAD="$PR_HEAD_SHA"
+          elif [[ -n "${BEFORE_SHA:-}" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            BASE="$BEFORE_SHA"
+            HEAD="$GITHUB_SHA"
+          else
+            BASE="HEAD^"
+            HEAD="HEAD"
+          fi
+
+          git diff --name-only "$BASE" "$HEAD" > changed-files.txt || git show --name-only --format= "$HEAD" > changed-files.txt
+
+          android_changed=false
+          ios_changed=false
+          if grep -Eq '^(android/|\.maestro/|scripts/device-tests/|scripts/ci/run-with-retry\.sh|docs/testing/|scripts/check_mobile_test_coverage\.py|\.github/workflows/device-tests\.yml)' changed-files.txt; then
+            android_changed=true
+          fi
+          if grep -Eq '^(ios/|\.maestro/|docs/testing/|scripts/check_mobile_test_coverage\.py|\.github/workflows/device-tests\.yml)' changed-files.txt; then
+            ios_changed=true
+          fi
+
+          echo "android_changed=$android_changed" >> "$GITHUB_OUTPUT"
+          echo "ios_changed=$ios_changed" >> "$GITHUB_OUTPUT"
+          echo "Android device tests: $android_changed"
+          echo "iOS device tests: $ios_changed"
+
   android-device-tests:
     name: Android Emulator + Maestro Tests
+    needs: [device-test-changes]
+    if: needs.device-test-changes.outputs.android_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -108,6 +162,8 @@ jobs:
 
   ios-device-tests:
     name: iOS Simulator Tests
+    needs: [device-test-changes]
+    if: needs.device-test-changes.outputs.ios_changed == 'true'
     runs-on: macos-15
     timeout-minutes: 30
 
@@ -115,10 +171,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: List available simulators
+        id: simulator
         run: |
           xcrun simctl list devices available | grep iPhone
-          echo "Selected simulator for testing:"
-          xcrun simctl list devices available | grep "iPhone 16" | head -1
+          SIMULATOR_ID=$(xcrun simctl list devices available | awk '/iPhone/ { if (match($0, /\([0-9A-F-]+\)/)) { print substr($0, RSTART + 1, RLENGTH - 2); exit } }')
+          if [ -z "$SIMULATOR_ID" ]; then
+            echo "No available iPhone simulator found."
+            exit 1
+          fi
+          DESTINATION="platform=iOS Simulator,id=$SIMULATOR_ID"
+          echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
+          echo "Using destination: $DESTINATION"
 
       - name: Resolve SPM dependencies
         working-directory: ios/OpenClawConsole
@@ -133,7 +196,7 @@ jobs:
           # Build for simulator
           xcodebuild build \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination '${{ steps.simulator.outputs.destination }}' \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -disableAutomaticPackageResolution \
@@ -142,28 +205,23 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-          # Run unit tests (if the scheme defines a test action)
-          set +e
+          set -o pipefail
           xcodebuild test \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination '${{ steps.simulator.outputs.destination }}' \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -disableAutomaticPackageResolution \
             -skipPackagePluginValidation \
+            -enableCodeCoverage YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee /tmp/xcode-test.log
-          test_exit=${PIPESTATUS[0]}
-          set -e
 
-          if [ "$test_exit" -ne 0 ]; then
-            if grep -q "not currently configured for the test action" /tmp/xcode-test.log; then
-              echo "No test action configured for scheme OpenClawConsole; skipping xcodebuild test."
-            else
-              exit "$test_exit"
-            fi
+          if grep -q "not currently configured for the test action" /tmp/xcode-test.log; then
+            echo "OpenClawConsole scheme has no test action configured."
+            exit 1
           fi
 
       - name: Install Maestro CLI
@@ -177,10 +235,15 @@ jobs:
           CI_RETRY_DELAY_SECONDS: "15"
           CI_RETRY_LOG_DIR: ${{ runner.temp }}/openclaw-ci-retry
         run: |
-          if [ -d ".maestro" ] && [ -f ".maestro/smoke-test-ios.yaml" ]; then
-            echo "Running iOS Maestro tests..."
+          IOS_FLOWS=()
+          while IFS= read -r flow; do
+            IOS_FLOWS+=("$flow")
+          done < <(find .maestro -maxdepth 1 -type f \( -name '*ios*.yaml' -o -name 'smoke-test-ios.yaml' \) 2>/dev/null | sort)
+          if [ "${#IOS_FLOWS[@]}" -gt 0 ]; then
+            printf 'Running iOS Maestro tests:\n'
+            printf ' - %s\n' "${IOS_FLOWS[@]}"
             set +e
-            scripts/ci/run-with-retry.sh --label ios-maestro -- maestro test .maestro/smoke-test-ios.yaml 2>&1 | tee /tmp/maestro-ios.log
+            scripts/ci/run-with-retry.sh --label ios-maestro -- maestro test "${IOS_FLOWS[@]}" 2>&1 | tee /tmp/maestro-ios.log
             maestro_exit=${PIPESTATUS[0]}
             set -e
 

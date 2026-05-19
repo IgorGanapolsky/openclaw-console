@@ -16,11 +16,12 @@ on:
         description: 'Android only: Google Play track to publish to'
         type: choice
         options:
+          - internal
           - production
           - beta
           - alpha
         required: false
-        default: 'production'
+        default: 'internal'
       submit_review:
         description: 'iOS only: submit the App Store version for App Review after verification'
         type: choice
@@ -37,18 +38,44 @@ concurrency:
 jobs:
   ios-testflight:
     if: ${{ inputs.platform == 'ios' || inputs.platform == 'both' }}
-    runs-on: macos-15
+    runs-on: macos-26
     environment: production
     steps:
       - uses: actions/checkout@v5
 
+      - name: Verify Xcode 26 upload SDK
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          echo "iphoneos SDK: ${sdk_version}"
+          sdk_major="${sdk_version%%.*}"
+          if [ "${sdk_major}" -lt 26 ]; then
+            echo "❌ App Store Connect requires iOS SDK 26 or later for uploads."
+            exit 1
+          fi
+
       - name: Setup Python
+        if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
+      - name: Verify self-hosted Python
+        if: ${{ runner.environment == 'self-hosted' }}
+        run: |
+          set -euo pipefail
+          python3 --version
+          python3 -m pip --version
+
       - name: Install Pillow
-        run: python3 -m pip install pillow
+        run: |
+          set -euo pipefail
+          if python3 -c "import PIL" >/dev/null 2>&1; then
+            echo "Pillow already available"
+            exit 0
+          fi
+          python3 -m pip install pillow
 
       - name: Fail fast on required iOS release secrets
         env:
@@ -59,9 +86,10 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          for name in APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION ADMIN_TOKEN; do
+          for name in APPSTORE_PRIVATE_KEY APPSTORE_KEY_ID APPSTORE_ISSUER_ID MATCH_GIT_URL MATCH_PASSWORD MATCH_GIT_BASIC_AUTHORIZATION ADMIN_TOKEN REVENUECAT_PUBLIC_KEY; do
             if [ -z "${!name:-}" ]; then
               echo "❌ Missing required secret: $name"
               exit 1
@@ -154,7 +182,8 @@ jobs:
           TESTFLIGHT_CONTACT_FIRST_NAME: ${{ secrets.TESTFLIGHT_CONTACT_FIRST_NAME }}
           TESTFLIGHT_CONTACT_LAST_NAME: ${{ secrets.TESTFLIGHT_CONTACT_LAST_NAME }}
           TESTFLIGHT_CONTACT_PHONE: ${{ secrets.TESTFLIGHT_CONTACT_PHONE }}
-          TESTFLIGHT_GROUP: ${{ vars.TESTFLIGHT_GROUPS }}
+          TESTFLIGHT_GROUP: ${{ secrets.TESTFLIGHT_GROUPS }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
         run: bundle exec fastlane beta
         working-directory: ios/OpenClawConsole
 
@@ -176,6 +205,24 @@ jobs:
       - name: Preflight release checks (Android)
         run: bash scripts/preflight-release.sh --platform android --layer 1
 
+      - name: Fail fast on required Android release secrets
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          for name in GOOGLE_PLAY_JSON_KEY GOOGLE_SERVICES_JSON ANDROID_KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD REVENUECAT_PUBLIC_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "❌ Missing required secret: $name"
+              exit 1
+            fi
+          done
+
       - name: Setup Java
         uses: actions/setup-java@v5
         with:
@@ -185,11 +232,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: android
+
       - name: Create google-services.json
         working-directory: android
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
+      - name: Create Google Play service account
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+        run: printf '%s' "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
 
       - name: Decode keystore
         env:
@@ -198,14 +257,15 @@ jobs:
 
       - name: Build and Publish to Google Play
         env:
-          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          ANDROID_TRACK: ${{ inputs.android_track }}
           KEYSTORE_PATH: /tmp/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew publishReleaseBundle
+          REVENUECAT_PUBLIC_KEY: ${{ secrets.REVENUECAT_PUBLIC_KEY }}
+        run: bundle exec fastlane release "track:${ANDROID_TRACK}"
         working-directory: android
 
       - name: Cleanup secrets
         if: always()
-        run: rm -f /tmp/release.keystore
+        run: rm -f /tmp/release.keystore /tmp/play-service-account.json

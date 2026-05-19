@@ -33,6 +33,7 @@ import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
 import com.openclaw.console.ui.screens.settings.AddGatewayScreen
+import com.openclaw.console.ui.screens.settings.GatewayQrScannerScreen
 import com.openclaw.console.ui.screens.settings.SettingsScreen
 import com.openclaw.console.ui.screens.subscription.PaywallScreen
 import com.openclaw.console.ui.screens.tasks.TaskDetailScreen
@@ -64,6 +65,7 @@ sealed class Screen(val route: String, val label: String) {
         fun route(approvalId: String) = "approvals/$approvalId"
     }
     object AddGateway : Screen("settings/add", "Add Gateway")
+    object ScanGatewayQr : Screen("settings/add/scan", "Scan Gateway QR")
     object Paywall : Screen("paywall?feature={feature}", "Upgrade to Pro") {
         fun route(feature: String? = null): String =
             if (feature.isNullOrBlank()) "paywall?feature=" else "paywall?feature=$feature"
@@ -77,7 +79,11 @@ private data class BottomNavItem(
 )
 
 @Composable
-fun NavGraph(appViewModel: AppViewModel = viewModel()) {
+fun NavGraph(
+    appViewModel: AppViewModel = viewModel(),
+    pendingPairingLink: String? = null,
+    onPairingLinkConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val colors = LocalOpenClawColors.current
     val savedGateways by appViewModel.gatewayRepository.gateways.collectAsStateWithLifecycle()
@@ -108,7 +114,11 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
         currentDestination?.hierarchy?.any { destination -> destination.route in topLevelRoutes } == true
 
     LaunchedEffect(hasConfiguredGateway, currentRoute) {
-        if (!hasConfiguredGateway && currentRoute != Screen.Welcome.route && currentRoute != Screen.AddGateway.route) {
+        if (!hasConfiguredGateway &&
+            currentRoute != Screen.Welcome.route &&
+            currentRoute != Screen.AddGateway.route &&
+            currentRoute != Screen.ScanGatewayQr.route
+        ) {
             navController.navigate(Screen.Welcome.route) {
                 popUpTo(navController.graph.findStartDestination().id) {
                     inclusive = true
@@ -122,6 +132,15 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
                 popUpTo(Screen.Welcome.route) {
                     inclusive = true
                 }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(pendingPairingLink, currentRoute) {
+        val link = pendingPairingLink?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        if (currentRoute != Screen.AddGateway.route) {
+            navController.navigate(Screen.AddGateway.route) {
                 launchSingleTop = true
             }
         }
@@ -302,9 +321,32 @@ fun NavGraph(appViewModel: AppViewModel = viewModel()) {
             }
 
             composable(Screen.AddGateway.route) {
+                val scannedCodeFlow = remember {
+                    it.savedStateHandle.getStateFlow<String?>("gateway_qr_payload", null)
+                }
+                val scannedCode by scannedCodeFlow.collectAsStateWithLifecycle()
                 AddGatewayScreen(
                     appViewModel = appViewModel,
-                    onBack = { navController.navigateUp() }
+                    onBack = { navController.navigateUp() },
+                    onScanQr = { navController.navigate(Screen.ScanGatewayQr.route) },
+                    pendingPairingLink = pendingPairingLink,
+                    onPairingLinkConsumed = onPairingLinkConsumed,
+                    scannedPairingCode = scannedCode,
+                    onScannedPairingCodeConsumed = {
+                        it.savedStateHandle["gateway_qr_payload"] = null
+                    }
+                )
+            }
+
+            composable(Screen.ScanGatewayQr.route) {
+                GatewayQrScannerScreen(
+                    onBack = { navController.navigateUp() },
+                    onPairingCodeScanned = { payload ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("gateway_qr_payload", payload)
+                        navController.popBackStack()
+                    }
                 )
             }
 

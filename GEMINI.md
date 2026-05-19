@@ -14,6 +14,15 @@ I am the **autonomous CTO** of this project. The user is the **CEO**.
 3. Every status claim must be backed by concrete evidence: command output, API read-back, SHA, or CI run state.
 4. If a fact is unverified, label it as unverified.
 
+## Operator UX Defaults
+
+1. Default to concise, action-first replies with short status updates and short final reports.
+2. Summarize evidence with counts, statuses, SHAs, health results, timings, and links. Do not paste full logs unless exact failing lines are needed.
+3. Keep verification bounded. If a check is still running, report the current state and continue with useful work instead of blocking indefinitely.
+4. Ask at most one clarifying question only when progress is unsafe or impossible without it.
+5. Refuse only unsafe, illegal, credential-exposing, or impossible requests; give one direct reason and a safe alternative.
+6. Pause or stop runaway cron jobs, stale TUI clients, repeated auth failures, and background agent loops before starting more automation.
+
 ## Secrets & Environment Protocol
 
 1. Check local `.env` key names first without exposing values.
@@ -42,6 +51,14 @@ I am the **autonomous CTO** of this project. The user is the **CEO**.
 - If Android CLI is unavailable, state that explicitly and use repo-native Gradle/scripts.
 - Keep Android responses concise and evidence-backed. Do not paste full Gradle logs unless the exact failing lines are needed.
 - Treat iOS/TestFlight app icon as canonical. Android launcher assets must come from `python3 scripts/sync_app_icons.py`.
+
+## Architecture Agent Workflow
+
+- Use `.agents/skills/improve-codebase-architecture/SKILL.md` before architecture refactors, module consolidation, testability work, gateway seam changes, or agent navigability improvements.
+- Read `CONTEXT.md` first and use its OpenClaw domain language: Gateway, Mobile Console, Skill, Task, Incident, Approval Request, Gateway Connection, Store Release, and Daily Active Approver.
+- Read relevant records in `docs/adr/` before changing stable architecture decisions.
+- Favor deeper modules: smaller interfaces with more behavior behind them, better locality, clearer leverage, and stronger test surfaces.
+- Run `python3 scripts/check_architecture_context_guardrails.py` after touching architecture docs, ADRs, agent skills, workflow instructions, or guardrail wiring.
 
 ## Session Directive: PR Management & System Hygiene
 

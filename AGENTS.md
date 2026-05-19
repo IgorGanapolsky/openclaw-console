@@ -32,6 +32,15 @@
 4. Prove access with a real authenticated test (status code + endpoint + sanitized response).
 5. Never claim "no access" until steps 1-4 are completed with evidence.
 
+## Operator UX Defaults
+
+1. Default to concise, action-first replies. Status updates should be one or two useful sentences; final reports should be short unless the user asks for a full audit.
+2. Evidence is required, but summarize it: counts, SHAs, CI states, health results, timings, and links. Do not paste full logs unless exact failing lines are needed.
+3. Keep checks bounded. If CI or an external service is still running, report the current state and URL instead of freezing the conversation.
+4. Ask at most one clarifying question only when the next action is unsafe, impossible, or likely to waste significant work.
+5. Refuse only unsafe, illegal, credential-exposing, or impossible requests. Include one direct reason and a safe alternative.
+6. Prefer interactive responsiveness over background autonomy: stale TUI clients, cron storms, repeated auth failures, and runaway subagents must be stopped or paused before more automation is started.
+
 ## North Star
 
 **Daily Active Approvers (DAA)**: unique users who approve at least one agent action per day via the console.
@@ -97,6 +106,14 @@ Mobile apps are thin clients. All intelligence lives in OpenClaw skills on the u
 - If Android CLI is unavailable, state that explicitly and use the repo commands below.
 - Keep Android agent responses concise: outcome, evidence, changed files, and next fix only. Do not paste full Gradle logs unless the exact failing lines are needed.
 - iOS/TestFlight app icon remains the canonical launcher icon source. Android launcher assets must be regenerated with `python3 scripts/sync_app_icons.py`, never hand-edited.
+
+## Architecture Agent Workflow
+
+- Use `.agents/skills/improve-codebase-architecture/SKILL.md` before architecture refactors, module consolidation, testability work, gateway seam changes, or agent navigability improvements.
+- Read `CONTEXT.md` first and use its OpenClaw domain language: Gateway, Mobile Console, Skill, Task, Incident, Approval Request, Gateway Connection, Store Release, and Daily Active Approver.
+- Read relevant records in `docs/adr/` before changing stable architecture decisions.
+- Favor deeper modules: smaller interfaces with more behavior behind them, better locality, clearer leverage, and stronger test surfaces.
+- Run `python3 scripts/check_architecture_context_guardrails.py` after touching architecture docs, ADRs, agent skills, workflow instructions, or guardrail wiring.
 
 ## Session Directive: PR Management & System Hygiene
 

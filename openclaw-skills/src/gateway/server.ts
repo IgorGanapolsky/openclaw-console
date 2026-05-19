@@ -46,6 +46,13 @@ import {
   isBridgeSessionControlAction,
   normalizeProjectBridgeSession,
 } from './project-session.js';
+import {
+  buildGatewayPairingPayload,
+  pairingUri,
+  rejectNonLocalPairing,
+  renderPairingPage,
+  renderTerminalPairingQr,
+} from './pairing.js';
 import { normalizeSkillWorkflowSystem } from './skill-workflow.js';
 import { buildOperatorSummary } from './operator-summary.js';
 import { presentTaskForOperator } from '../utils/response-style.js';
@@ -123,6 +130,23 @@ export function createGatewayServer(
       local_model: getConfiguredLocalModel(config),
     };
     res.json(body);
+  });
+
+  app.get('/api/pairing', (req: Request, res: Response) => {
+    if (rejectNonLocalPairing(req, res)) return;
+
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    res.json({
+      ...payload,
+      pairing_uri: pairingUri(payload),
+    });
+  });
+
+  app.get('/pair', async (req: Request, res: Response) => {
+    if (rejectNonLocalPairing(req, res)) return;
+
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    res.type('html').send(await renderPairingPage(payload));
   });
 
   app.get('/api/runtime/status', auth, (_req: Request, res: Response) => {
@@ -579,17 +603,23 @@ export function createGatewayServer(
     });
   });
 
-  app.post('/api/remote-control', auth, (_req: Request, res: Response) => {
-    const devToken = tokenManager.getDefaultDevToken();
-    // Development-only URL with temporary access token for mobile testing
-    const baseUrl = `http://${config.host}:${config.port}/api/health`;
-    const sessionUrl = `${baseUrl}?tkn=${devToken}`;
+  app.post('/api/remote-control', auth, async (req: Request, res: Response) => {
+    const payload = buildGatewayPairingPayload(req, config, tokenManager);
+    const pairingLink = pairingUri(payload);
+    const pairingPage = `${payload.base_url}/pair`;
+    const terminalQr = await renderTerminalPairingQr(payload);
     console.info('\n' + '='.repeat(40));
     console.info('📱 REMOTE CONTROL ACTIVE');
-    console.info('Scan to access from mobile:');
-    console.info(`URL: ${sessionUrl}`);
+    console.info('Scan this QR in OpenClaw Console:');
+    console.info(terminalQr);
+    console.info(`QR page: ${pairingPage}`);
+    console.info(`Pairing link: ${pairingLink}`);
     console.info('='.repeat(40) + '\n');
-    res.json({ url: sessionUrl, expires_in: 600 });
+    res.json({
+      url: pairingLink,
+      pairing_uri: pairingLink,
+      pairing_page: pairingPage,
+    });
   });
 
   // ── Revenue Infrastructure ────────────────────────────────────────────────
@@ -663,9 +693,11 @@ export function createGatewayServer(
           console.info(`[gateway] OpenClaw gateway listening on http://${config.host}:${config.port}`); // local-dev-only
           // Dev hint: connect via WebSocket using your dev auth bearer credential
           const wsEndpoint = `ws://${config.host}:${config.port}/ws`; // local-dev-only
-          console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          if (process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
+            console.info(`[gateway] WebSocket endpoint: ${wsEndpoint} (add bearer auth header)`); // local-dev-only
+          }
           const devToken = tokenManager.getDefaultDevToken();
-          if (devToken) {
+          if (devToken && process.env['OPENCLAW_PAIRING_MODE'] !== 'true') {
             console.info(`[gateway] Dev credential prefix: ${devToken.slice(0, 8)}…`);
           }
           resolve();

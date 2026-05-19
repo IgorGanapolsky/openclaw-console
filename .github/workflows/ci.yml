@@ -84,6 +84,24 @@ jobs:
       - name: Validate portable agent workflow settings
         run: python3 scripts/check_agent_workflow_settings.py
 
+  architecture-context-guardrails:
+    name: Architecture Context Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify architecture context workflow guardrails
+        run: python3 scripts/check_architecture_context_guardrails.py
+
+  mobile-test-coverage-policy:
+    name: Mobile Test Coverage Policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify critical mobile flow coverage map
+        run: python3 scripts/check_mobile_test_coverage.py
+
   icon-parity:
     name: App Icon Parity
     runs-on: ubuntu-latest
@@ -174,7 +192,7 @@ jobs:
               echo ":: $f: Uses plain HTTP URL (use HTTPS)"
               ERRORS=$((ERRORS + 1))
             fi
-          done < <(find ios -name '*.swift')
+          done < <(git ls-files 'ios/**/*.swift')
           if [ "$ERRORS" -gt 0 ]; then
             echo "Found $ERRORS architecture violation(s)"
             exit 1
@@ -243,7 +261,7 @@ jobs:
   ios-build:
     name: iOS Build Check
     needs: [ios-changes]
-    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && 'macos-14' || 'ubuntu-latest' }}
+    runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && (vars.IOS_CI_RUNS_ON || 'macos-15') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -252,8 +270,27 @@ jobs:
         run: echo "No iOS files changed; skipping macOS simulator build."
 
       - name: Select Xcode
+        if: needs.ios-changes.outputs.ios_changed == 'true' && runner.environment != 'self-hosted'
+        run: |
+          if [ -d /Applications/Xcode_15.2.app ]; then
+            sudo xcode-select -s /Applications/Xcode_15.2.app
+          else
+            echo "Xcode 15.2 not installed; using current Xcode: $(xcode-select -p)"
+            xcodebuild -version
+          fi
+
+      - name: Resolve simulator destination
         if: needs.ios-changes.outputs.ios_changed == 'true'
-        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+        id: simulator
+        run: |
+          SIMULATOR_NAME=$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*/\1/p' | head -n 1)
+          if [ -n "$SIMULATOR_NAME" ]; then
+            DESTINATION="platform=iOS Simulator,name=$SIMULATOR_NAME"
+          else
+            DESTINATION="generic/platform=iOS Simulator"
+          fi
+          echo "destination=$DESTINATION" >> "$GITHUB_OUTPUT"
+          echo "Using destination: $DESTINATION"
 
       - name: Resolve and build for simulator
         if: needs.ios-changes.outputs.ios_changed == 'true'
@@ -267,7 +304,7 @@ jobs:
           # Build with the same derivedDataPath and disable auto-resolution
           xcodebuild build \
             -scheme OpenClawConsole \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+            -destination '${{ steps.simulator.outputs.destination }}' \
             -configuration Debug \
             -derivedDataPath .build/DerivedData \
             -disableAutomaticPackageResolution \
@@ -275,3 +312,26 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Run iOS unit tests with coverage
+        if: needs.ios-changes.outputs.ios_changed == 'true'
+        working-directory: ios/OpenClawConsole
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme OpenClawConsole \
+            -destination '${{ steps.simulator.outputs.destination }}' \
+            -configuration Debug \
+            -derivedDataPath .build/DerivedData \
+            -disableAutomaticPackageResolution \
+            -skipPackagePluginValidation \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee /tmp/openclaw-ios-unit-tests.log
+
+          if grep -q "not currently configured for the test action" /tmp/openclaw-ios-unit-tests.log; then
+            echo "OpenClawConsole scheme has no test action configured."
+            exit 1
+          fi

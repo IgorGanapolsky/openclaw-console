@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -28,16 +29,34 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun AddGatewayScreen(
     appViewModel: AppViewModel,
     onBack: () -> Unit,
+    onScanQr: () -> Unit,
+    pendingPairingLink: String? = null,
+    onPairingLinkConsumed: () -> Unit = {},
+    scannedPairingCode: String? = null,
+    onScannedPairingCodeConsumed: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel()
 ) {
     val gatewayRepo = appViewModel.gatewayRepository
     val uiState by viewModel.addGatewayUiState.collectAsStateWithLifecycle()
+    val clipboardManager = LocalClipboardManager.current
     val focusManager = LocalFocusManager.current
     var tokenVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.setRepository(gatewayRepo)
         viewModel.resetAddGatewayForm()
+    }
+
+    LaunchedEffect(pendingPairingLink) {
+        val link = pendingPairingLink?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        viewModel.importPairing(link, onSuccess = onBack)
+        onPairingLinkConsumed()
+    }
+
+    LaunchedEffect(scannedPairingCode) {
+        val code = scannedPairingCode?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        viewModel.applyScannedPairingCode(code)
+        onScannedPairingCodeConsumed()
     }
 
     Scaffold(
@@ -61,6 +80,123 @@ fun AddGatewayScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Pair by QR or Code",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Button(
+                        onClick = onScanQr,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scan QR Code")
+                    }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.18f)
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.pairingCode,
+                        onValueChange = viewModel::onPairingCodeChange,
+                        label = { Text("Setup code, link, or JSON") },
+                        placeholder = { Text("Paste the code from OpenClaw") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
+                        minLines = 1,
+                        maxLines = 3,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Uri,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus() }
+                        )
+                    )
+
+                    uiState.pairingImportMessage?.let { message ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                clipboardManager.getText()?.text
+                                    ?.takeIf { it.isNotBlank() }
+                                    ?.let(viewModel::onPairingCodeChange)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.ContentPaste, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Paste")
+                        }
+
+                        Button(
+                            onClick = viewModel::applyPairingCode,
+                            enabled = uiState.pairingCode.isNotBlank(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Key, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Use Code")
+                        }
+                    }
+
+                }
+            }
 
             // Name field
             OutlinedTextField(
