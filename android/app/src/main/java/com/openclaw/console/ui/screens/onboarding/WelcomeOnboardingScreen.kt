@@ -1,18 +1,10 @@
 package com.openclaw.console.ui.screens.onboarding
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -76,14 +68,36 @@ fun WelcomeOnboardingScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "Connect to a gateway to start monitoring and controlling your agents.",
+                text = "Your mobile control center for OpenClaw agents, CI/CD pipelines, and infrastructure monitoring.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Key features
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                FeatureRow(
+                    icon = Icons.Default.Security,
+                    text = "Biometric approval for dangerous actions"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FeatureRow(
+                    icon = Icons.Default.Notifications,
+                    text = "Real-time mobile notifications"
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FeatureRow(
+                    icon = Icons.Default.Analytics,
+                    text = "Monitor deployments from your pocket"
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = onAddGateway,
@@ -93,14 +107,58 @@ fun WelcomeOnboardingScreen(
                     .height(56.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    imageVector = Icons.Default.RocketLaunch,
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.size(8.dp))
-                Text("Add Gateway")
+                Text(
+                    text = "Get Started",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = { /* TODO: Open documentation */ },
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.HelpOutline,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text("Documentation")
             }
 
             Spacer(modifier = Modifier.weight(1f))
         }
+    }
+}
+
+@Composable
+private fun FeatureRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
