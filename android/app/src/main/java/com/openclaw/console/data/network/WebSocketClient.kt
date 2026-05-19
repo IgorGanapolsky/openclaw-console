@@ -36,7 +36,8 @@ private val json = Json {
 
 open class WebSocketClient(
     private val baseUrl: String,
-    private val token: String
+    private val token: String,
+    private val headers: Map<String, String> = emptyMap()
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -72,9 +73,15 @@ open class WebSocketClient(
         _connectionState.value = ConnectionState.CONNECTING
 
         val wsUrl = buildWsUrl()
-        val request = Request.Builder()
+        val requestBuilder = Request.Builder()
             .url(wsUrl)
-            .build()
+
+        // Add custom headers
+        headers.forEach { (key, value) ->
+            requestBuilder.addHeader(key, value)
+        }
+
+        val request = requestBuilder.build()
 
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {

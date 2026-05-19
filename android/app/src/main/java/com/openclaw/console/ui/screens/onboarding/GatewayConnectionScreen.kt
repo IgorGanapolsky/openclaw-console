@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.openclaw.console.ui.theme.LocalOpenClawColors
 import com.openclaw.console.ui.components.GatewayQRCodeDisplay
 import com.openclaw.console.ui.components.NetworkTroubleshootingDialog
+import com.openclaw.console.ui.components.EnhancedQRScannerDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +41,7 @@ fun GatewayConnectionScreen(
     var qrGeneratorUrl by remember { mutableStateOf("") }
     var showTroubleshooting by remember { mutableStateOf(false) }
     var lastError by remember { mutableStateOf("") }
+    var showEnhancedScanner by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -99,6 +101,31 @@ fun GatewayConnectionScreen(
                 Text(
                     text = "Start your OpenClaw gateway and scan the QR code it displays",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Enhanced QR Scanner Button
+                Button(
+                    onClick = { showEnhancedScanner = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCodeScanner,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Enhanced QR Scanner")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Supports cross-network connectivity with automatic fallbacks",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
@@ -453,6 +480,23 @@ fun GatewayConnectionScreen(
         onRetry = {
             showTroubleshooting = false
             // Could trigger a connection retry here
+        }
+    )
+
+    // Enhanced QR scanner dialog
+    EnhancedQRScannerDialog(
+        isVisible = showEnhancedScanner,
+        onDismiss = { showEnhancedScanner = false },
+        onConnectionSuccess = { connectionResult ->
+            showEnhancedScanner = false
+            // Extract URL from successful connection for backwards compatibility
+            val url = connectionResult.endpoint.url
+            onConnectionSuccess(url)
+        },
+        onConnectionError = { error ->
+            showEnhancedScanner = false
+            lastError = error
+            showTroubleshooting = true
         }
     )
 }
