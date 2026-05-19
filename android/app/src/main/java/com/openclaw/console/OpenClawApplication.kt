@@ -2,7 +2,6 @@ package com.openclaw.console
 
 import android.app.Application
 import android.util.Log
-import com.openclaw.console.service.AnalyticsService
 import com.openclaw.console.service.subscription.SubscriptionService
 
 /**
@@ -20,9 +19,6 @@ class OpenClawApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.i(TAG, "OpenClaw Console starting...")
-
-        // Initialize 2026 observability for QR scanner debugging
-        AnalyticsService.initialize(this)
 
         // Configure RevenueCat. The key is baked in via BuildConfig at build time
         // (set in CI from the REVENUECAT_PUBLIC_KEY secret). When the key is blank
