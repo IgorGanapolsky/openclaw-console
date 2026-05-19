@@ -1,3 +1,35 @@
 {
-  "mcpServers": {}
+  "mcpServers": {},
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/generate-pretool-hook.sh"
+          }
+        ]
+      }
+    ],
+    "AfterTool": [],
+    "AfterAgent": [],
+    "Notification": [],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "\"$GEMINI_PROJECT_DIR\"/.claude/hooks/session-start.sh",
+            "type": "command",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [],
+    "PreCompress": [],
+    "BeforeModel": [],
+    "AfterModel": [],
+    "BeforeToolSelection": []
+  }
 }
