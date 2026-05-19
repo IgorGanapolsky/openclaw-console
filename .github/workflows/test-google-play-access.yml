@@ -1,0 +1,85 @@
+name: Test Google Play Access
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-play-access:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Test Google Play API access
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          PACKAGE_NAME: com.openclaw.console
+        run: |
+          set -euo pipefail
+
+          echo "Testing Google Play Console API access for OpenClaw Console..."
+
+          # Write service account key
+          echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
+
+          # Install Google API client
+          pip install google-api-python-client==2.149.0 google-auth==2.35.0
+
+          # Test API access
+          cat << 'EOF' > test_play_access.py
+          import sys
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          try:
+              # Setup authentication
+              credentials = service_account.Credentials.from_service_account_file(
+                  '/tmp/play-service-account.json',
+                  scopes=['https://www.googleapis.com/auth/androidpublisher']
+              )
+
+              service = build('androidpublisher', 'v3', credentials=credentials)
+
+              # Test: Try to create and delete an edit (minimal permission test)
+              print(f"🧪 Testing API access for package: com.openclaw.console")
+
+              edit = service.edits().insert(
+                  body={},
+                  packageName='com.openclaw.console'
+              ).execute()
+
+              edit_id = edit['id']
+              print(f"✅ Successfully created edit: {edit_id}")
+
+              # Clean up the test edit
+              service.edits().delete(
+                  packageName='com.openclaw.console',
+                  editId=edit_id
+              ).execute()
+
+              print("✅ Google Play API access is working for OpenClaw Console!")
+              print("🎉 Service account has the required permissions")
+
+          except Exception as e:
+              error_msg = str(e)
+              if "Invalid grant: account not found" in error_msg:
+                  print("❌ Service account not found or invalid")
+                  print("💡 Check if the service account was deleted or key expired")
+              elif "does not have access" in error_msg or "403" in error_msg:
+                  print("❌ Service account lacks permissions for com.openclaw.console")
+                  print("💡 Go to Google Play Console → Setup → API access")
+                  print("💡 Add service account and grant 'Release apps to testing tracks' permission")
+              elif "not found" in error_msg and "package" in error_msg:
+                  print("❌ App package 'com.openclaw.console' not found in Google Play")
+                  print("💡 Ensure the app is created in Google Play Console first")
+              else:
+                  print(f"❌ API Error: {error_msg}")
+
+              sys.exit(1)
+          EOF
+
+          python test_play_access.py
+
+          # Cleanup
+          rm -f /tmp/play-service-account.json

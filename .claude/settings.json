@@ -19,7 +19,7 @@
         ]
       }
     ],
-    "BeforeAgent": [
+    "PreToolUse": [
       {
         "hooks": [
           {
