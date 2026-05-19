@@ -31,6 +31,12 @@ android {
             ?: providers.gradleProperty("revenueCatPublicKey").orNull
             ?: ""
         buildConfigField("String", "REVENUECAT_PUBLIC_KEY", "\"$revenueCatKey\"")
+
+        // Sentry DSN for error tracking (environment variable only - secure)
+        val sentryDsn = System.getenv("SENTRY_DSN")
+            ?: providers.gradleProperty("sentryDsn").orNull
+            ?: ""
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     signingConfigs {
@@ -151,6 +157,9 @@ dependencies {
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.11.0")
 
+    // Sentry - Error tracking and performance monitoring (2026 observability)
+    implementation("io.sentry:sentry-android:7.8.0")
+
     // RevenueCat (Android billing + subscription management).
     // Mirrors iOS SubscriptionService — product IDs and entitlement name must match iOS.
     implementation("com.revenuecat.purchases:purchases:9.29.1")
@@ -159,6 +168,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
