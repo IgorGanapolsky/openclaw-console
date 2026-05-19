@@ -64,7 +64,7 @@ fun QRCodeDisplay(
             }
             qrBitmap != null -> {
                 Image(
-                    bitmap = qrBitmap!!.asImageBitmap(),
+                    bitmap = qrBitmap!!.asImageBitmap(), // allow-nonnull
                     contentDescription = "QR Code: $content",
                     modifier = Modifier
                         .fillMaxSize()

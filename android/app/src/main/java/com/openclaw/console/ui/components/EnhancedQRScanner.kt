@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,7 +36,7 @@ fun EnhancedQRScannerDialog(
     var isConnecting by remember { mutableStateOf(false) }
     var scannedConnectionInfo by remember { mutableStateOf<GatewayConnectionInfo?>(null) }
 
-    val connectionProgress by connectionManager.connectionProgress.collectAsState()
+    val connectionProgress by connectionManager.connectionProgress.collectAsStateWithLifecycle()
 
     if (isVisible) {
         AlertDialog(
