@@ -14,6 +14,7 @@
 
 import http from 'node:http';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import { createRelayManager } from './relay-manager.js';
 import { createMetricsServer } from './metrics.js';
@@ -53,6 +54,16 @@ async function main() {
     // Create Express app for HTTP endpoints
     const app = express();
     app.use(express.json());
+
+    // Rate limiting for all endpoints
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // Limit each IP to 100 requests per windowMs
+      message: 'Too many requests from this IP, please try again later.',
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    app.use(limiter);
 
     // Health check endpoint
     const healthCheck = createHealthCheck(redis);

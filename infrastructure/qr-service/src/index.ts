@@ -28,7 +28,7 @@ redis.connect().catch(console.error);
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['*'],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:18789'],
   credentials: true
 }));
 
@@ -413,7 +413,8 @@ function generateFingerprint(input: string): string {
   // Simple hash function for demonstration
   // In production, use proper cryptographic hashing
   let hash = 0;
-  for (let i = 0; i < input.length; i++) {
+  const maxLength = Math.min(input.length, 10000); // Prevent DoS via unbounded input
+  for (let i = 0; i < maxLength; i++) {
     const char = input.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32-bit integer
