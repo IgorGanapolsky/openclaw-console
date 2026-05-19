@@ -153,7 +153,7 @@ fun SetupInstructionsScreen(
 
                 CommandBox(
                     title = "Terminal command:",
-                    command = "openclaw gateway start --mobile-console",
+                    command = "openclaw qr --remote",
                     onCopy = { clipboardManager.setText(AnnotatedString(it)) }
                 )
 

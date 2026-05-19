@@ -126,14 +126,14 @@ fun WelcomeOnboardingScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "openclaw gateway start --mobile-console",
+                                text = "openclaw qr --remote",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(
                                 onClick = {
-                                    clipboardManager.setText(AnnotatedString("openclaw gateway start --mobile-console"))
+                                    clipboardManager.setText(AnnotatedString("openclaw qr --remote"))
                                 },
                                 modifier = Modifier.size(32.dp)
                             ) {
