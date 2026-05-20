@@ -18,7 +18,6 @@ appId: com.openclaw.console
 
 # If early tap worked, go back and continue testing
 - pressKey: "Back"
-  optional: true
 
 # EDGE CASE 2: Test button after app backgrounding/foregrounding
 - runScript: |
