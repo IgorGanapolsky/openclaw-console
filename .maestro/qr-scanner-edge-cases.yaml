@@ -36,7 +36,7 @@ appId: com.openclaw.console
 
 # EDGE CASE 3: Test after rapid screen rotation (if supported)
 - pressKey: "Back"
-- setOrientation: landscape
+- setOrientation: landscapeLeft
 - setOrientation: portrait
 
 - extendedWaitUntil:
