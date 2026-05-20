@@ -1,5 +1,6 @@
 appId: com.openclaw.console
 ---
+- clearState
 # Comprehensive Setup Wizard & Onboarding Flow Regression Test
 # This test verifies the complete happy path of the onboarding wizard from launch to dashboard
 

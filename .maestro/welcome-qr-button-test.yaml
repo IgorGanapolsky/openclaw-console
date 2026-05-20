@@ -1,5 +1,6 @@
 appId: com.openclaw.console
 ---
+- clearState
 # Test for the actual QR scanner button regression on WelcomeOnboardingScreen
 # This test targets the "STEP 2: Scan QR Code" button that was broken
 

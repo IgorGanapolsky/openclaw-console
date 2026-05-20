@@ -1,5 +1,6 @@
 appId: com.openclaw.console
 ---
+- clearState
 # OBSESSIVE EDGE CASE TESTING for QR Scanner Button
 # Testing unusual scenarios and edge cases
 

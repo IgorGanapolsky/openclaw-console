@@ -1,5 +1,6 @@
 appId: com.openclaw.console
 ---
+- clearState
 # CRITICAL REGRESSION PROTECTION: QR Scanner Button Click
 # This test specifically protects against the "button does nothing" regression
 # User reported: "scan qr code button doesn't even work i click it and nothing happens"

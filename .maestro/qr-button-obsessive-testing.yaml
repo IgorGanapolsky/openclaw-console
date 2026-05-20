@@ -1,5 +1,6 @@
 appId: com.openclaw.console
 ---
+- clearState
 # 2026 OBSESSIVE Maestro E2E Testing for QR Scanner Button
 # Comprehensive testing to catch ALL possible regressions
 
