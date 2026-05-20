@@ -8,12 +8,10 @@ appId: com.openclaw.console
 # Wait for the Welcome screen to load
 - assertVisible:
     text: "OpenClaw Console"
-    timeout: 10000
 
 # Look for the critical QR scanner button
 - assertVisible:
     text: "STEP 2: Scan QR Code"
-    timeout: 5000
 
 # Test the QR scanner button click - this was broken!
 - tapOn: "STEP 2: Scan QR Code"
@@ -22,7 +20,6 @@ appId: com.openclaw.console
 # The button should trigger onAddGateway() navigation
 - assertVisible:
     text: "Setup Wizard|Gateway|Scanner|Camera|Scan QR Code"
-    timeout: 8000
 
 # If we see the Setup Wizard screen, continue the flow
 - tapOn:
@@ -32,14 +29,12 @@ appId: com.openclaw.console
 # Should eventually show camera or QR scanner interface
 - assertVisible:
     text: "Camera|Scanner|QR|Code"
-    timeout: 5000
     optional: true
 
 # Test back navigation works
 - pressKey: "Back"
 - assertVisible:
     text: "OpenClaw Console"
-    timeout: 3000
 
 ---
 # This test specifically covers the regression:

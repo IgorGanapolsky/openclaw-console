@@ -14,7 +14,6 @@ appId: com.openclaw.console
 # Immediately test button (before full UI stabilization)
 - tapOn:
     text: "STEP 2: Scan QR Code"
-    timeout: 3000
     optional: true
 
 # If early tap worked, go back and continue testing
@@ -113,7 +112,6 @@ appId: com.openclaw.console
 # Handle camera permission if prompted
 - tapOn:
     text: "Allow|Grant|While using app"
-    timeout: 5000
     optional: true
 
 # Test button works after permission handling
@@ -152,7 +150,6 @@ appId: com.openclaw.console
 # Verify button works regardless of text language
 - tapOn:
     text: "STEP 2|Scan|QR|Code"
-    timeout: 5000
 
 - extendedWaitUntil:
     visible:
@@ -163,7 +160,5 @@ appId: com.openclaw.console
 - pressKey: "Back"
 - assertVisible:
     text: "OpenClaw Console"
-    timeout: 8000
 - assertVisible:
     text: "STEP 2"
-    timeout: 3000

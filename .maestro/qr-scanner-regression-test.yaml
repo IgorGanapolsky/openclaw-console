@@ -13,7 +13,6 @@ appId: com.openclaw.console
 # Wait for the Gateway Connection screen to load
 - assertVisible:
     text: "Enhanced QR Scanner"
-    timeout: 10000
 
 # Test the QR Scanner button click functionality
 - tapOn: "Enhanced QR Scanner"
@@ -23,7 +22,6 @@ appId: com.openclaw.console
 # In production: should show QR scanner or some UI feedback
 - assertVisible:
     text: "DEBUG: QR Scanner|QR Scanner|Camera|Cancel|Close"
-    timeout: 5000
 
 # If debug dialog appears, test the connection success button
 - tapOn:
@@ -33,7 +31,6 @@ appId: com.openclaw.console
 # Verify connection callback works
 - assertVisible:
     text: "Connected|Success|Gateway"
-    timeout: 3000
     optional: true
 
 # Test manual URL input as fallback
@@ -62,7 +59,6 @@ appId: com.openclaw.console
 # Verify QR code is generated and displayed
 - assertVisible:
     id: "generated-qr-code"
-    timeout: 3000
 
 # Test troubleshooting dialog
 - tapOn: "Connection Troubleshooting"

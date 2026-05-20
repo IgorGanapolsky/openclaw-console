@@ -8,24 +8,19 @@ appId: com.openclaw.console
 # OBSESSIVE TEST 1: App Launch and Initial State
 - assertVisible:
     text: "OpenClaw Console"
-    timeout: 15000
 
 - assertVisible:
     text: "STEP 1: Run this on your computer"
-    timeout: 5000
 
 - assertVisible:
     text: "openclaw qr --remote"
-    timeout: 3000
 
 - assertVisible:
     text: "STEP 2: Scan QR Code"
-    timeout: 5000
 
 # OBSESSIVE TEST 2: Button Accessibility and State
 - assertVisible:
     id: "qr_scanner_button"
-    timeout: 5000
     optional: true  # Test tag might not be in final builds
 
 # OBSESSIVE TEST 3: Multiple Click Testing
@@ -77,13 +72,11 @@ appId: com.openclaw.console
 # Verify we're in the correct next screen
 - assertNotVisible:
     text: "STEP 1: Run this on your computer"
-    timeout: 3000
 
 # Test back navigation
 - pressKey: "Back"
 - assertVisible:
     text: "STEP 1: Run this on your computer"
-    timeout: 5000
 
 ---
 # OBSESSIVE TEST 5: Error Handling and Edge Cases
@@ -121,12 +114,10 @@ appId: com.openclaw.console
 # Simulate real user reading instructions
 - assertVisible:
     text: "Before scanning QR codes"
-    timeout: 5000
     optional: true
 
 - assertVisible:
     text: "run this command"
-    timeout: 3000
     optional: true
 
 # User copies command (test copy button)
@@ -212,7 +203,5 @@ appId: com.openclaw.console
 - pressKey: "Back"
 - assertVisible:
     text: "OpenClaw Console"
-    timeout: 5000
 - assertVisible:
     text: "STEP 2: Scan QR Code"
-    timeout: 3000
