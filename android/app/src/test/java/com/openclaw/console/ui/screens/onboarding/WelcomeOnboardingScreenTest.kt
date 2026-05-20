@@ -9,7 +9,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.printToLog
 import com.openclaw.console.ui.theme.OpenClawTheme
 import org.junit.Rule
 import org.junit.Test
@@ -260,6 +262,7 @@ class WelcomeOnboardingScreenTest {
 
         val onAddGateway = {
             callbackResults.add("navigation_triggered_${System.currentTimeMillis()}")
+            Unit
         }
 
         composeTestRule.setContent {
