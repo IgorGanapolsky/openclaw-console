@@ -93,7 +93,7 @@ def generate_with_gemini(api_key: str) -> dict[str, str] | None:
 def get_fallback_assets() -> dict[str, str]:
     print("Using high-quality pre-designed store assets fallback...")
     
-    title = "OpenClaw Console"
+    title = "OpenClaw Work Console"
     
     short_desc = "Biometric-verified DevOps & infrastructure approval workflows in your pocket."
     
@@ -180,11 +180,10 @@ def main() -> int:
     if not assets:
         assets = get_fallback_assets()
         
-    # Enforce lengths limits
-    if len(assets["title"]) > 30:
-        print(f"Warning: Generated title too long ({len(assets['title'])} chars). Truncating to 30 chars.")
-        assets["title"] = assets["title"][:30]
+    # Enforce exact app name parity with iOS to satisfy release contract
+    assets["title"] = "OpenClaw Work Console"
         
+    # Enforce lengths limits
     if len(assets["short_description"]) > 80:
         print(f"Warning: Generated short_description too long ({len(assets['short_description'])} chars). Truncating to 80 chars.")
         assets["short_description"] = assets["short_description"][:80]
