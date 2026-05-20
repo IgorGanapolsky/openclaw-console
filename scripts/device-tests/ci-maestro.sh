@@ -12,6 +12,9 @@ sleep 10
 echo "Installing OpenClaw Console..."
 adb install -r "$APK_PATH"
 
+echo "Clearing app storage to ensure clean state..."
+adb shell pm clear "$APP_ID"
+
 export PATH="$HOME/.maestro/bin:$PATH"
 
 FLOW_PATHS="$(find .maestro -maxdepth 1 -type f ! -name '*ios*' -name '*.yaml' 2>/dev/null | sort | tr '\n' ' ')"
