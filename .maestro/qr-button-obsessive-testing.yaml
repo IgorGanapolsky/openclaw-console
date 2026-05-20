@@ -166,10 +166,7 @@ appId: com.openclaw.console
 
 - launchApp
 
-# Test with different interaction patterns
-- longPressOn:
-    text: "STEP 2: Scan QR Code"
-    duration: 1000
+- longPressOn: "STEP 2: Scan QR Code"
 
 # Verify long press doesn't break the button
 - tapOn: "STEP 2: Scan QR Code"
