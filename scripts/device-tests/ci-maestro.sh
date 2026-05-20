@@ -14,7 +14,7 @@ adb install -r "$APK_PATH"
 
 export PATH="$HOME/.maestro/bin:$PATH"
 
-FLOW_PATHS="$(find .maestro -maxdepth 1 -type f \( -name '*android*.yaml' -o -name 'smoke-test-android.yaml' \) 2>/dev/null | sort | tr '\n' ' ')"
+FLOW_PATHS="$(find .maestro -maxdepth 1 -type f ! -name '*ios*' -name '*.yaml' 2>/dev/null | sort | tr '\n' ' ')"
 if [ -n "$FLOW_PATHS" ]; then
   echo "Running Maestro smoke tests: $FLOW_PATHS"
   maestro test $FLOW_PATHS
