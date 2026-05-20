@@ -31,7 +31,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 10000
 
 # EDGE CASE 3: Test after rapid screen rotation (if supported)
@@ -47,7 +47,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 10000
 
 # EDGE CASE 4: Test button with accessibility features
@@ -65,7 +65,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 10000
 
 # EDGE CASE 5: Test button during low memory conditions
@@ -86,7 +86,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 15000
 
 # EDGE CASE 6: Permission and Security Testing
@@ -109,7 +109,7 @@ appId: com.openclaw.console
 # Test button works after permission handling
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner|Camera"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 12000
 
 # EDGE CASE 7: App focus loss and recovery
@@ -127,7 +127,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 15000
 
 # EDGE CASE 8: Button text localization/internationalization
@@ -139,7 +139,7 @@ appId: com.openclaw.console
 
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 10000
 
 # FINAL EDGE CASE VALIDATION
@@ -148,3 +148,4 @@ appId: com.openclaw.console
     text: "OpenClaw Console"
 - assertVisible:
     text: "STEP 2"
+

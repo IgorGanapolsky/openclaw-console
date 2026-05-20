@@ -35,7 +35,7 @@ appId: com.openclaw.console
 # Expected: button click → navigation to setup/scanner screen
 - extendedWaitUntil:
     visible:
-      text: "Setup Wizard|Gateway|Scanner|Camera|QR Code|Add Gateway"
+      text: "OpenClaw Setup|Setup Progress|Install OpenClaw CLI"
     timeout: 15000
 
 # CRITICAL CHECKPOINT 6: We should NOT still be on welcome screen
@@ -47,7 +47,7 @@ appId: com.openclaw.console
 
 # CRITICAL CHECKPOINT 7: Verify new screen has expected functionality
 - assertVisible:
-    text: "Scanner|Camera|Gateway|QR"
+    text: "Install OpenClaw CLI|I've installed OpenClaw"
 
 # CRITICAL CHECKPOINT 8: Test back navigation works
 - pressKey: "Back"
@@ -58,7 +58,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 10000
 
 # FINAL VALIDATION: Multiple clicks don't break functionality
@@ -67,7 +67,7 @@ appId: com.openclaw.console
 - tapOn: "STEP 2: Scan QR Code"  # Double-click test
 - extendedWaitUntil:
     visible:
-      text: "Setup|Gateway|Scanner"
+      text: "OpenClaw Setup|Setup Progress"
     timeout: 8000
 
 # REGRESSION TEST SUMMARY:

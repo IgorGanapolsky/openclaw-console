@@ -16,25 +16,39 @@ appId: com.openclaw.console
 # Test the QR scanner button click - this was broken!
 - tapOn: "STEP 2: Scan QR Code"
 
-# Verify navigation works - should go to SetupWizardScreen or camera
-# The button should trigger onAddGateway() navigation
+# Verify navigation works - should go to SetupWizardScreen (Install step)
 - assertVisible:
-    text: "Setup Wizard|Gateway|Scanner|Camera|Scan QR Code"
+    text: "OpenClaw Setup|Setup Progress|Install OpenClaw CLI"
 
-# If we see the Setup Wizard screen, continue the flow
+# Complete Step 1: Install
+- tapOn:
+    text: "I've installed OpenClaw"
+
+# Complete Step 2: Gateway
+- assertVisible:
+    text: "Start OpenClaw Gateway|Gateway is running"
+- tapOn:
+    text: "Gateway is running"
+
+# Now we should see Step 3: Connect Mobile App which has "Scan QR Code" button
+- assertVisible:
+    text: "Connect Mobile App|Scan QR Code"
 - tapOn:
     text: "Scan QR Code"
-    optional: true
 
-# Should eventually show camera or QR scanner interface
+# Should navigate to Scan Gateway QR scanner screen (and show camera or permission request)
 - assertVisible:
-    text: "Camera|Scanner|QR|Code"
-    optional: true
+    text: "Scan Gateway QR|Camera access is needed|Allow Camera"
 
-# Test back navigation works
+# Test back navigation from QR scanner screen to Setup Wizard
 - pressKey: "Back"
 - assertVisible:
-    text: "OpenClaw Console"
+    text: "OpenClaw Setup|Setup Progress"
+
+# Test back navigation from Setup Wizard to Welcome Screen
+- pressKey: "Back"
+- assertVisible:
+    text: "OpenClaw Console|STEP 2: Scan QR Code"
 
 # This test specifically covers the regression:
 # ✅ Welcomes screen loads with correct title
