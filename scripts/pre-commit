@@ -291,6 +291,52 @@ if [ -n "$STAGED_TS" ]; then
 fi
 
 # ═══════════════════════════════════════════════════════════════════
+# 2026 TESTING ENFORCEMENT
+# ═══════════════════════════════════════════════════════════════════
+
+# Android testing requirements
+if [ -n "$STAGED_KT" ] || echo "$STAGED_ALL" | grep -qE '^android/(app|shared)/src/main/'; then
+  echo "🧪 Android code changes detected - enforcing testing requirements..."
+
+  # Run Android unit tests
+  if ! (cd "$(dirname "$0")/../android" && ./gradlew testDebugUnitTest --no-daemon); then
+    err "Android unit tests failed"
+  fi
+
+  # Run code coverage check (80% minimum)
+  if ! (cd "$(dirname "$0")/../android" && ./gradlew checkCoverage --no-daemon); then
+    err "Android code coverage below 80% threshold"
+  fi
+
+  # Ensure Android test compilation passes
+  if ! (cd "$(dirname "$0")/../android" && ./gradlew compileDebugAndroidTestSources --no-daemon); then
+    err "Android instrumented test compilation failed"
+  fi
+fi
+
+# iOS testing requirements
+if [ -n "$STAGED_SWIFT" ] || echo "$STAGED_ALL" | grep -qE '^ios/OpenClawConsole/OpenClawConsole/'; then
+  echo "🍎 iOS code changes detected - enforcing testing requirements..."
+
+  # Run iOS unit tests
+  if ! (cd "$(dirname "$0")/../ios/OpenClawConsole" && xcodebuild test -scheme OpenClawConsole -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' > /dev/null 2>&1); then
+    err "iOS unit tests failed"
+  fi
+fi
+
+# Skills gateway testing requirements
+if [ -n "$STAGED_TS" ] || echo "$STAGED_ALL" | grep -qE '^openclaw-skills/'; then
+  echo "🚀 Skills gateway changes detected - enforcing testing requirements..."
+
+  if [ -f "openclaw-skills/package.json" ]; then
+    # Run TypeScript tests
+    if ! (cd "$(dirname "$0")/../openclaw-skills" && npm test); then
+      err "Skills gateway tests failed"
+    fi
+  fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════
 # RESULT
 # ═══════════════════════════════════════════════════════════════════
 
