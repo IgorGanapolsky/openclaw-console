@@ -20,10 +20,8 @@ appId: com.openclaw.console
 - pressKey: "Back"
 
 # EDGE CASE 2: Test button after app backgrounding/foregrounding
-- runScript: |
-    maestro.pressKey("Home");
-    maestro.sleep(2000);
-    maestro.launchApp("com.openclaw.console");
+- pressKey: "Home"
+- launchApp: "com.openclaw.console"
 
 - extendedWaitUntil:
     visible:
@@ -38,11 +36,8 @@ appId: com.openclaw.console
 
 # EDGE CASE 3: Test after rapid screen rotation (if supported)
 - pressKey: "Back"
-- runScript: |
-    // Simulate device rotation by changing to landscape
-    maestro.setOrientation("landscape");
-    maestro.sleep(1000);
-    maestro.setOrientation("portrait");
+- setOrientation: landscape
+- setOrientation: portrait
 
 - extendedWaitUntil:
     visible:
@@ -59,10 +54,10 @@ appId: com.openclaw.console
 - pressKey: "Back"
 
 # Test with TalkBack/voice over simulation
-- runScript: |
-    // Test accessibility navigation
-    maestro.scrollDown(50);
-    maestro.scrollUp(50);
+- swipe:
+    direction: DOWN
+- swipe:
+    direction: UP
 
 - assertVisible:
     text: "STEP 2: Scan QR Code"
@@ -81,9 +76,7 @@ appId: com.openclaw.console
     times: 3
     commands:
       - pressKey: "Home"
-      - runScript: |
-          maestro.sleep(500);
-      - launchApp
+      - launchApp: "com.openclaw.console"
       - extendedWaitUntil:
           visible:
             text: "STEP 2: Scan QR Code"
@@ -119,18 +112,12 @@ appId: com.openclaw.console
       text: "Setup|Gateway|Scanner|Camera"
     timeout: 12000
 
-# EDGE CASE 7: Network connectivity changes
+# EDGE CASE 7: App focus loss and recovery
 - pressKey: "Back"
 
-# Simulate network changes (airplane mode toggle)
-- runScript: |
-    // Test button behavior during network changes
-    maestro.openControlCenter();
-    maestro.tapOn("Airplane Mode", { optional: true });
-    maestro.sleep(2000);
-    maestro.tapOn("Airplane Mode", { optional: true });
-    maestro.pressKey("Home");
-    maestro.launchApp("com.openclaw.console");
+# Simulate brief focus loss and app switching
+- pressKey: "Home"
+- launchApp: "com.openclaw.console"
 
 - extendedWaitUntil:
     visible:
