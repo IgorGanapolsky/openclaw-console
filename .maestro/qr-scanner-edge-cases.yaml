@@ -81,7 +81,8 @@ appId: com.openclaw.console
     times: 3
     commands:
       - pressKey: "Home"
-      - delay: 500
+      - runScript: |
+          maestro.sleep(500);
       - launchApp
       - extendedWaitUntil:
           visible:
