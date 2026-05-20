@@ -81,7 +81,7 @@ appId: com.openclaw.console
     times: 3
     commands:
       - pressKey: "Home"
-      - sleep: 500
+      - delay: 500
       - launchApp
       - extendedWaitUntil:
           visible:
