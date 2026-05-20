@@ -30,12 +30,16 @@ import androidx.compose.ui.text.font.FontFamily
 import com.openclaw.console.R
 import com.openclaw.console.ui.theme.LocalOpenClawColors
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun WelcomeOnboardingScreen(
     onAddGateway: () -> Unit
 ) {
     val openClaw = LocalOpenClawColors.current
     val clipboardManager = LocalClipboardManager.current
+    val scrollState = rememberScrollState()
 
     Box(
         modifier = Modifier
@@ -43,11 +47,13 @@ fun WelcomeOnboardingScreen(
             .padding(horizontal = 24.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             Surface(
                 shape = RoundedCornerShape(32.dp),
@@ -131,7 +137,7 @@ fun WelcomeOnboardingScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.weight(1f)
-                            )
+                              )
                             IconButton(
                                 onClick = {
                                     clipboardManager.setText(AnnotatedString("openclaw qr --remote"))
@@ -199,7 +205,7 @@ fun WelcomeOnboardingScreen(
                 Text("Documentation")
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
