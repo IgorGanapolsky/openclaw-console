@@ -65,7 +65,6 @@ appId: com.openclaw.console
 - assertVisible: "Network Troubleshooting"
 - tapOn: "Close"
 
----
 # This E2E test covers:
 # ✅ QR Scanner button click response (catches the regression!)
 # ✅ Manual URL input functionality

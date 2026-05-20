@@ -93,11 +93,8 @@ appId: com.openclaw.console
       text: "Setup|Gateway|Scanner"
     timeout: 15000
 
----
 # EDGE CASE 6: Permission and Security Testing
 
-appId: com.openclaw.console
----
 - launchApp
 
 # Test button behavior before/after permission grants

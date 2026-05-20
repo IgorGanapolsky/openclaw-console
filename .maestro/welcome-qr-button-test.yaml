@@ -36,7 +36,6 @@ appId: com.openclaw.console
 - assertVisible:
     text: "OpenClaw Console"
 
----
 # This test specifically covers the regression:
 # ✅ Welcomes screen loads with correct title
 # ✅ "STEP 2: Scan QR Code" button is visible

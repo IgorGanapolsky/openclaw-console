@@ -76,7 +76,6 @@ appId: com.openclaw.console
       text: "Setup|Gateway|Scanner"
     timeout: 8000
 
----
 # REGRESSION TEST SUMMARY:
 # ✅ App launches and shows welcome screen
 # ✅ All UI elements are visible and properly labeled
