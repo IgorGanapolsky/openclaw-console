@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import com.openclaw.console.R
@@ -168,6 +169,7 @@ fun WelcomeOnboardingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
+                    .testTag("qr_scanner_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.QrCodeScanner,
