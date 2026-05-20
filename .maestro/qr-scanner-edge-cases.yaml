@@ -77,14 +77,16 @@ appId: com.openclaw.console
 - pressKey: "Back"
 
 # Simulate memory pressure by opening and closing multiple times
-- repeat: 3
-  - pressKey: "Home"
-  - sleep: 500
-  - launchApp
-  - extendedWaitUntil:
-      visible:
-        text: "STEP 2: Scan QR Code"
-      timeout: 10000
+- repeat:
+    times: 3
+    commands:
+      - pressKey: "Home"
+      - sleep: 500
+      - launchApp
+      - extendedWaitUntil:
+          visible:
+            text: "STEP 2: Scan QR Code"
+          timeout: 10000
 
 # Final test after memory stress
 - tapOn: "STEP 2: Scan QR Code"

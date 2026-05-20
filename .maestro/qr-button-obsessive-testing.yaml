@@ -141,17 +141,19 @@ appId: com.openclaw.console
 - launchApp
 
 # Rapid interaction stress test
-- repeat: 5
-  - tapOn: "STEP 2: Scan QR Code"
-  - extendedWaitUntil:
-      visible:
-        text: "Setup|Gateway|Scanner"
-      timeout: 5000
-  - pressKey: "Back"
-  - extendedWaitUntil:
-      visible:
-        text: "STEP 1: Run this on your computer"
-      timeout: 5000
+- repeat:
+    times: 5
+    commands:
+      - tapOn: "STEP 2: Scan QR Code"
+      - extendedWaitUntil:
+          visible:
+            text: "Setup|Gateway|Scanner"
+          timeout: 5000
+      - pressKey: "Back"
+      - extendedWaitUntil:
+          visible:
+            text: "STEP 1: Run this on your computer"
+          timeout: 5000
 
 # Final verification that button still works
 - tapOn: "STEP 2: Scan QR Code"
