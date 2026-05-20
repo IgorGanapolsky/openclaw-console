@@ -24,10 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import com.openclaw.console.R
-import com.openclaw.console.service.AnalyticsService
 import com.openclaw.console.ui.theme.LocalOpenClawColors
 
 @Composable
@@ -162,56 +162,14 @@ fun WelcomeOnboardingScreen(
 
             Button(
                 onClick = {
-                    // 2026 Observability: Track critical QR scanner button interaction
-                    AnalyticsService.trackUIInteraction(
-                        action = "click",
-                        screen = "WelcomeOnboardingScreen",
-                        elementId = "qr_scanner_button",
-                        additionalContext = mapOf(
-                            "button_text" to "STEP 2: Scan QR Code",
-                            "expected_flow" to "navigate_to_setup_wizard",
-                            "user_reported_issue" to "button_does_nothing_camera_never_appears"
-                        )
-                    )
-
-                    try {
-                        onAddGateway()
-
-                        // Track successful navigation
-                        AnalyticsService.trackNavigation(
-                            from = "WelcomeOnboardingScreen",
-                            to = "SetupWizardScreen",
-                            success = true
-                        )
-                    } catch (e: Exception) {
-                        // Track navigation failures
-                        AnalyticsService.trackNavigation(
-                            from = "WelcomeOnboardingScreen",
-                            to = "SetupWizardScreen",
-                            success = false,
-                            errorMessage = e.message
-                        )
-
-                        // Critical error alert for regression
-                        AnalyticsService.trackCriticalButtonIssue(
-                            buttonId = "qr_scanner_button",
-                            screen = "WelcomeOnboardingScreen",
-                            issueDescription = "Navigation failure - button click doesn't open camera",
-                            userAction = "tap_step_2_scan_qr_code"
-                        )
-
-                        // Still track the error
-                        AnalyticsService.trackError(
-                            error = e,
-                            screen = "WelcomeOnboardingScreen",
-                            action = "qr_scanner_button_click"
-                        )
-                    }
+                    println("DEBUG: STEP 2 Scan QR Code button clicked!")
+                    onAddGateway()
                 },
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
+                    .testTag("qr_scanner_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.QrCodeScanner,

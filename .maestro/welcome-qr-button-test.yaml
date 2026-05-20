@@ -1,0 +1,50 @@
+appId: com.openclaw.console
+---
+# Test for the actual QR scanner button regression on WelcomeOnboardingScreen
+# This test targets the "STEP 2: Scan QR Code" button that was broken
+
+- launchApp
+
+# Wait for the Welcome screen to load
+- assertVisible:
+    text: "OpenClaw Console"
+    timeout: 10000
+
+# Look for the critical QR scanner button
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+    timeout: 5000
+
+# Test the QR scanner button click - this was broken!
+- tapOn: "STEP 2: Scan QR Code"
+
+# Verify navigation works - should go to SetupWizardScreen or camera
+# The button should trigger onAddGateway() navigation
+- assertVisible:
+    text: "Setup Wizard|Gateway|Scanner|Camera|Scan QR Code"
+    timeout: 8000
+
+# If we see the Setup Wizard screen, continue the flow
+- tapOn:
+    text: "Scan QR Code"
+    optional: true
+
+# Should eventually show camera or QR scanner interface
+- assertVisible:
+    text: "Camera|Scanner|QR|Code"
+    timeout: 5000
+    optional: true
+
+# Test back navigation works
+- pressKey: "Back"
+- assertVisible:
+    text: "OpenClaw Console"
+    timeout: 3000
+
+---
+# This test specifically covers the regression:
+# ✅ Welcomes screen loads with correct title
+# ✅ "STEP 2: Scan QR Code" button is visible
+# ✅ Button click triggers navigation (fixes the "does nothing" bug)
+# ✅ Navigation leads to QR scanner or setup wizard
+# ✅ Back navigation returns to welcome screen
