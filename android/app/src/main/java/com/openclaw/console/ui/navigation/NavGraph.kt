@@ -214,8 +214,14 @@ fun NavGraph(
                     )
                 }
 
-                composable(Screen.SetupWizard.route) {
+                composable(Screen.SetupWizard.route) { backStackEntry ->
+                    val scannedCodeFlow = remember {
+                        backStackEntry.savedStateHandle.getStateFlow<String?>("gateway_qr_payload", null)
+                    }
+                    val scannedCode by scannedCodeFlow.collectAsStateWithLifecycle()
+
                     SetupWizardScreen(
+                        appViewModel = appViewModel,
                         onNavigateToScanner = { navController.navigate(Screen.ScanGatewayQr.route) },
                         onSetupComplete = { gatewayUrl ->
                             // Navigate to dashboard after successful setup
@@ -223,7 +229,11 @@ fun NavGraph(
                                 popUpTo(Screen.Welcome.route) { inclusive = true }
                             }
                         },
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        scannedPairingCode = scannedCode,
+                        onScannedPairingCodeConsumed = {
+                            backStackEntry.savedStateHandle["gateway_qr_payload"] = null
+                        }
                     )
                 }
 
