@@ -4,7 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.openclaw.console.ui.theme.LocalOpenClawColors
 
 data class SetupStep(
     val id: String,
@@ -29,7 +30,6 @@ data class SetupStep(
     val isCompleted: Boolean = false
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupWizard(
     steps: List<SetupStep>,
@@ -37,194 +37,146 @@ fun SetupWizard(
     modifier: Modifier = Modifier,
     onStepClick: (Int) -> Unit = {}
 ) {
+    val colors = LocalOpenClawColors.current
+
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp)
-        ) {
-            // Header
-            Text(
-                text = "Setup Progress",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Progress indicator
-            LinearProgressIndicator(
-                progress = { (currentStepIndex + 1) / steps.size.toFloat() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Step ${currentStepIndex + 1} of ${steps.size}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Steps list
-            steps.forEachIndexed { index, step ->
-                SetupStepItem(
-                    step = step,
-                    isActive = index == currentStepIndex,
-                    isCompleted = step.isCompleted || index < currentStepIndex,
-                    onClick = { onStepClick(index) }
-                )
-
-                if (index < steps.lastIndex) {
-                    // Connection line between steps
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 28.dp)
-                            .width(2.dp)
-                            .height(24.dp)
-                            .background(
-                                color = if (step.isCompleted || index < currentStepIndex) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                },
-                                shape = RoundedCornerShape(1.dp)
-                            )
-                    )
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SetupStepItem(
-    step: SetupStep,
-    isActive: Boolean,
-    isCompleted: Boolean,
-    onClick: () -> Unit
-) {
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isActive) 1.05f else 1f,
-        animationSpec = tween(200)
-    )
-
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isActive -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                isCompleted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                else -> Color.Transparent
-            }
-        ),
-        border = if (isActive) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else null,
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isActive) 4.dp else 0.dp
-        )
-    ) {
-        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Step icon/number
+            // Header: Step title and step count
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Setup Progress",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Step ${currentStepIndex + 1} of ${steps.size}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.glowCyan
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Sleek horizontal step indicators with connection line
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .background(
-                        color = when {
-                            isCompleted -> MaterialTheme.colorScheme.primary
-                            isActive -> MaterialTheme.colorScheme.primaryContainer
-                            else -> MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        shape = CircleShape
-                    )
-                    .border(
-                        width = if (isActive) 3.dp else 0.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    ),
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (isCompleted) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Completed",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = step.icon,
-                        contentDescription = step.title,
-                        tint = when {
-                            isActive -> MaterialTheme.colorScheme.onPrimaryContainer
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.size(28.dp)
-                    )
+                // Background connection line
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(1.5.dp)
+                        )
+                )
+
+                // Foreground active progress connection line
+                val progressFraction = if (steps.size > 1) {
+                    currentStepIndex.toFloat() / (steps.size - 1).toFloat()
+                } else 0f
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progressFraction)
+                        .height(3.dp)
+                        .align(Alignment.CenterStart)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(1.5.dp)
+                        )
+                )
+
+                // Row of step circles
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    steps.forEachIndexed { index, step ->
+                        val isCompleted = step.isCompleted || index < currentStepIndex
+                        val isActive = index == currentStepIndex
+
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    color = when {
+                                        isCompleted -> MaterialTheme.colorScheme.primary
+                                        isActive -> MaterialTheme.colorScheme.primaryContainer
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    }
+                                )
+                                .border(
+                                    width = if (isActive) 2.dp else 0.dp,
+                                    color = colors.glowCyan,
+                                    shape = CircleShape
+                                )
+                                .clickable { onStepClick(index) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCompleted) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Step ${index + 1} completed",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = (index + 1).toString(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when {
+                                        isActive -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Step content
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            // Subtitle displaying current step title
+            val currentStep = steps.getOrNull(currentStepIndex)
+            if (currentStep != null) {
                 Text(
-                    text = step.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                    color = when {
-                        isCompleted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                        isActive -> MaterialTheme.colorScheme.onSurface
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+                    text = currentStep.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = step.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = when {
-                        isCompleted -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        isActive -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    }
-                )
-            }
-
-            // Status indicator
-            if (isActive && !isCompleted) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    strokeWidth = 3.dp,
-                    color = MaterialTheme.colorScheme.primary
+                    text = currentStep.description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }

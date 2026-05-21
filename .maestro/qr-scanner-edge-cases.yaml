@@ -134,9 +134,8 @@ appId: com.openclaw.console
 # EDGE CASE 8: Button text localization/internationalization
 - pressKey: "Back"
 
-# Verify button works regardless of text language
 - tapOn:
-    text: "STEP 2|Scan|QR|Code"
+    id: "qr_scanner_button"
 
 - extendedWaitUntil:
     visible:
