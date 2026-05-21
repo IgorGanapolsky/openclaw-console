@@ -146,5 +146,5 @@ appId: com.openclaw.console
 - assertVisible:
     text: "OpenClaw Console"
 - assertVisible:
-    text: "STEP 2"
+    text: "STEP 2: Scan QR Code"
 

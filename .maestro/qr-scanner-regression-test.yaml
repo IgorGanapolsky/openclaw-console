@@ -36,6 +36,7 @@ appId: com.openclaw.console
 - tapOn: "Generate QR Code"
 - tapOn: "Gateway URL"
 - inputText: "http://192.168.1.100:18789"
+- hideKeyboard
 - scroll
 - tapOn: "Use This URL"
 

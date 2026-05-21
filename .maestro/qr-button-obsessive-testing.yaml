@@ -42,6 +42,8 @@ appId: com.openclaw.console
       text: "OpenClaw Setup|Setup Progress"
     timeout: 8000
 
+- pressKey: "Back"
+
 # OBSESSIVE TEST 4: Navigation Flow Validation
 
 - launchApp
@@ -54,9 +56,9 @@ appId: com.openclaw.console
 
 # Verify all critical UI elements are present
 - assertVisible:
-    text: "STEP 1"
+    text: "STEP 1: Run this on your computer"
 - assertVisible:
-    text: "STEP 2"
+    text: "STEP 2: Scan QR Code"
 - assertVisible:
     text: "Documentation"
 
@@ -101,6 +103,8 @@ appId: com.openclaw.console
       text: "OpenClaw Setup|Setup Progress"
     timeout: 8000
 
+- pressKey: "Back"
+
 # OBSESSIVE TEST 6: Full User Journey Simulation
 
 - launchApp
@@ -139,6 +143,8 @@ appId: com.openclaw.console
       text: "OpenClaw Setup|Setup Progress"
     timeout: 8000
 
+- pressKey: "Back"
+
 # OBSESSIVE TEST 7: Stress Testing
 
 - launchApp
@@ -164,6 +170,8 @@ appId: com.openclaw.console
     visible:
       text: "OpenClaw Setup|Setup Progress"
     timeout: 10000
+
+- pressKey: "Back"
 
 # OBSESSIVE TEST 8: Device-Specific Testing
 
