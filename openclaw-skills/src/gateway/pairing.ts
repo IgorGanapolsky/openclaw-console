@@ -84,6 +84,13 @@ export async function renderPairingPage(payload: GatewayPairingPayload): Promise
     errorCorrectionLevel: 'M',
   });
 
+  const safeJsonForHtml = (value: string): string => {
+    return JSON.stringify(value)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e')
+      .replace(/&/g, '\\u0026');
+  };
+
   const isLocal = payload.base_url.includes('localhost') ||
                   payload.base_url.includes('127.0.0.1') ||
                   payload.base_url.includes('192.168.') ||
@@ -344,8 +351,8 @@ export async function renderPairingPage(payload: GatewayPairingPayload): Promise
     // Live Polling Mechanism
     // Monitors the pairing API and dynamically reloads the page 
     // if the server changes network configurations (e.g. starting a tunnel)
-    const currentBaseUrl = ${JSON.stringify(payload.base_url)};
-    const currentToken = ${JSON.stringify(payload.token)};
+    const currentBaseUrl = ${safeJsonForHtml(payload.base_url)};
+    const currentToken = ${safeJsonForHtml(payload.token)};
     
     async function checkPairingStatus() {
       try {
