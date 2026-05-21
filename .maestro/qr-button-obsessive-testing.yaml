@@ -181,7 +181,6 @@ appId: com.openclaw.console
 
 # Verify long press doesn't break the button
 - pressKey: "Back"
-  optional: true
 
 - tapOn: "STEP 2: Scan QR Code"
 - extendedWaitUntil:
