@@ -43,14 +43,7 @@ appId: com.openclaw.console
 - assertNotVisible:
     text: "STEP 1: Run this on your computer"
 
-# REGRESSION PROTECTION: Verify button click caused state change
-# If we can still see STEP 1 instructions, the button did nothing!
-- runScript: |
-    // JavaScript validation that navigation occurred
-    const step1Visible = maestro.isVisible("STEP 1: Run this on your computer", { timeout: 1000 });
-    if (step1Visible) {
-      throw new Error("REGRESSION DETECTED: QR scanner button click did not trigger navigation!");
-    }
+
 
 # CRITICAL CHECKPOINT 7: Verify new screen has expected functionality
 - assertVisible:
