@@ -52,8 +52,12 @@ def setup_google_play_key() -> str | None:
             if expanded.is_file():
                 return str(expanded)
                 
-        # Otherwise, parse it as JSON and write to a temporary file
-        parsed = json.loads(raw_key) if not raw_key.strip().startswith("{") else raw_key
+        # Validate JSON before writing
+        try:
+            json.loads(raw_key)
+        except json.JSONDecodeError:
+            print(f"GOOGLE_PLAY_JSON_KEY is not valid JSON", file=sys.stderr)
+            return None
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", mode="w", encoding="utf-8")
         temp_file.write(raw_key)
         temp_file.close()

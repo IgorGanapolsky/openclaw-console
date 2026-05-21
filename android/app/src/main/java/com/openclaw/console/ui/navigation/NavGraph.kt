@@ -244,11 +244,12 @@ fun NavGraph(
                     val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
                     val agents by (agentRepo?.agents ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
                     val hasUnlimited = com.openclaw.console.service.subscription.SubscriptionService.getInstance(context).hasAccess("unlimited_agents")
-                    val agentsCount = agents.size
+                    val freeAgentIds = remember(agents) {
+                        agents.sortedBy { it.id }.take(3).map { it.id }.toSet()
+                    }
                     FleetDashboardScreen(
                         appViewModel = appViewModel,
                         onAgentClick = { agentId ->
-                            val freeAgentIds = agents.take(3).map { it.id }.toSet()
                             if (!hasUnlimited && agentId !in freeAgentIds) {
                                 navController.navigate(Screen.Paywall.route("unlimited_agents"))
                             } else {
@@ -272,11 +273,12 @@ fun NavGraph(
                 val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
                 val agents by (agentRepo?.agents ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
                 val hasUnlimited = com.openclaw.console.service.subscription.SubscriptionService.getInstance(context).hasAccess("unlimited_agents")
-                val agentsCount = agents.size
+                val freeAgentIds = remember(agents) {
+                    agents.sortedBy { it.id }.take(3).map { it.id }.toSet()
+                }
                 AgentListScreen(
                     appViewModel = appViewModel,
                     onAgentClick = { agentId ->
-                        val freeAgentIds = agents.take(3).map { it.id }.toSet()
                         if (!hasUnlimited && agentId !in freeAgentIds) {
                             navController.navigate(Screen.Paywall.route("unlimited_agents"))
                         } else {
