@@ -76,7 +76,13 @@ fun SetupWizardScreen(
 
     val gatewayRepo = appViewModel.gatewayRepository
     var isConnecting by rememberSaveable { mutableStateOf(false) }
-    var connectionError by rememberSaveable { mutableStateOf<String?>(null) }
+    var connectionError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        if (isConnecting && scannedPairingCode.isNullOrBlank()) {
+            isConnecting = false
+        }
+    }
 
     LaunchedEffect(scannedPairingCode) {
         val code = scannedPairingCode?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
