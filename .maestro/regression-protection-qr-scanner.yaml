@@ -55,13 +55,11 @@ appId: com.openclaw.console
 # CRITICAL CHECKPOINT 7: Verify new screen has expected functionality
 - assertVisible:
     text: "Install OpenClaw CLI|I've installed OpenClaw"
-    timeout: 8000
 
 # CRITICAL CHECKPOINT 8: Test back navigation works
 - pressKey: "Back"
 - assertVisible:
     text: "STEP 1: Run this on your computer"
-    timeout: 8000
 
 # CRITICAL CHECKPOINT 9: Test button still works after back navigation
 - tapOn: "STEP 2: Scan QR Code"
