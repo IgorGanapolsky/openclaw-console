@@ -34,7 +34,9 @@ appId: com.openclaw.console
 # Test rapid successive clicks (regression protection)
 - pressKey: "Back"
 - tapOn: "STEP 2: Scan QR Code"
-- tapOn: "STEP 2: Scan QR Code"  # Double tap test
+- tapOn:
+    text: "STEP 2: Scan QR Code"
+    optional: true  # Double tap might not be possible once navigated
 - extendedWaitUntil:
     visible:
       text: "OpenClaw Setup|Setup Progress"

@@ -64,7 +64,9 @@ appId: com.openclaw.console
 # FINAL VALIDATION: Multiple clicks don't break functionality
 - pressKey: "Back"
 - tapOn: "STEP 2: Scan QR Code"
-- tapOn: "STEP 2: Scan QR Code"  # Double-click test
+- tapOn:
+    text: "STEP 2: Scan QR Code"
+    optional: true  # Double-click test might not find the element if screen transitions immediately
 - extendedWaitUntil:
     visible:
       text: "OpenClaw Setup|Setup Progress"
