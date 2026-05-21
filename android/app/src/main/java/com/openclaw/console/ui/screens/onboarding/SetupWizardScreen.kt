@@ -68,7 +68,7 @@ fun SetupWizardScreen(
     val clipboardManager = LocalClipboardManager.current
     val openClaw = LocalOpenClawColors.current
 
-    var wizardState by rememberSaveable(saver = SetupWizardStateSaver) {
+    var wizardState by rememberSaveable(stateSaver = SetupWizardStateSaver) {
         mutableStateOf(SetupWizardState())
     }
     var showQRGenerator by rememberSaveable { mutableStateOf(false) }
