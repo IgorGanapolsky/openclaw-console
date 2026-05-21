@@ -118,6 +118,7 @@ fun NavGraph(
     LaunchedEffect(hasConfiguredGateway, currentRoute) {
         if (!hasConfiguredGateway &&
             currentRoute != Screen.Welcome.route &&
+            currentRoute != Screen.SetupWizard.route &&
             currentRoute != Screen.AddGateway.route &&
             currentRoute != Screen.ScanGatewayQr.route
         ) {
