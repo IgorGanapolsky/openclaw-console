@@ -1,78 +1,58 @@
 appId: com.openclaw.console
 ---
-# Comprehensive QR Scanner Button Regression Test
-# This test would have caught the "button click does nothing" issue
+- clearState
+# Comprehensive Setup Wizard & Onboarding Flow Regression Test
+# This test verifies the complete happy path of the onboarding wizard from launch to dashboard
 
 - launchApp
 
-# Navigate to Gateway Connection screen
-- tapOn:
-    text: "Connect Gateway|Gateway Connection|Enhanced QR Scanner"
-    optional: true
-
-# Wait for the Gateway Connection screen to load
+# 1. Welcome Screen
 - assertVisible:
-    text: "Enhanced QR Scanner"
-    timeout: 10000
-
-# Test the QR Scanner button click functionality
-- tapOn: "Enhanced QR Scanner"
-
-# Verify that clicking the button produces some response
-# In debug build: should show "DEBUG: QR Scanner" dialog
-# In production: should show QR scanner or some UI feedback
+    text: "OpenClaw Console"
 - assertVisible:
-    text: "DEBUG: QR Scanner|QR Scanner|Camera|Cancel|Close"
-    timeout: 5000
+    text: "STEP 2: Scan QR Code"
+- tapOn: "STEP 2: Scan QR Code"
 
-# If debug dialog appears, test the connection success button
-- tapOn:
-    text: "Test Connection Success"
-    optional: true
-
-# Verify connection callback works
+# 2. Setup Wizard - Step 1: Install
 - assertVisible:
-    text: "Connected|Success|Gateway"
-    timeout: 3000
-    optional: true
-
-# Test manual URL input as fallback
-- tapOn: "Enter Gateway URL Manually"
-- assertVisible: "Gateway URL"
-
-# Test URL input field
-- tapOn:
-    id: "manual-url-input"
-- inputText: "http://192.168.1.100:18789"
-
-# Verify Connect button becomes enabled
+    text: "OpenClaw Setup"
 - assertVisible:
-    text: "Connect"
-    enabled: true
+    text: "Setup Progress"
+- assertVisible:
+    text: "Install OpenClaw CLI"
+- scroll
+- tapOn: "I've installed OpenClaw"
 
-# Test QR Code Generator
+# 3. Setup Wizard - Step 2: Gateway
+- assertVisible:
+    text: "Start OpenClaw Gateway"
+- scroll
+- tapOn: "Gateway is running"
+
+# 4. Setup Wizard - Step 3: Connect
+- assertVisible:
+    text: "Connect Mobile App"
+- scroll
 - tapOn: "Generate QR Code"
-- assertVisible: "Generate Your Own QR Code"
-
-# Test QR generator URL input
-- tapOn:
-    id: "qr-generator-url-input"
+- tapOn: "Gateway URL"
 - inputText: "http://192.168.1.100:18789"
+- hideKeyboard
+- scroll
+- tapOn: "Use This URL"
 
-# Verify QR code is generated and displayed
+# 5. Setup Wizard - Step 4: Security
 - assertVisible:
-    id: "generated-qr-code"
-    timeout: 3000
+    text: "Enable Biometric Security"
+- scroll
+- tapOn: "Skip for Now"
 
-# Test troubleshooting dialog
-- tapOn: "Connection Troubleshooting"
-- assertVisible: "Network Troubleshooting"
-- tapOn: "Close"
+# 6. Setup Wizard - Step 5: Complete
+- assertVisible:
+    text: "Setup Complete!"
+- scroll
+- tapOn: "Start Using OpenClaw Console"
 
----
-# This E2E test covers:
-# ✅ QR Scanner button click response (catches the regression!)
-# ✅ Manual URL input functionality
-# ✅ QR Code generator
-# ✅ Troubleshooting dialog
-# ✅ All major user interaction flows that could break
+# 7. Dashboard Screen (onboarding completes)
+- assertVisible:
+    text: "OpenClaw Console"
+
