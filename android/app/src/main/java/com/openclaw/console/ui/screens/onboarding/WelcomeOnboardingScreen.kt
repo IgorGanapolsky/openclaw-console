@@ -30,12 +30,16 @@ import androidx.compose.ui.text.font.FontFamily
 import com.openclaw.console.R
 import com.openclaw.console.ui.theme.LocalOpenClawColors
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun WelcomeOnboardingScreen(
     onAddGateway: () -> Unit
 ) {
     val openClaw = LocalOpenClawColors.current
     val clipboardManager = LocalClipboardManager.current
+    val scrollState = rememberScrollState()
 
     Box(
         modifier = Modifier
@@ -43,14 +47,16 @@ fun WelcomeOnboardingScreen(
             .padding(horizontal = 24.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Surface(
-                shape = RoundedCornerShape(32.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = openClaw.cardBackground,
                 tonalElevation = 6.dp,
                 shadowElevation = 8.dp
@@ -60,12 +66,12 @@ fun WelcomeOnboardingScreen(
                     contentDescription = "OpenClaw Console icon",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(112.dp)
-                        .clip(RoundedCornerShape(28.dp))
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(18.dp))
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
                 text = "OpenClaw Console",
@@ -74,39 +80,38 @@ fun WelcomeOnboardingScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Before scanning QR codes, you need to run this command on your computer:",
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Command card - FIRST THING USERS SEE
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         imageVector = Icons.Default.Terminal,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(24.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "STEP 1: Run this on your computer",
@@ -115,7 +120,7 @@ fun WelcomeOnboardingScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
@@ -123,7 +128,7 @@ fun WelcomeOnboardingScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -131,7 +136,7 @@ fun WelcomeOnboardingScreen(
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.weight(1f)
-                            )
+                              )
                             IconButton(
                                 onClick = {
                                     clipboardManager.setText(AnnotatedString("openclaw qr --remote"))
@@ -147,7 +152,7 @@ fun WelcomeOnboardingScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "This will show a QR code that you scan with this app",
@@ -158,17 +163,17 @@ fun WelcomeOnboardingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Button(
                 onClick = {
                     println("DEBUG: STEP 2 Scan QR Code button clicked!")
                     onAddGateway()
                 },
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(48.dp)
                     .testTag("qr_scanner_button")
             ) {
                 Icon(
@@ -182,14 +187,14 @@ fun WelcomeOnboardingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
                 onClick = { /* TODO: Open documentation */ },
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(40.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.HelpOutline,
@@ -199,7 +204,7 @@ fun WelcomeOnboardingScreen(
                 Text("Documentation")
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
