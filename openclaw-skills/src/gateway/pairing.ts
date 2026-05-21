@@ -95,7 +95,7 @@ export async function renderPairingPage(payload: GatewayPairingPayload): Promise
                   payload.base_url.includes('127.0.0.1') ||
                   payload.base_url.includes('192.168.') ||
                   payload.base_url.includes('10.') ||
-                  payload.base_url.includes('172.');
+                  /172\.(1[6-9]|2[0-9]|3[01])\./.test(payload.base_url);
 
   const statusBadge = isLocal 
     ? `<span class="badge badge-local">● LOCAL NETWORK ONLY</span>`
