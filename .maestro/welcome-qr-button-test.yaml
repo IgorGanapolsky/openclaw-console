@@ -22,18 +22,21 @@ appId: com.openclaw.console
     text: "OpenClaw Setup|Setup Progress|Install OpenClaw CLI"
 
 # Complete Step 1: Install
+- scroll
 - tapOn:
     text: "I've installed OpenClaw"
 
 # Complete Step 2: Gateway
 - assertVisible:
     text: "Start OpenClaw Gateway|Gateway is running"
+- scroll
 - tapOn:
     text: "Gateway is running"
 
 # Now we should see Step 3: Connect Mobile App which has "Scan QR Code" button
 - assertVisible:
     text: "Connect Mobile App|Scan QR Code"
+- scroll
 - tapOn:
     text: "Scan QR Code"
 
@@ -57,3 +60,4 @@ appId: com.openclaw.console
 # ✅ Button click triggers navigation (fixes the "does nothing" bug)
 # ✅ Navigation leads to QR scanner or setup wizard
 # ✅ Back navigation returns to welcome screen
+
