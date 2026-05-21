@@ -240,10 +240,21 @@ fun NavGraph(
 
                 // Dashboard
                 composable(Screen.Dashboard.route) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+                    val agents by (agentRepo?.agents ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
+                    val hasUnlimited = com.openclaw.console.service.subscription.SubscriptionService.getInstance(context).hasAccess("unlimited_agents")
+                    val freeAgentIds = remember(agents) {
+                        agents.sortedBy { it.id }.take(3).map { it.id }.toSet()
+                    }
                     FleetDashboardScreen(
                         appViewModel = appViewModel,
                         onAgentClick = { agentId ->
-                            navController.navigate(Screen.AgentDetail.route(agentId))
+                            if (!hasUnlimited && agentId !in freeAgentIds) {
+                                navController.navigate(Screen.Paywall.route("unlimited_agents"))
+                            } else {
+                                navController.navigate(Screen.AgentDetail.route(agentId))
+                            }
                         },
                         onAddGateway = {
                             navController.navigate(Screen.AddGateway.route)
@@ -258,10 +269,21 @@ fun NavGraph(
 
             // Agents
             composable(Screen.Agents.route) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+                val agents by (agentRepo?.agents ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
+                val hasUnlimited = com.openclaw.console.service.subscription.SubscriptionService.getInstance(context).hasAccess("unlimited_agents")
+                val freeAgentIds = remember(agents) {
+                    agents.sortedBy { it.id }.take(3).map { it.id }.toSet()
+                }
                 AgentListScreen(
                     appViewModel = appViewModel,
                     onAgentClick = { agentId ->
-                        navController.navigate(Screen.AgentDetail.route(agentId))
+                        if (!hasUnlimited && agentId !in freeAgentIds) {
+                            navController.navigate(Screen.Paywall.route("unlimited_agents"))
+                        } else {
+                            navController.navigate(Screen.AgentDetail.route(agentId))
+                        }
                     }
                 )
             }
