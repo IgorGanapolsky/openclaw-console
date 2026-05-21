@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+import json
 import argparse
 import subprocess
 import tempfile
@@ -122,5 +123,4 @@ def main() -> int:
                 pass
 
 if __name__ == "__main__":
-    import json
     sys.exit(main())

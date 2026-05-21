@@ -248,7 +248,8 @@ fun NavGraph(
                     FleetDashboardScreen(
                         appViewModel = appViewModel,
                         onAgentClick = { agentId ->
-                            if (!hasUnlimited && agentsCount > 3) {
+                            val freeAgentIds = agents.take(3).map { it.id }.toSet()
+                            if (!hasUnlimited && agentId !in freeAgentIds) {
                                 navController.navigate(Screen.Paywall.route("unlimited_agents"))
                             } else {
                                 navController.navigate(Screen.AgentDetail.route(agentId))
@@ -275,7 +276,8 @@ fun NavGraph(
                 AgentListScreen(
                     appViewModel = appViewModel,
                     onAgentClick = { agentId ->
-                        if (!hasUnlimited && agentsCount > 3) {
+                        val freeAgentIds = agents.take(3).map { it.id }.toSet()
+                        if (!hasUnlimited && agentId !in freeAgentIds) {
                             navController.navigate(Screen.Paywall.route("unlimited_agents"))
                         } else {
                             navController.navigate(Screen.AgentDetail.route(agentId))
