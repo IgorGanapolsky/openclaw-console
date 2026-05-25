@@ -136,7 +136,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.7")
 
     // Core
-    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-ktx:1.18.0")
 
     // OkHttp (WebSocket + HTTP)
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
