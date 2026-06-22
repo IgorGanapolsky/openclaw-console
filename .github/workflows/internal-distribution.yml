@@ -36,7 +36,7 @@ jobs:
       android_changed: ${{ steps.decide.outputs.android_changed }}
       ios_changed: ${{ steps.decide.outputs.ios_changed }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         if: github.event_name == 'workflow_run'
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
@@ -152,7 +152,7 @@ jobs:
     timeout-minutes: 45
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.gate.outputs.ref }}
 
@@ -382,7 +382,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.gate.outputs.ref }}
 

@@ -21,7 +21,7 @@ jobs:
     outputs:
       ios_changed: ${{ steps.changed.outputs.ios_changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -58,7 +58,7 @@ jobs:
     name: Android Agent Guardrails
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verify Android CLI bootstrap path
         run: python3 scripts/check_android_cli.py --allow-missing-tools
@@ -70,7 +70,7 @@ jobs:
     name: Flaky Test Guardrails
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Validate flaky test quarantine manifest
         run: python3 scripts/check_flaky_quarantine.py
@@ -79,7 +79,7 @@ jobs:
     name: Agent Workflow Guardrails
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Validate portable agent workflow settings
         run: python3 scripts/check_agent_workflow_settings.py
@@ -88,7 +88,7 @@ jobs:
     name: Architecture Context Guardrails
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verify architecture context workflow guardrails
         run: python3 scripts/check_architecture_context_guardrails.py
@@ -97,7 +97,7 @@ jobs:
     name: Mobile Test Coverage Policy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verify critical mobile flow coverage map
         run: python3 scripts/check_mobile_test_coverage.py
@@ -106,7 +106,7 @@ jobs:
     name: App Icon Parity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -123,7 +123,7 @@ jobs:
     name: Release Contract
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -140,7 +140,7 @@ jobs:
     name: Brand Parity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Verify Android/iOS icon parity
         run: ./scripts/check-brand-parity.sh
@@ -149,7 +149,7 @@ jobs:
     name: Architecture Lint (Kotlin)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Architecture ban checks
         run: |
@@ -178,7 +178,7 @@ jobs:
     name: Architecture Lint (Swift)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Architecture ban checks
         run: |
@@ -203,7 +203,7 @@ jobs:
     name: Skills Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -232,7 +232,7 @@ jobs:
     name: Android Build Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -294,7 +294,7 @@ jobs:
       matrix:
         test-type: [robolectric, lint-and-build]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -383,7 +383,7 @@ jobs:
     needs: [ios-changes]
     runs-on: ${{ needs.ios-changes.outputs.ios_changed == 'true' && (vars.IOS_CI_RUNS_ON || 'macos-15') || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Skip iOS build when no iOS files changed
         if: needs.ios-changes.outputs.ios_changed != 'true'
