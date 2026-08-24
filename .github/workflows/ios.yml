@@ -17,7 +17,7 @@ jobs:
         working-directory: ios/OpenClawConsole
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Select Xcode
         if: runner.environment != 'self-hosted'
@@ -72,7 +72,7 @@ jobs:
         working-directory: ios/OpenClawConsole
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install SwiftLint
         run: brew list swiftlint >/dev/null 2>&1 || brew install swiftlint

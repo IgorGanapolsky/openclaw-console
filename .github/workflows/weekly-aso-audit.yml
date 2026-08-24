@@ -10,7 +10,7 @@ jobs:
     name: ASO Metadata Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: iOS keyword length check (100 char limit)
         run: |

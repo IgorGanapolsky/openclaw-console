@@ -41,7 +41,7 @@ jobs:
     runs-on: macos-26
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Verify Xcode 26 upload SDK
         run: |
@@ -192,7 +192,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6

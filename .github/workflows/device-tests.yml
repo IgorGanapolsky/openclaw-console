@@ -21,7 +21,7 @@ jobs:
       android_changed: ${{ steps.changed.outputs.android_changed }}
       ios_changed: ${{ steps.changed.outputs.ios_changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -76,7 +76,7 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v5
         with:
@@ -168,7 +168,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: List available simulators
         id: simulator
