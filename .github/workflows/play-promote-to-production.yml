@@ -1,0 +1,152 @@
+name: Google Play Promote to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Android versionCode to promote (from internal track)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name (e.g., 1.0.1)'
+        required: true
+        type: string
+      user_fraction:
+        description: 'Staged rollout fraction (0.01-1.0). Empty means 100% rollout.'
+        required: false
+        default: '0.05'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play-promote-${{ github.event.inputs.version_code }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Google Play API dependencies
+        run: python -m pip install --quiet google-api-python-client==2.149.0 google-auth==2.35.0
+
+      - name: Promote internal track to production with staged rollout
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          PACKAGE_NAME: com.openclaw.console
+          VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+          USER_FRACTION: ${{ inputs.user_fraction }}
+        run: |
+          set -euo pipefail
+
+          # Write service account key
+          echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
+
+          # Create Python script for promotion
+          cat << 'EOF' > promote_to_production.py
+          import os
+          import sys
+          from google.auth.transport.requests import Request
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          # Configuration
+          PACKAGE_NAME = os.environ['PACKAGE_NAME']
+          VERSION_CODE = int(os.environ['VERSION_CODE'])
+          RELEASE_NAME = os.environ['RELEASE_NAME']
+          USER_FRACTION = os.environ.get('USER_FRACTION', '').strip()
+
+          # Setup authentication
+          credentials = service_account.Credentials.from_service_account_file(
+              '/tmp/play-service-account.json',
+              scopes=['https://www.googleapis.com/auth/androidpublisher']
+          )
+          service = build('androidpublisher', 'v3', credentials=credentials)
+
+          try:
+              # Start edit
+              edit = service.edits().insert(body={}, packageName=PACKAGE_NAME).execute()
+              edit_id = edit['id']
+              print(f"Created edit: {edit_id}")
+
+              # Get release from internal track
+              internal_releases = service.edits().tracks().get(
+                  packageName=PACKAGE_NAME,
+                  editId=edit_id,
+                  track='internal'
+              ).execute()
+
+              # Find the release with matching version code
+              target_release = None
+              for release in internal_releases.get('releases', []):
+                  if VERSION_CODE in release.get('versionCodes', []):
+                      target_release = release
+                      break
+
+              if not target_release:
+                  print(f"❌ Version code {VERSION_CODE} not found in internal track")
+                  sys.exit(1)
+
+              print(f"✅ Found release: {target_release.get('name', 'Unnamed')} with version codes: {target_release.get('versionCodes', [])}")
+
+              # Prepare production release
+              production_release = {
+                  'name': RELEASE_NAME,
+                  'versionCodes': [VERSION_CODE],
+                  'status': 'inProgress' if USER_FRACTION and float(USER_FRACTION) < 1.0 else 'completed'
+              }
+
+              if USER_FRACTION and USER_FRACTION != '1.0':
+                  production_release['userFraction'] = float(USER_FRACTION)
+                  print(f"📊 Setting staged rollout to {float(USER_FRACTION)*100:.1f}%")
+              else:
+                  print("🚀 Setting 100% rollout")
+
+              # Copy release notes if available
+              if 'releaseNotes' in target_release:
+                  production_release['releaseNotes'] = target_release['releaseNotes']
+
+              # Update production track
+              result = service.edits().tracks().update(
+                  packageName=PACKAGE_NAME,
+                  editId=edit_id,
+                  track='production',
+                  body={'releases': [production_release]}
+              ).execute()
+
+              print(f"✅ Updated production track: {result}")
+
+              # Commit the edit
+              commit = service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id).execute()
+              print(f"✅ Changes committed: {commit['id']}")
+              print(f"🎉 Successfully promoted version {VERSION_CODE} to production!")
+
+          except Exception as e:
+              print(f"❌ Error promoting to production: {e}")
+              sys.exit(1)
+          EOF
+
+          python promote_to_production.py
+
+          # Cleanup
+          rm -f /tmp/play-service-account.json
+
+      - name: Post-promotion verification
+        run: |
+          echo "✅ OpenClaw Console v${{ inputs.release_name }} (build ${{ inputs.version_code }}) promoted to production"
+          if [ "${{ inputs.user_fraction }}" != "1.0" ] && [ -n "${{ inputs.user_fraction }}" ]; then
+            echo "📊 Staged rollout: ${{ inputs.user_fraction }}% of users"
+            echo "💡 Monitor crash-free rates and manually increase rollout via Google Play Console"
+          else
+            echo "🚀 Full rollout: Available to all users"
+          fi

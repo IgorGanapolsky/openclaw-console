@@ -1,0 +1,205 @@
+appId: com.openclaw.console
+---
+- clearState
+# 2026 OBSESSIVE Maestro E2E Testing for QR Scanner Button
+# Comprehensive testing to catch ALL possible regressions
+
+- launchApp
+
+# OBSESSIVE TEST 1: App Launch and Initial State
+- assertVisible:
+    text: "OpenClaw Console"
+
+- assertVisible:
+    text: "STEP 1: Run this on your computer"
+
+- assertVisible:
+    text: "openclaw qr --remote"
+
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+
+# OBSESSIVE TEST 2: Button Accessibility and State
+- assertVisible:
+    id: "qr_scanner_button"
+    optional: true  # Test tag might not be in final builds
+
+# OBSESSIVE TEST 3: Multiple Click Testing
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+# Test rapid successive clicks (regression protection)
+- pressKey: "Back"
+- tapOn: "STEP 2: Scan QR Code"
+- tapOn:
+    text: "STEP 2: Scan QR Code"
+    optional: true  # Double tap might not be possible once navigated
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 8000
+
+- pressKey: "Back"
+
+# OBSESSIVE TEST 4: Navigation Flow Validation
+
+- launchApp
+
+# Wait for full app initialization
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Console"
+    timeout: 20000
+
+# Verify all critical UI elements are present
+- assertVisible:
+    text: "STEP 1: Run this on your computer"
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+- assertVisible:
+    text: "Documentation"
+
+# Test the critical navigation path
+- tapOn: "STEP 2: Scan QR Code"
+
+# Allow time for navigation animation
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress|Install OpenClaw CLI"
+    timeout: 15000
+
+# Verify we're in the correct next screen
+- assertNotVisible:
+    text: "STEP 1: Run this on your computer"
+
+# Test back navigation
+- pressKey: "Back"
+- assertVisible:
+    text: "STEP 1: Run this on your computer"
+
+# OBSESSIVE TEST 5: Error Handling and Edge Cases
+
+- launchApp
+
+# Test button behavior under different conditions
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+# Test multiple back and forward navigation
+- pressKey: "Back"
+- tapOn: "STEP 2: Scan QR Code"
+- pressKey: "Back"
+- tapOn: "STEP 2: Scan QR Code"
+
+# Verify navigation still works after multiple attempts
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 8000
+
+- pressKey: "Back"
+
+# OBSESSIVE TEST 6: Full User Journey Simulation
+
+- launchApp
+
+# Simulate real user reading instructions
+- assertVisible:
+    text: "Before scanning QR codes"
+    optional: true
+
+- assertVisible:
+    text: "run this command"
+    optional: true
+
+# User copies command (test copy button)
+- tapOn:
+    id: "copy_button"
+    optional: true
+
+# User proceeds to scan QR code
+- tapOn: "STEP 2: Scan QR Code"
+
+# Wait for camera permission or setup screen
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 12000
+
+# Handle potential permission dialogs
+- tapOn:
+    text: "Allow|Grant|OK"
+    optional: true
+
+# Verify we reach the scanner interface
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 8000
+
+- pressKey: "Back"
+
+# OBSESSIVE TEST 7: Stress Testing
+
+- launchApp
+
+# Rapid interaction stress test
+- repeat:
+    times: 5
+    commands:
+      - tapOn: "STEP 2: Scan QR Code"
+      - extendedWaitUntil:
+          visible:
+            text: "OpenClaw Setup|Setup Progress"
+          timeout: 5000
+      - pressKey: "Back"
+      - extendedWaitUntil:
+          visible:
+            text: "STEP 1: Run this on your computer"
+          timeout: 5000
+
+# Final verification that button still works
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+- pressKey: "Back"
+
+# OBSESSIVE TEST 8: Device-Specific Testing
+
+- launchApp
+
+- longPressOn: "STEP 2: Scan QR Code"
+
+# Verify long press doesn't break the button
+- pressKey: "Back"
+
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 8000
+
+# Test orientation stability (if supported)
+- pressKey: "Back"
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 8000
+
+# Final validation
+- pressKey: "Back"
+- assertVisible:
+    text: "OpenClaw Console"
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+

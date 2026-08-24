@@ -28,6 +28,8 @@ import com.openclaw.console.data.model.ResponseVerbosity
 import com.openclaw.console.data.model.RuntimeConfig
 import com.openclaw.console.ui.AppViewModel
 import com.openclaw.console.ui.components.*
+import com.openclaw.console.service.BiometricService
+import com.openclaw.console.ui.components.BiometricProtectedAction
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -292,47 +294,76 @@ private fun SwipeToDismissGatewayItem(
     onDelete: () -> Unit,
     onSetActive: () -> Unit
 ) {
+    val biometricService = BiometricService
+    var pendingDelete by remember { mutableStateOf(false) }
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
+                pendingDelete = true
+                false // Don't dismiss yet, wait for biometric confirmation
             } else false
         }
     )
 
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val color by animateColorAsState(
-                targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
-                    MaterialTheme.colorScheme.errorContainer
-                else
-                    MaterialTheme.colorScheme.surfaceVariant,
-                label = "swipe_bg"
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color)
-                    .padding(end = 20.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
+    // Reset dismiss state when biometric auth is cancelled
+    LaunchedEffect(pendingDelete) {
+        if (!pendingDelete) {
+            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        }
+    }
+
+    BiometricProtectedAction(
+        request = BiometricService.AuthenticationRequest.RemoveGateway,
+        biometricService = biometricService,
+        onSuccess = {
+            onDelete()
+            pendingDelete = false
         },
-        enableDismissFromStartToEnd = false,
-        enableDismissFromEndToStart = true
-    ) {
-        GatewayListItem(
-            gateway = gateway,
-            isActive = isActive,
-            onSetActive = onSetActive
-        )
+        onCancel = {
+            pendingDelete = false
+        }
+    ) { triggerAuth ->
+        SwipeToDismissBox(
+            state = dismissState,
+            backgroundContent = {
+                val color by animateColorAsState(
+                    targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                        MaterialTheme.colorScheme.errorContainer
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant,
+                    label = "swipe_bg"
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(color)
+                        .padding(end = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            },
+            enableDismissFromStartToEnd = false,
+            enableDismissFromEndToStart = true
+        ) {
+            GatewayListItem(
+                gateway = gateway,
+                isActive = isActive,
+                onSetActive = onSetActive
+            )
+        }
+
+        // Trigger biometric auth when swipe is detected
+        LaunchedEffect(pendingDelete) {
+            if (pendingDelete) {
+                triggerAuth()
+            }
+        }
     }
 }
 

@@ -29,6 +29,7 @@ import com.openclaw.console.ui.components.ApprovalBanner
 import com.openclaw.console.ui.components.EmptyState
 import com.openclaw.console.ui.screens.dashboard.FleetDashboardScreen
 import com.openclaw.console.ui.screens.onboarding.WelcomeOnboardingScreen
+import com.openclaw.console.ui.screens.onboarding.SetupWizardScreen
 import com.openclaw.console.ui.screens.approvals.ApprovalDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentDetailScreen
 import com.openclaw.console.ui.screens.incidents.IncidentListScreen
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed class Screen(val route: String, val label: String) {
     object Welcome : Screen("welcome", "Welcome")
+    object SetupWizard : Screen("setup-wizard", "Setup Wizard")
 
     // Bottom nav roots
     object Dashboard : Screen("dashboard", "Dashboard")
@@ -116,6 +118,7 @@ fun NavGraph(
     LaunchedEffect(hasConfiguredGateway, currentRoute) {
         if (!hasConfiguredGateway &&
             currentRoute != Screen.Welcome.route &&
+            currentRoute != Screen.SetupWizard.route &&
             currentRoute != Screen.AddGateway.route &&
             currentRoute != Screen.ScanGatewayQr.route
         ) {
@@ -208,16 +211,50 @@ fun NavGraph(
             ) {
                 composable(Screen.Welcome.route) {
                     WelcomeOnboardingScreen(
-                        onAddGateway = { navController.navigate(Screen.AddGateway.route) }
+                        onAddGateway = { navController.navigate(Screen.SetupWizard.route) }
+                    )
+                }
+
+                composable(Screen.SetupWizard.route) { backStackEntry ->
+                    val scannedCodeFlow = remember {
+                        backStackEntry.savedStateHandle.getStateFlow<String?>("gateway_qr_payload", null)
+                    }
+                    val scannedCode by scannedCodeFlow.collectAsStateWithLifecycle()
+
+                    SetupWizardScreen(
+                        appViewModel = appViewModel,
+                        onNavigateToScanner = { navController.navigate(Screen.ScanGatewayQr.route) },
+                        onSetupComplete = { gatewayUrl ->
+                            // Navigate to dashboard after successful setup
+                            navController.navigate(Screen.Dashboard.route) {
+                                popUpTo(Screen.Welcome.route) { inclusive = true }
+                            }
+                        },
+                        onBack = { navController.popBackStack() },
+                        scannedPairingCode = scannedCode,
+                        onScannedPairingCodeConsumed = {
+                            backStackEntry.savedStateHandle["gateway_qr_payload"] = null
+                        }
                     )
                 }
 
                 // Dashboard
                 composable(Screen.Dashboard.route) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+                    val agents by (agentRepo?.agents ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
+                    val hasUnlimited = com.openclaw.console.service.subscription.SubscriptionService.getInstance(context).hasAccess("unlimited_agents")
+                    val freeAgentIds = remember(agents) {
+                        agents.sortedBy { it.id }.take(3).map { it.id }.toSet()
+                    }
                     FleetDashboardScreen(
                         appViewModel = appViewModel,
                         onAgentClick = { agentId ->
-                            navController.navigate(Screen.AgentDetail.route(agentId))
+                            if (!hasUnlimited && agentId !in freeAgentIds) {
+                                navController.navigate(Screen.Paywall.route("unlimited_agents"))
+                            } else {
+                                navController.navigate(Screen.AgentDetail.route(agentId))
+                            }
                         },
                         onAddGateway = {
                             navController.navigate(Screen.AddGateway.route)
@@ -232,10 +269,21 @@ fun NavGraph(
 
             // Agents
             composable(Screen.Agents.route) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val agentRepo by appViewModel.agentRepository.collectAsStateWithLifecycle()
+                val agents by (agentRepo?.agents ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }).collectAsStateWithLifecycle()
+                val hasUnlimited = com.openclaw.console.service.subscription.SubscriptionService.getInstance(context).hasAccess("unlimited_agents")
+                val freeAgentIds = remember(agents) {
+                    agents.sortedBy { it.id }.take(3).map { it.id }.toSet()
+                }
                 AgentListScreen(
                     appViewModel = appViewModel,
                     onAgentClick = { agentId ->
-                        navController.navigate(Screen.AgentDetail.route(agentId))
+                        if (!hasUnlimited && agentId !in freeAgentIds) {
+                            navController.navigate(Screen.Paywall.route("unlimited_agents"))
+                        } else {
+                            navController.navigate(Screen.AgentDetail.route(agentId))
+                        }
                     }
                 )
             }

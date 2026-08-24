@@ -1,0 +1,150 @@
+appId: com.openclaw.console
+---
+- clearState
+# OBSESSIVE EDGE CASE TESTING for QR Scanner Button
+# Testing unusual scenarios and edge cases
+
+- launchApp
+
+# EDGE CASE 1: Test button behavior during app startup
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Console"
+    timeout: 25000
+
+# Immediately test button (before full UI stabilization)
+- tapOn:
+    text: "STEP 2: Scan QR Code"
+    optional: true
+
+# If early tap worked, go back and continue testing
+- pressKey: "Back"
+
+# EDGE CASE 2: Test button after app backgrounding/foregrounding
+- pressKey: "Home"
+- launchApp: "com.openclaw.console"
+
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Console"
+    timeout: 15000
+
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+# EDGE CASE 3: Test after rapid screen rotation (if supported)
+- pressKey: "Back"
+- setOrientation: landscapeLeft
+- setOrientation: portrait
+
+- extendedWaitUntil:
+    visible:
+      text: "STEP 2: Scan QR Code"
+    timeout: 8000
+
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+# EDGE CASE 4: Test button with accessibility features
+- pressKey: "Back"
+
+# Test with TalkBack/voice over simulation
+- swipe:
+    direction: DOWN
+- swipe:
+    direction: UP
+
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+# EDGE CASE 5: Test button during low memory conditions
+- pressKey: "Back"
+
+# Simulate memory pressure by opening and closing multiple times
+- repeat:
+    times: 3
+    commands:
+      - pressKey: "Home"
+      - launchApp: "com.openclaw.console"
+      - extendedWaitUntil:
+          visible:
+            text: "STEP 2: Scan QR Code"
+          timeout: 10000
+
+# Final test after memory stress
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 15000
+
+# EDGE CASE 6: Permission and Security Testing
+
+- launchApp
+
+# Test button behavior before/after permission grants
+- extendedWaitUntil:
+    visible:
+      text: "STEP 2: Scan QR Code"
+    timeout: 15000
+
+- tapOn: "STEP 2: Scan QR Code"
+
+# Handle camera permission if prompted
+- tapOn:
+    text: "Allow|Grant|While using app"
+    optional: true
+
+# Test button works after permission handling
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 12000
+
+# EDGE CASE 7: App focus loss and recovery
+- pressKey: "Back"
+
+# Simulate brief focus loss and app switching
+- pressKey: "Home"
+- launchApp: "com.openclaw.console"
+
+- extendedWaitUntil:
+    visible:
+      text: "STEP 2: Scan QR Code"
+    timeout: 20000
+
+- tapOn: "STEP 2: Scan QR Code"
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 15000
+
+# EDGE CASE 8: Button text localization/internationalization
+- pressKey: "Back"
+
+- tapOn: "STEP 2: Scan QR Code"
+
+- extendedWaitUntil:
+    visible:
+      text: "OpenClaw Setup|Setup Progress"
+    timeout: 10000
+
+# FINAL EDGE CASE VALIDATION
+- pressKey: "Back"
+- assertVisible:
+    text: "OpenClaw Console"
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+

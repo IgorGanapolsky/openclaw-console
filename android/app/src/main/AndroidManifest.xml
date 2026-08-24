@@ -49,6 +49,9 @@
             </intent-filter>
         </receiver>
 
+        <!-- Disable Sentry auto-initialization to prevent crashes when DSN is not configured -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
     </application>
 
 </manifest>
