@@ -1,1 +1,1 @@
-AI agent console: biometric approvals, CI/CD monitoring, self-hosted DevOps.
+Biometric-verified DevOps & infrastructure approval workflows in your pocket.
