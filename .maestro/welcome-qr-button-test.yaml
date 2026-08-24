@@ -1,5 +1,6 @@
 appId: com.openclaw.console
 ---
+- clearState
 # Test for the actual QR scanner button regression on WelcomeOnboardingScreen
 # This test targets the "STEP 2: Scan QR Code" button that was broken
 
@@ -8,43 +9,55 @@ appId: com.openclaw.console
 # Wait for the Welcome screen to load
 - assertVisible:
     text: "OpenClaw Console"
-    timeout: 10000
 
 # Look for the critical QR scanner button
 - assertVisible:
     text: "STEP 2: Scan QR Code"
-    timeout: 5000
 
 # Test the QR scanner button click - this was broken!
 - tapOn: "STEP 2: Scan QR Code"
 
-# Verify navigation works - should go to SetupWizardScreen or camera
-# The button should trigger onAddGateway() navigation
+# Verify navigation works - should go to SetupWizardScreen (Install step)
 - assertVisible:
-    text: "Setup Wizard|Gateway|Scanner|Camera|Scan QR Code"
-    timeout: 8000
+    text: "OpenClaw Setup|Setup Progress|Install OpenClaw CLI"
 
-# If we see the Setup Wizard screen, continue the flow
+# Complete Step 1: Install
+- scroll
+- tapOn:
+    text: "I've installed OpenClaw"
+
+# Complete Step 2: Gateway
+- assertVisible:
+    text: "Start OpenClaw Gateway|Gateway is running"
+- scroll
+- tapOn:
+    text: "Gateway is running"
+
+# Now we should see Step 3: Connect Mobile App which has "Scan QR Code" button
+- assertVisible:
+    text: "Connect Mobile App|Scan QR Code"
+- scroll
 - tapOn:
     text: "Scan QR Code"
-    optional: true
 
-# Should eventually show camera or QR scanner interface
+# Should navigate to Scan Gateway QR scanner screen (and show camera or permission request)
 - assertVisible:
-    text: "Camera|Scanner|QR|Code"
-    timeout: 5000
-    optional: true
+    text: "Scan Gateway QR|Camera access is needed|Allow Camera"
 
-# Test back navigation works
+# Test back navigation from QR scanner screen to Setup Wizard
 - pressKey: "Back"
 - assertVisible:
-    text: "OpenClaw Console"
-    timeout: 3000
+    text: "OpenClaw Setup|Setup Progress"
 
----
+# Test back navigation from Setup Wizard to Welcome Screen
+- pressKey: "Back"
+- assertVisible:
+    text: "OpenClaw Console|STEP 2: Scan QR Code"
+
 # This test specifically covers the regression:
 # ✅ Welcomes screen loads with correct title
 # ✅ "STEP 2: Scan QR Code" button is visible
 # ✅ Button click triggers navigation (fixes the "does nothing" bug)
 # ✅ Navigation leads to QR scanner or setup wizard
 # ✅ Back navigation returns to welcome screen
+

@@ -20,6 +20,11 @@ import androidx.compose.ui.unit.dp
 import com.openclaw.console.ui.components.OpenClawSetupWizard
 import com.openclaw.console.ui.components.GatewayQRCodeDisplay
 import com.openclaw.console.ui.theme.LocalOpenClawColors
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.openclaw.console.data.model.GatewayConnection
+import com.openclaw.console.data.model.GatewayPairing
+import com.openclaw.console.ui.AppViewModel
 
 data class SetupWizardState(
     val currentStep: Int = 0,
@@ -29,21 +34,92 @@ data class SetupWizardState(
     val isBiometricEnabled: Boolean = false
 )
 
+private val SetupWizardStateSaver = listSaver<SetupWizardState, Any>(
+    save = { state ->
+        listOf(
+            state.currentStep,
+            state.completedSteps.toList(),
+            state.isGatewayConnected,
+            state.gatewayUrl,
+            state.isBiometricEnabled
+        )
+    },
+    restore = { list ->
+        SetupWizardState(
+            currentStep = list[0] as Int,
+            completedSteps = (list[1] as List<String>).toSet(),
+            isGatewayConnected = list[2] as Boolean,
+            gatewayUrl = list[3] as String,
+            isBiometricEnabled = list[4] as Boolean
+        )
+    }
+)
+
 @Composable
 fun SetupWizardScreen(
+    appViewModel: AppViewModel,
     onNavigateToScanner: () -> Unit,
     onSetupComplete: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    scannedPairingCode: String? = null,
+    onScannedPairingCodeConsumed: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val clipboardManager = LocalClipboardManager.current
     val openClaw = LocalOpenClawColors.current
 
-    var wizardState by remember {
+    var wizardState by rememberSaveable(stateSaver = SetupWizardStateSaver) {
         mutableStateOf(SetupWizardState())
     }
-    var showQRGenerator by remember { mutableStateOf(false) }
-    var qrGeneratorUrl by remember { mutableStateOf("") }
+    var showQRGenerator by rememberSaveable { mutableStateOf(false) }
+    var qrGeneratorUrl by rememberSaveable { mutableStateOf("") }
+
+    val gatewayRepo = appViewModel.gatewayRepository
+    var isConnecting by rememberSaveable { mutableStateOf(false) }
+    var connectionError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        if (isConnecting && scannedPairingCode.isNullOrBlank()) {
+            isConnecting = false
+        }
+    }
+
+    LaunchedEffect(scannedPairingCode) {
+        val code = scannedPairingCode?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        connectionError = null
+        isConnecting = true
+        GatewayPairing.parse(code)
+            .onSuccess { pairing ->
+                gatewayRepo.testConnection(pairing.baseUrl, pairing.token)
+                    .onSuccess {
+                        val newGateway = GatewayConnection(
+                            name = pairing.name,
+                            baseUrl = pairing.baseUrl
+                        )
+                        gatewayRepo.saveGateway(newGateway, pairing.token)
+                        gatewayRepo.setActiveGateway(newGateway.id)
+                        
+                        wizardState = wizardState.copy(
+                            currentStep = 3,
+                            completedSteps = wizardState.completedSteps + "connect",
+                            isGatewayConnected = true,
+                            gatewayUrl = pairing.baseUrl
+                        )
+                        isConnecting = false
+                        onScannedPairingCodeConsumed()
+                    }
+                    .onFailure { error ->
+                        connectionError = "Connection failed: ${error.message}"
+                        isConnecting = false
+                        onScannedPairingCodeConsumed()
+                    }
+            }
+            .onFailure { error ->
+                connectionError = "Invalid QR code: ${error.message}"
+                isConnecting = false
+                onScannedPairingCodeConsumed()
+            }
+    }
 
     Column(
         modifier = Modifier
@@ -118,7 +194,9 @@ fun SetupWizardScreen(
                             isGatewayConnected = true,
                             gatewayUrl = url
                         )
-                    }
+                    },
+                    isConnecting = isConnecting,
+                    connectionError = connectionError
                 )
                 3 -> BiometricStep(
                     onNext = {
@@ -231,7 +309,9 @@ private fun ConnectStep(
     qrGeneratorUrl: String,
     onShowQRGenerator: () -> Unit,
     onQRUrlChange: (String) -> Unit,
-    onConnectionSuccess: (String) -> Unit
+    onConnectionSuccess: (String) -> Unit,
+    isConnecting: Boolean = false,
+    connectionError: String? = null
 ) {
     StepCard(
         title = "Connect Mobile App",
@@ -243,14 +323,52 @@ private fun ConnectStep(
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        Button(
-            onClick = onNavigateToScanner,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Scan QR Code")
+        if (isConnecting) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Button(
+                onClick = onNavigateToScanner,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(imageVector = Icons.Default.QrCodeScanner, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Scan QR Code")
+            }
+        }
+
+        connectionError?.let { error ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Error,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
