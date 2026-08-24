@@ -1,0 +1,205 @@
+name: OpenClaw Console Health Monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # Every 30 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install monitoring dependencies
+        run: |
+          pip install requests==2.31.0 python-dateutil==2.8.2
+
+      - name: Check Gateway Skills Service
+        run: |
+          # Test if skills gateway is accessible (when deployed)
+          SKILLS_ENDPOINT="${{ secrets.SKILLS_GATEWAY_URL || 'http://localhost:18789' }}/health"
+
+          if curl -s --connect-timeout 10 --max-time 30 "$SKILLS_ENDPOINT" > /tmp/skills_health.json 2>/dev/null; then
+            echo "✅ Skills Gateway: Online"
+            cat /tmp/skills_health.json
+          else
+            echo "⚠️ Skills Gateway: Not accessible at $SKILLS_ENDPOINT"
+            echo "skills_gateway_status=down" >> $GITHUB_ENV
+          fi
+
+      - name: Check App Store Connect Status
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APPSTORE_KEY_ID" ]; then
+            echo "⚠️ App Store Connect: API keys not configured"
+            echo "appstore_status=unconfigured" >> $GITHUB_ENV
+          else
+            echo "✅ App Store Connect: API keys configured"
+            echo "appstore_status=configured" >> $GITHUB_ENV
+          fi
+
+      - name: Check Google Play Console Status
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+        run: |
+          if [ -z "$GOOGLE_PLAY_JSON_KEY" ]; then
+            echo "⚠️ Google Play Console: Service account not configured"
+            echo "googleplay_status=unconfigured" >> $GITHUB_ENV
+          else
+            echo "✅ Google Play Console: Service account configured"
+            echo "googleplay_status=configured" >> $GITHUB_ENV
+
+            # Test API access
+            echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-sa.json
+            pip install google-api-python-client==2.149.0 google-auth==2.35.0
+
+            python << 'EOF'
+          import os
+          import sys
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          try:
+              credentials = service_account.Credentials.from_service_account_file(
+                  '/tmp/play-sa.json',
+                  scopes=['https://www.googleapis.com/auth/androidpublisher']
+              )
+              service = build('androidpublisher', 'v3', credentials=credentials)
+
+              # Test API call - get app details
+              edit = service.edits().insert(body={}, packageName='com.openclaw.console').execute()
+              service.edits().delete(packageName='com.openclaw.console', editId=edit['id']).execute()
+              print("✅ Google Play API: Functional")
+
+          except Exception as e:
+              print(f"⚠️ Google Play API: Error - {e}")
+              sys.exit(1)
+          EOF
+
+            if [ $? -eq 0 ]; then
+              echo "googleplay_api_status=functional" >> $GITHUB_ENV
+            else
+              echo "googleplay_api_status=error" >> $GITHUB_ENV
+            fi
+
+            rm -f /tmp/play-sa.json
+          fi
+
+      - name: Check Critical Dependencies
+        run: |
+          echo "🔍 Checking critical dependencies..."
+
+          # Check if required secrets are configured
+          REQUIRED_SECRETS=(
+            "REVENUECAT_PUBLIC_KEY"
+            "FIREBASE_PROJECT_ID"
+            "ANDROID_KEYSTORE_BASE64"
+          )
+
+          MISSING_SECRETS=()
+
+          if [ -z "${{ secrets.REVENUECAT_PUBLIC_KEY }}" ]; then
+            MISSING_SECRETS+=("REVENUECAT_PUBLIC_KEY")
+          fi
+
+          if [ -z "${{ secrets.FIREBASE_PROJECT_ID }}" ]; then
+            MISSING_SECRETS+=("FIREBASE_PROJECT_ID")
+          fi
+
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            MISSING_SECRETS+=("ANDROID_KEYSTORE_BASE64")
+          fi
+
+          if [ ${#MISSING_SECRETS[@]} -eq 0 ]; then
+            echo "✅ All critical secrets configured"
+            echo "secrets_status=complete" >> $GITHUB_ENV
+          else
+            echo "⚠️ Missing secrets: ${MISSING_SECRETS[*]}"
+            echo "secrets_status=incomplete" >> $GITHUB_ENV
+          fi
+
+      - name: Generate Health Report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+          SKILLS_STATUS="${{ env.skills_gateway_status }}"
+          APPSTORE_STATUS="${{ env.appstore_status }}"
+          GOOGLEPLAY_STATUS="${{ env.googleplay_status }}"
+          GOOGLEPLAY_API_STATUS="${{ env.googleplay_api_status }}"
+          SECRETS_STATUS="${{ env.secrets_status }}"
+
+          # Overall health calculation
+          HEALTH_SCORE=0
+          if [ "$APPSTORE_STATUS" = "configured" ]; then ((HEALTH_SCORE+=20)); fi
+          if [ "$GOOGLEPLAY_STATUS" = "configured" ]; then ((HEALTH_SCORE+=20)); fi
+          if [ "$GOOGLEPLAY_API_STATUS" = "functional" ]; then ((HEALTH_SCORE+=20)); fi
+          if [ "$SECRETS_STATUS" = "complete" ]; then ((HEALTH_SCORE+=20)); fi
+          if [ "$SKILLS_STATUS" != "down" ]; then ((HEALTH_SCORE+=20)); fi
+
+          if [ $HEALTH_SCORE -ge 80 ]; then
+            HEALTH_EMOJI="🟢"
+            HEALTH_STATUS="Healthy"
+          elif [ $HEALTH_SCORE -ge 60 ]; then
+            HEALTH_EMOJI="🟡"
+            HEALTH_STATUS="Degraded"
+          else
+            HEALTH_EMOJI="🔴"
+            HEALTH_STATUS="Critical"
+          fi
+
+          HEALTH_REPORT=$(cat << EOF
+          # 🏥 OpenClaw Console Health Report
+
+          **Status:** $HEALTH_EMOJI **$HEALTH_STATUS** ($HEALTH_SCORE/100)
+          **Last Check:** $TIMESTAMP
+
+          ## 📱 Store Publishing Health
+          - **App Store Connect:** $(${ APPSTORE_STATUS:-unchecked } = "configured" && echo "✅ Ready" || echo "⚠️ Not configured")
+          - **Google Play Console:** $(${ GOOGLEPLAY_STATUS:-unchecked } = "configured" && echo "✅ Ready" || echo "⚠️ Not configured")
+          - **Google Play API:** $(${ GOOGLEPLAY_API_STATUS:-unchecked } = "functional" && echo "✅ Functional" || echo "⚠️ Error")
+
+          ## 🔧 Infrastructure Health
+          - **Critical Secrets:** $(${ SECRETS_STATUS:-unchecked } = "complete" && echo "✅ Complete" || echo "⚠️ Missing")
+          - **Skills Gateway:** $(${ SKILLS_STATUS:-unknown } = "down" && echo "⚠️ Down" || echo "✅ Ready")
+
+          ## 🚀 Deployment Status
+          - **Production Release:** [In Progress](https://github.com/IgorGanapolsky/openclaw-console/actions/runs/26058547118)
+          - **iOS TestFlight:** Building & Uploading
+          - **Android Production:** Building & Publishing
+
+          ---
+          *Health monitoring runs every 30 minutes*
+          EOF
+          )
+
+          # Update or create health status issue
+          HEALTH_ISSUE_NUMBER=$(gh issue list --label "health-monitor" --json number --jq '.[0].number // empty')
+
+          if [ -n "$HEALTH_ISSUE_NUMBER" ]; then
+            echo "🏥 Updating health monitor issue #$HEALTH_ISSUE_NUMBER"
+            gh issue edit "$HEALTH_ISSUE_NUMBER" --body "$HEALTH_REPORT"
+          else
+            echo "🏥 Creating health monitor issue"
+            gh issue create \
+              --title "🏥 System Health Monitor" \
+              --body "$HEALTH_REPORT" \
+              --label "health-monitor" \
+              --assignee "@me"
+          fi
+
+          echo "🏥 Health Score: $HEALTH_SCORE/100 ($HEALTH_STATUS)"

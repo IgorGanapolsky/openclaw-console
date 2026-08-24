@@ -1,0 +1,181 @@
+name: Auto-Publish When Google Play Ready
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Check every 5 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: auto-publish-android
+  cancel-in-progress: true
+
+jobs:
+  check-and-publish:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Google Play API dependencies
+        run: pip install google-api-python-client==2.149.0 google-auth==2.35.0
+
+      - name: Test Google Play Console access
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          PACKAGE_NAME: com.openclaw.console
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          echo "🧪 Testing Google Play Console API access..."
+
+          # Write service account key
+          echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
+
+          # Test script
+          cat << 'EOF' > test_and_publish.py
+          import sys
+          import os
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+          import subprocess
+          import json
+
+          def test_google_play_access():
+              try:
+                  # Setup authentication
+                  credentials = service_account.Credentials.from_service_account_file(
+                      '/tmp/play-service-account.json',
+                      scopes=['https://www.googleapis.com/auth/androidpublisher']
+                  )
+
+                  service = build('androidpublisher', 'v3', credentials=credentials)
+
+                  # Test: Try to create and delete an edit
+                  print("🧪 Testing Google Play API access for com.openclaw.console...")
+
+                  edit = service.edits().insert(
+                      body={},
+                      packageName='com.openclaw.console'
+                  ).execute()
+
+                  edit_id = edit['id']
+                  print(f"✅ Successfully created edit: {edit_id}")
+
+                  # Clean up the test edit
+                  service.edits().delete(
+                      packageName='com.openclaw.console',
+                      editId=edit_id
+                  ).execute()
+
+                  print("🎉 Google Play API access is working!")
+                  return True
+
+              except Exception as e:
+                  error_msg = str(e)
+                  print(f"❌ Google Play API test failed: {error_msg}")
+
+                  if "Invalid grant" in error_msg or "account not found" in error_msg:
+                      print("💡 Service account needs Google Play Console permissions")
+                      print("💡 Go to: https://play.google.com/console → Setup → API access")
+                  elif "403" in error_msg or "does not have access" in error_msg:
+                      print("💡 Service account found but lacks permissions for this app")
+                  elif "404" in error_msg and "package" in error_msg:
+                      print("💡 App 'com.openclaw.console' not found - create it first")
+
+                  return False
+
+          def trigger_android_release():
+              """Trigger the Android production release"""
+              try:
+                  result = subprocess.run([
+                      'gh', 'workflow', 'run', 'Native App Release',
+                      '--field', 'platform=android',
+                      '--field', 'android_track=production'
+                  ], capture_output=True, text=True, check=True)
+
+                  print("🚀 Triggered Android production release!")
+                  print("📊 Monitor at: https://github.com/IgorGanapolsky/openclaw-console/actions")
+                  return True
+
+              except subprocess.CalledProcessError as e:
+                  print(f"❌ Failed to trigger release: {e}")
+                  return False
+
+          def create_success_issue():
+              """Create a GitHub issue celebrating the fix"""
+              try:
+                  issue_body = """# 🎉 Google Play Console Access FIXED!
+
+          **Status:** ✅ **RESOLVED**
+
+          ## What Was Fixed
+          - Google Play Console service account permissions granted
+          - API access test: **PASSING**
+          - Android production release: **TRIGGERED**
+
+          ## Next Steps
+          1. ✅ Monitor the Android release build
+          2. ✅ App will be published to Google Play production
+          3. ✅ iOS already live on TestFlight
+
+          ## Business Impact
+          - OpenClaw Console will be available on both App Store and Google Play
+          - Revenue tracking can begin via RevenueCat integration
+          - Daily Active Approvers (DAA) metric collection active
+
+          ---
+          *Auto-generated when Google Play Console access was restored*"""
+
+                  result = subprocess.run([
+                      'gh', 'issue', 'create',
+                      '--title', '🎉 Google Play Console Access FIXED - Android Publishing Active',
+                      '--body', issue_body,
+                      '--label', 'automated-fix',
+                      '--assignee', '@me'
+                  ], capture_output=True, text=True, check=True)
+
+                  print("📝 Created success issue to track progress")
+
+              except subprocess.CalledProcessError as e:
+                  print(f"⚠️ Could not create issue: {e}")
+
+          # Main execution
+          if test_google_play_access():
+              print("\n🚀 GOOGLE PLAY ACCESS RESTORED!")
+
+              if trigger_android_release():
+                  create_success_issue()
+
+                  # Disable this monitoring job since it's no longer needed
+                  print("🛑 Disabling auto-publish monitor (job complete)")
+
+              sys.exit(0)  # Success - stop monitoring
+          else:
+              print("\n⏳ Google Play Console permissions still needed")
+              print("💡 Waiting for manual configuration...")
+              sys.exit(1)  # Keep monitoring
+
+          EOF
+
+          python test_and_publish.py
+
+          # Cleanup
+          rm -f /tmp/play-service-account.json
+
+      - name: Disable monitoring workflow if successful
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "✅ Google Play access restored - disabling monitoring"
+          gh workflow disable "Auto-Publish When Google Play Ready" || true

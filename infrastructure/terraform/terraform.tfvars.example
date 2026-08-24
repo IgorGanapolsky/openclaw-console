@@ -1,0 +1,32 @@
+# OpenClaw Relay Service Terraform Configuration
+# Copy this to terraform.tfvars and update with your values
+
+# Google Cloud Configuration
+gcp_project_id = "your-gcp-project-id"
+gcp_region     = "us-central1"
+environment    = "production"
+
+# Cloudflare Configuration
+cloudflare_api_token = "your-cloudflare-api-token"
+cloudflare_zone_id   = "your-cloudflare-zone-id"
+
+# Domain Configuration
+domain_name = "relay.openclaw.com"
+
+# Container Configuration
+container_image = "gcr.io/PROJECT_ID/openclaw-relay:latest"
+
+# Scaling Configuration
+min_instances = 2
+max_instances = 20
+
+# Resource Limits
+cpu_limit    = "1000m"
+memory_limit = "1Gi"
+
+# Redis Configuration
+redis_memory_size_gb = 2
+
+# Feature Flags
+enable_monitoring = true
+enable_cdn       = true

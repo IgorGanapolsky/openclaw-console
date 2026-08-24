@@ -1,0 +1,58 @@
+appId: com.openclaw.console
+---
+- clearState
+# Comprehensive Setup Wizard & Onboarding Flow Regression Test
+# This test verifies the complete happy path of the onboarding wizard from launch to dashboard
+
+- launchApp
+
+# 1. Welcome Screen
+- assertVisible:
+    text: "OpenClaw Console"
+- assertVisible:
+    text: "STEP 2: Scan QR Code"
+- tapOn: "STEP 2: Scan QR Code"
+
+# 2. Setup Wizard - Step 1: Install
+- assertVisible:
+    text: "OpenClaw Setup"
+- assertVisible:
+    text: "Setup Progress"
+- assertVisible:
+    text: "Install OpenClaw CLI"
+- scroll
+- tapOn: "I've installed OpenClaw"
+
+# 3. Setup Wizard - Step 2: Gateway
+- assertVisible:
+    text: "Start OpenClaw Gateway"
+- scroll
+- tapOn: "Gateway is running"
+
+# 4. Setup Wizard - Step 3: Connect
+- assertVisible:
+    text: "Connect Mobile App"
+- scroll
+- tapOn: "Generate QR Code"
+- tapOn: "Gateway URL"
+- inputText: "http://192.168.1.100:18789"
+- hideKeyboard
+- scroll
+- tapOn: "Use This URL"
+
+# 5. Setup Wizard - Step 4: Security
+- assertVisible:
+    text: "Enable Biometric Security"
+- scroll
+- tapOn: "Skip for Now"
+
+# 6. Setup Wizard - Step 5: Complete
+- assertVisible:
+    text: "Setup Complete!"
+- scroll
+- tapOn: "Start Using OpenClaw Console"
+
+# 7. Dashboard Screen (onboarding completes)
+- assertVisible:
+    text: "OpenClaw Console"
+

@@ -11,15 +11,12 @@ appId: com.openclaw.console
 - tapOn: 'Add Gateway'
 - assertVisible: 'Gateway Details'
 
-- inputText:
-    placeholder: 'Name'
-    text: "Dev Gateway"
-- inputText:
-    placeholder: 'Base URL'
-    text: "http://localhost:8080"
-- inputText:
-    placeholder: 'Token'
-    text: "dev-token-123"
+- tapOn: "Name"
+- inputText: "Dev Gateway"
+- tapOn: "Base URL"
+- inputText: "http://localhost:8080"
+- tapOn: "Token"
+- inputText: "dev-token-123"
 
 # 3. Test & Save
 - tapOn: 'Test & Save'

@@ -1,0 +1,191 @@
+name: Store Metadata Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      sync_target:
+        description: 'Target to sync metadata'
+        type: choice
+        options:
+          - both
+          - android
+          - ios
+        required: true
+        default: 'both'
+  schedule:
+    - cron: '0 10 * * 1'  # Weekly on Monday at 10 AM UTC
+
+permissions:
+  contents: read
+
+jobs:
+  sync-android-metadata:
+    if: ${{ github.event.inputs.sync_target == 'android' || github.event.inputs.sync_target == 'both' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install google-api-python-client==2.149.0 google-auth==2.35.0
+
+      - name: Sync Android metadata to Google Play
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+          PACKAGE_NAME: com.openclaw.console
+        run: |
+          set -euo pipefail
+
+          # Write service account key
+          echo "$GOOGLE_PLAY_JSON_KEY" > /tmp/play-service-account.json
+
+          # Verify required metadata files exist
+          REQUIRED_FILES=(
+            "android/fastlane/metadata/android/en-US/title.txt"
+            "android/fastlane/metadata/android/en-US/short_description.txt"
+            "android/fastlane/metadata/android/en-US/full_description.txt"
+          )
+
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Required metadata file missing: $file"
+              exit 1
+            fi
+          done
+
+          echo "✅ All required Android metadata files present"
+
+          # Create Python script for metadata sync
+          cat << 'EOF' > sync_android_metadata.py
+          import os
+          from google.auth.transport.requests import Request
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+
+          PACKAGE_NAME = os.environ['PACKAGE_NAME']
+
+          # Setup authentication
+          credentials = service_account.Credentials.from_service_account_file(
+              '/tmp/play-service-account.json',
+              scopes=['https://www.googleapis.com/auth/androidpublisher']
+          )
+          service = build('androidpublisher', 'v3', credentials=credentials)
+
+          try:
+              # Start edit
+              edit = service.edits().insert(body={}, packageName=PACKAGE_NAME).execute()
+              edit_id = edit['id']
+              print(f"Created edit: {edit_id}")
+
+              # Read metadata files
+              with open('android/fastlane/metadata/android/en-US/title.txt', 'r') as f:
+                  title = f.read().strip()[:50]  # Google Play 50 char limit
+
+              with open('android/fastlane/metadata/android/en-US/short_description.txt', 'r') as f:
+                  short_desc = f.read().strip()[:80]  # Google Play 80 char limit
+
+              with open('android/fastlane/metadata/android/en-US/full_description.txt', 'r') as f:
+                  full_desc = f.read().strip()[:4000]  # Google Play 4000 char limit
+
+              # Update listing
+              listing_body = {
+                  'language': 'en-US',
+                  'title': title,
+                  'shortDescription': short_desc,
+                  'fullDescription': full_desc
+              }
+
+              result = service.edits().listings().update(
+                  packageName=PACKAGE_NAME,
+                  editId=edit_id,
+                  language='en-US',
+                  body=listing_body
+              ).execute()
+
+              print(f"✅ Updated listing: {result}")
+
+              # Commit the edit
+              commit = service.edits().commit(packageName=PACKAGE_NAME, editId=edit_id).execute()
+              print(f"✅ Metadata sync committed: {commit['id']}")
+
+          except Exception as e:
+              print(f"❌ Error syncing Android metadata: {e}")
+              raise
+          EOF
+
+          python sync_android_metadata.py
+
+          # Cleanup
+          rm -f /tmp/play-service-account.json
+
+          echo "🎉 Android metadata sync completed successfully"
+
+  sync-ios-metadata:
+    if: ${{ github.event.inputs.sync_target == 'ios' || github.event.inputs.sync_target == 'both' || github.event_name == 'schedule' }}
+    runs-on: macos-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ios/OpenClawConsole
+
+      - name: Verify iOS metadata files exist
+        run: |
+          REQUIRED_FILES=(
+            "ios/OpenClawConsole/fastlane/metadata/en-US/name.txt"
+            "ios/OpenClawConsole/fastlane/metadata/en-US/subtitle.txt"
+            "ios/OpenClawConsole/fastlane/metadata/en-US/description.txt"
+            "ios/OpenClawConsole/fastlane/metadata/en-US/keywords.txt"
+            "ios/OpenClawConsole/fastlane/metadata/en-US/release_notes.txt"
+          )
+
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Required metadata file missing: $file"
+              exit 1
+            fi
+          done
+
+          echo "✅ All required iOS metadata files present"
+
+      - name: Setup App Store Connect API key
+        env:
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$KEY_PATH"
+          echo "APPSTORE_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Sync iOS metadata to App Store Connect
+        working-directory: ios/OpenClawConsole
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_PATH: ${{ env.APPSTORE_KEY_PATH }}
+          CI: "true"
+          FASTLANE_SKIP_UPDATE_CHECK: "true"
+          FASTLANE_DISABLE_COLORS: "true"
+        run: |
+          # Use fastlane to sync metadata (upload_metadata_only lane)
+          bundle exec fastlane run upload_to_app_store \
+            api_key_path:"$APPSTORE_KEY_PATH" \
+            app_identifier:"com.openclaw.console" \
+            skip_binary_upload:true \
+            skip_screenshots:true \
+            skip_metadata:false \
+            force:true \
+            metadata_path:"fastlane/metadata"
+
+          echo "🎉 iOS metadata sync completed successfully"
