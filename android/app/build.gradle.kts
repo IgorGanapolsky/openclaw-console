@@ -165,7 +165,7 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     // Pull-to-refresh
-    implementation("androidx.compose.material:material:1.6.0")
+    implementation("androidx.compose.material:material:1.11.0")
 
     // Sentry - Error tracking and performance monitoring (2026 observability)
     implementation("io.sentry:sentry-android:7.8.0")
