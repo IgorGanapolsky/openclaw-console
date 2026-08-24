@@ -1,0 +1,224 @@
+name: Deploy OpenClaw Relay Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/relay-service/**'
+      - 'infrastructure/terraform/**'
+      - '.github/workflows/deploy-relay-service.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+
+jobs:
+  deploy:
+    name: Deploy Relay Service
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          export_default_credentials: true
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ~1.5
+          terraform_wrapper: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: infrastructure/relay-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: infrastructure/relay-service
+        run: npm ci
+
+      - name: Run tests
+        working-directory: infrastructure/relay-service
+        run: npm test
+
+      - name: Build TypeScript
+        working-directory: infrastructure/relay-service
+        run: npm run build
+
+      - name: Build and push Docker image
+        working-directory: infrastructure/relay-service
+        run: |
+          IMAGE_TAG="gcr.io/${GCP_PROJECT_ID}/openclaw-relay:${{ github.sha }}"
+          LATEST_TAG="gcr.io/${GCP_PROJECT_ID}/openclaw-relay:latest"
+
+          docker build -t "$IMAGE_TAG" -t "$LATEST_TAG" .
+          docker push "$IMAGE_TAG"
+          docker push "$LATEST_TAG"
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: terraform init
+
+      - name: Plan Terraform deployment
+        working-directory: infrastructure/terraform
+        env:
+          TF_VAR_gcp_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
+          TF_VAR_cloudflare_api_token: ${{ env.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_zone_id: ${{ env.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_container_image: ${{ env.IMAGE_TAG }}
+        run: |
+          terraform plan \
+            -var="gcp_project_id=${GCP_PROJECT_ID}" \
+            -var="environment=${{ github.event.inputs.environment || 'production' }}" \
+            -var="cloudflare_api_token=${CLOUDFLARE_API_TOKEN}" \
+            -var="cloudflare_zone_id=${CLOUDFLARE_ZONE_ID}" \
+            -var="container_image=${IMAGE_TAG}" \
+            -out=tfplan
+
+      - name: Apply Terraform deployment
+        working-directory: infrastructure/terraform
+        env:
+          TF_VAR_gcp_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
+          TF_VAR_cloudflare_api_token: ${{ env.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_cloudflare_zone_id: ${{ env.CLOUDFLARE_ZONE_ID }}
+          TF_VAR_container_image: ${{ env.IMAGE_TAG }}
+        run: terraform apply tfplan
+
+      - name: Get Terraform outputs
+        working-directory: infrastructure/terraform
+        run: |
+          terraform output -json > terraform-outputs.json
+          cat terraform-outputs.json
+
+          SERVICE_URL=$(terraform output -raw relay_service_url)
+          WEBSOCKET_URL=$(terraform output -raw relay_websocket_url)
+          LB_IP=$(terraform output -raw load_balancer_ip)
+
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+          echo "WEBSOCKET_URL=$WEBSOCKET_URL" >> $GITHUB_ENV
+          echo "LB_IP=$LB_IP" >> $GITHUB_ENV
+
+      - name: Wait for service to be ready
+        run: |
+          echo "Waiting for service to be ready at $SERVICE_URL"
+
+          for i in {1..30}; do
+            if curl -f -s "$SERVICE_URL/health" | grep -q "healthy"; then
+              echo "Service is ready!"
+              break
+            else
+              echo "Waiting for service... (attempt $i/30)"
+              sleep 30
+            fi
+          done
+
+      - name: Run health checks
+        run: |
+          echo "Running comprehensive health checks..."
+
+          # Test HTTP health endpoint
+          echo "Testing HTTP health endpoint..."
+          HEALTH_RESPONSE=$(curl -s "$SERVICE_URL/health")
+          echo "Health response: $HEALTH_RESPONSE"
+
+          if echo "$HEALTH_RESPONSE" | grep -q "healthy"; then
+            echo "✅ HTTP health check passed"
+          else
+            echo "❌ HTTP health check failed"
+            exit 1
+          fi
+
+          # Test API info endpoint
+          echo "Testing API info endpoint..."
+          API_RESPONSE=$(curl -s "$SERVICE_URL/api/relay/info")
+          echo "API response: $API_RESPONSE"
+
+          if echo "$API_RESPONSE" | grep -q "openclaw-relay"; then
+            echo "✅ API endpoint check passed"
+          else
+            echo "❌ API endpoint check failed"
+            exit 1
+          fi
+
+          # Test regional endpoints
+          echo "Testing regional endpoints..."
+          REGIONAL_ENDPOINTS=$(echo '${{ env.REGIONAL_ENDPOINTS }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+
+          for endpoint in $REGIONAL_ENDPOINTS; do
+            region=$(echo "$endpoint" | cut -d= -f1)
+            url=$(echo "$endpoint" | cut -d= -f2)
+
+            if curl -f -s "$url/health" >/dev/null; then
+              echo "✅ Regional endpoint $region is healthy"
+            else
+              echo "⚠️ Regional endpoint $region is not responding"
+            fi
+          done
+
+      - name: Update deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Deployment successful!"
+            echo "Service URL: $SERVICE_URL"
+            echo "WebSocket URL: $WEBSOCKET_URL"
+            echo "Load Balancer IP: $LB_IP"
+
+            # Create deployment summary
+            cat << EOF >> $GITHUB_STEP_SUMMARY
+            ## 🚀 OpenClaw Relay Service Deployment
+
+            **Status:** ✅ Successful
+            **Environment:** ${{ github.event.inputs.environment || 'production' }}
+            **Image:** \`${{ env.IMAGE_TAG }}\`
+
+            ### 🔗 Service URLs
+            - **Service:** [$SERVICE_URL]($SERVICE_URL)
+            - **WebSocket:** \`$WEBSOCKET_URL\`
+            - **Health Check:** [$SERVICE_URL/health]($SERVICE_URL/health)
+            - **API Info:** [$SERVICE_URL/api/relay/info]($SERVICE_URL/api/relay/info)
+
+            ### 📊 Infrastructure
+            - **Load Balancer IP:** \`$LB_IP\`
+            - **Regions:** Multiple regions for global coverage
+            - **Monitoring:** Enabled with alerting
+
+            ### 🎯 Next Steps
+            Mobile apps can now connect to the relay service for cross-network connectivity.
+            EOF
+          else
+            echo "❌ Deployment failed!"
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed. Check the logs and infrastructure state."
+          echo "Service may be partially deployed. Manual intervention may be required."

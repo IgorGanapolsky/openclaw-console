@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("jacoco")
 }
 
 android {
@@ -31,6 +32,12 @@ android {
             ?: providers.gradleProperty("revenueCatPublicKey").orNull
             ?: ""
         buildConfigField("String", "REVENUECAT_PUBLIC_KEY", "\"$revenueCatKey\"")
+
+        // Sentry DSN for error tracking (environment variable only - secure)
+        val sentryDsn = System.getenv("SENTRY_DSN")
+            ?: providers.gradleProperty("sentryDsn").orNull
+            ?: ""
+        buildConfigField("String", "SENTRY_DSN", "\"$sentryDsn\"")
     }
 
     signingConfigs {
@@ -68,6 +75,15 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // 2026 Testing Configuration
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+        animationsDisabled = true
     }
 
     lint {
@@ -130,7 +146,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // AndroidX Security (EncryptedSharedPreferences)
     implementation("androidx.security:security-crypto:1.1.0")
@@ -139,25 +155,119 @@ dependencies {
     implementation("androidx.biometric:biometric:1.4.0-alpha07")
     implementation("com.google.errorprone:error_prone_annotations:2.49.0")
 
-    // QR gateway pairing scanner.
-    implementation("androidx.camera:camera-camera2:1.6.0")
-    implementation("androidx.camera:camera-lifecycle:1.6.0")
-    implementation("androidx.camera:camera-view:1.6.0")
+    // QR gateway pairing scanner & generator.
+    implementation("androidx.camera:camera-camera2:1.6.1")
+    implementation("androidx.camera:camera-lifecycle:1.6.1")
+    implementation("androidx.camera:camera-view:1.6.1")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.google.guava:guava:33.5.0-android")
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     // Pull-to-refresh
     implementation("androidx.compose.material:material:1.6.0")
+
+    // Sentry - Error tracking and performance monitoring (2026 observability)
+    implementation("io.sentry:sentry-android:7.8.0")
 
     // RevenueCat (Android billing + subscription management).
     // Mirrors iOS SubscriptionService — product IDs and entitlement name must match iOS.
     implementation("com.revenuecat.purchases:purchases:9.29.1")
 
-    // Test
+    // 2026 Testing Stack - Comprehensive Coverage
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.test.ext:junit:1.1.5")
+
+    // Robolectric for Android unit testing (2026 best practice)
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test:rules:1.6.1")
+    testImplementation("androidx.test:runner:1.6.1")
+    testImplementation("androidx.test.ext:truth:1.6.0")
+
+    // MockK for better Kotlin mocking
+    testImplementation("io.mockk:mockk:1.13.11")
+    testImplementation("io.mockk:mockk-android:1.13.11")
+
+    // Turbine for Flow testing
+    testImplementation("app.cash.turbine:turbine:1.0.0")
+
+    // Enhanced Compose testing
+    testImplementation("androidx.compose.ui:ui-test-manifest")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Navigation testing
+    testImplementation("androidx.navigation:navigation-testing:2.9.7")
+
+    // Android Instrumented Tests
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.1")
+}
+
+// 2026 Code Coverage Configuration (JaCoCo)
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    val javaClasses = fileTree(mapOf(
+        "dir" to "${layout.buildDirectory.get()}/intermediates/javac/debug/classes",
+        "excludes" to listOf("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+    ))
+
+    val kotlinClasses = fileTree(mapOf(
+        "dir" to "${layout.buildDirectory.get()}/tmp/kotlin-classes/debug",
+        "excludes" to listOf("**/R.class", "**/R\$*.class", "**/BuildConfig.*", "**/Manifest*.*")
+    ))
+
+    classDirectories.setFrom(files(listOf(javaClasses, kotlinClasses)))
+    sourceDirectories.setFrom(files(listOf(
+        "src/main/java", "src/main/kotlin"
+    )))
+    executionData.setFrom(fileTree(mapOf(
+        "dir" to layout.buildDirectory.get(),
+        "includes" to listOf("**/*.exec", "**/*.ec")
+    )))
+}
+
+// Enforce minimum coverage threshold
+tasks.register("checkCoverage") {
+    dependsOn("jacocoTestReport")
+    doLast {
+        val reportFile = file("${layout.buildDirectory.get()}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+        if (reportFile.exists()) {
+            val coverage = parseCoverage(reportFile)
+            if (coverage < 0.80) {
+                throw GradleException("Code coverage is $coverage. Required minimum is 80%.")
+            }
+        }
+    }
+}
+
+fun parseCoverage(reportFile: File): Double {
+    val xml = groovy.xml.XmlSlurper().parse(reportFile)
+    val counters = xml.getProperty("counter") as groovy.util.NodeList
+    val lineCounter = counters.find {
+        (it as groovy.util.Node).attributes()["type"] == "LINE"
+    } as groovy.util.Node?
+
+    if (lineCounter != null) {
+        val missed = (lineCounter.attributes()["missed"] as String).toInt()
+        val covered = (lineCounter.attributes()["covered"] as String).toInt()
+        return if (missed + covered > 0) covered.toDouble() / (missed + covered) else 0.0
+    }
+    return 0.0
 }
