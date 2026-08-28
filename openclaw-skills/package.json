@@ -15,7 +15,7 @@
     "lint": "eslint src tests --ext .ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@revenuecat/purchases-js": "^1.35.0",
     "@slack/oauth": "^3.0.5",
     "@slack/web-api": "^7.15.1",
