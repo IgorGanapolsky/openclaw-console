@@ -424,7 +424,8 @@ fun NavGraph(
                     val feature = backStackEntry.arguments?.getString("feature")?.ifBlank { null }
                     PaywallScreen(
                         onClose = { navController.navigateUp() },
-                        requiredFeature = feature
+                        requiredFeature = feature,
+                        onAnalyticsEvent = appViewModel::trackAnalyticsEvent
                     )
                 }
             }

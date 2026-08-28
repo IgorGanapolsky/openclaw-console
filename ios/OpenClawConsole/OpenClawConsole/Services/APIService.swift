@@ -227,11 +227,38 @@ final class APIService: ApprovalAPIProviding {
         let error: String?
     }
 
+    struct AnalyticsTrackRequest: Codable {
+        let event: String
+        let userId: String
+        let properties: [String: String]
+    }
+
+    struct AnalyticsTrackResponse: Codable {
+        let success: Bool
+        let message: String?
+    }
+
     func generateSkill(prompt: String, agentId: String) async throws -> GenerateSkillResponse {
         try await request(
             method: "POST",
             path: "/api/skills/generate",
             body: ["prompt": prompt, "agentId": agentId]
+        )
+    }
+
+    func trackAnalyticsEvent(
+        event: String,
+        userId: String,
+        properties: [String: String] = [:]
+    ) async throws -> AnalyticsTrackResponse {
+        try await request(
+            method: "POST",
+            path: "/api/analytics/track",
+            body: AnalyticsTrackRequest(
+                event: event,
+                userId: userId,
+                properties: properties
+            )
         )
     }
 

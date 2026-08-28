@@ -119,6 +119,18 @@ class AppViewModel(private val application: Application) : ViewModel() {
         gatewayRepository.updateLastConnected(gateway.id, java.time.Instant.now().toString())
     }
 
+    fun trackAnalyticsEvent(event: String, properties: Map<String, String> = emptyMap()) {
+        val api = _apiService.value ?: return
+        val gatewayId = gatewayRepository.activeGateway.value?.id ?: return
+        viewModelScope.launch {
+            api.trackAnalyticsEvent(
+                event = event,
+                userId = gatewayId,
+                properties = properties + mapOf("platform" to "android")
+            )
+        }
+    }
+
     private fun observeGatewaySignals(ws: WebSocketClient) {
         gatewaySignalJob?.cancel()
         gatewaySignalJob = viewModelScope.launch {

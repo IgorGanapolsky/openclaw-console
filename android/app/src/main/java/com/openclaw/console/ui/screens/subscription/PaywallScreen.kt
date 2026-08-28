@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openclaw.console.service.subscription.SubscriptionService
+import com.openclaw.console.service.subscription.PurchaseResult
 
 /**
  * Full paywall / subscription-management screen.
@@ -37,6 +38,7 @@ import com.openclaw.console.service.subscription.SubscriptionService
 fun PaywallScreen(
     onClose: () -> Unit,
     requiredFeature: String? = null,
+    onAnalyticsEvent: (String, Map<String, String>) -> Unit = { _, _ -> },
     viewModel: SubscriptionViewModel = viewModel(
         factory = SubscriptionViewModel.factory(
             SubscriptionService.getInstance(LocalContext.current.applicationContext)
@@ -49,11 +51,39 @@ fun PaywallScreen(
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val justPurchased by viewModel.justPurchased.collectAsStateWithLifecycle()
     val activity = LocalContextUtils.currentActivity()
+    var trackedOfferingsUnavailable by remember { mutableStateOf(false) }
 
     // Load offerings when screen first appears
     LaunchedEffect(Unit) {
+        onAnalyticsEvent(
+            "paywall_viewed",
+            mapOf(
+                "source" to if (requiredFeature == null) "settings" else "feature_gate",
+                "required_feature" to (requiredFeature ?: ""),
+                "is_configured" to viewModel.isConfigured.toString()
+            )
+        )
         if (viewModel.isConfigured) {
             viewModel.loadOfferings()
+        }
+    }
+
+    LaunchedEffect(viewModel.isConfigured, isLoading, offerings.size, status.hasProEntitlement) {
+        if (
+            viewModel.isConfigured &&
+            !isLoading &&
+            offerings.isEmpty() &&
+            !status.hasProEntitlement &&
+            !trackedOfferingsUnavailable
+        ) {
+            trackedOfferingsUnavailable = true
+            onAnalyticsEvent(
+                "paywall_offerings_unavailable",
+                mapOf(
+                    "source" to if (requiredFeature == null) "settings" else "feature_gate",
+                    "required_feature" to (requiredFeature ?: "")
+                )
+            )
         }
     }
 
@@ -105,16 +135,72 @@ fun PaywallScreen(
                     isLoading = isLoading,
                     onPurchase = { productId ->
                         if (activity != null) {
-                            viewModel.purchase(activity, productId)
+                            onAnalyticsEvent(
+                                "paywall_purchase_tapped",
+                                mapOf(
+                                    "product_id" to productId,
+                                    "required_feature" to (requiredFeature ?: "")
+                                )
+                            )
+                            viewModel.purchase(activity, productId) { result ->
+                                trackPurchaseResult(
+                                    result = result,
+                                    productId = productId,
+                                    requiredFeature = requiredFeature,
+                                    onAnalyticsEvent = onAnalyticsEvent
+                                )
+                            }
                         }
                     }
                 )
             }
 
-            RestoreSection(onRestore = viewModel::restore, isLoading = isLoading)
+            RestoreSection(
+                onRestore = {
+                    onAnalyticsEvent("paywall_restore_tapped", emptyMap())
+                    viewModel.restore { result ->
+                        trackRestoreResult(result, onAnalyticsEvent)
+                    }
+                },
+                isLoading = isLoading
+            )
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+private fun trackPurchaseResult(
+    result: PurchaseResult,
+    productId: String,
+    requiredFeature: String?,
+    onAnalyticsEvent: (String, Map<String, String>) -> Unit
+) {
+    val baseProperties = mapOf(
+        "product_id" to productId,
+        "required_feature" to (requiredFeature ?: "")
+    )
+    when (result) {
+        is PurchaseResult.Success -> onAnalyticsEvent("paywall_purchase_succeeded", baseProperties)
+        is PurchaseResult.UserCancelled -> onAnalyticsEvent("paywall_purchase_cancelled", baseProperties)
+        is PurchaseResult.Error -> onAnalyticsEvent(
+            "paywall_purchase_failed",
+            baseProperties + mapOf("error_message" to result.message)
+        )
+    }
+}
+
+private fun trackRestoreResult(
+    result: PurchaseResult,
+    onAnalyticsEvent: (String, Map<String, String>) -> Unit
+) {
+    when (result) {
+        is PurchaseResult.Success -> onAnalyticsEvent("paywall_restore_succeeded", emptyMap())
+        is PurchaseResult.UserCancelled -> onAnalyticsEvent("paywall_restore_cancelled", emptyMap())
+        is PurchaseResult.Error -> onAnalyticsEvent(
+            "paywall_restore_failed",
+            mapOf("error_message" to result.message)
+        )
     }
 }
 
