@@ -153,6 +153,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: android-device-diagnostics
           path: |
             ${{ runner.temp }}/openclaw-ci-retry/
@@ -262,6 +263,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: ios-device-diagnostics
           path: |
             /tmp/xcode-test.log

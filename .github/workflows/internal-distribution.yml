@@ -367,6 +367,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
+          retention-days: 1
           name: ios-distribution-internal
           path: |
             ios/OpenClawConsole/OpenClawConsole.ipa
@@ -731,6 +732,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
+          retention-days: 1
           name: android-apk-internal
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn

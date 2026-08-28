@@ -52,6 +52,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: test-results
           path: android/app/build/reports/tests/
 
@@ -86,5 +87,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: lint-results
           path: android/app/build/reports/lint-results-debug.html
