@@ -275,7 +275,6 @@ jobs:
         run: |
           echo "🎯 Validating instrumented test compilation..."
           ./gradlew compileDebugAndroidTestSources --no-daemon
-
       - name: Upload Android diagnostics
         if: always()
         uses: actions/upload-artifact@v4
