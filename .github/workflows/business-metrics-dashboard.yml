@@ -1,8 +1,8 @@
 name: Business Metrics Dashboard
 
 on:
-  schedule:
-    - cron: '0 9 * * *'  # Daily at 9 AM UTC
+  # schedule:  # Disabled to optimize GitHub Actions budget
+    # - cron: '0 9 * * *'  # Daily at 9 AM UTC
   workflow_dispatch:
     inputs:
       metric_type:

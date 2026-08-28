@@ -1,8 +1,8 @@
 name: Auto-Publish When Google Play Ready
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'  # Check every 5 minutes
+  # schedule:  # Disabled to optimize GitHub Actions budget
+    # - cron: '*/5 * * * *'  # Check every 5 minutes
   workflow_dispatch:
 
 permissions:

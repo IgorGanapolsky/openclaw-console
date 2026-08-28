@@ -12,8 +12,8 @@ on:
           - ios
         required: true
         default: 'both'
-  schedule:
-    - cron: '0 10 * * 1'  # Weekly on Monday at 10 AM UTC
+  # schedule:  # Disabled to optimize GitHub Actions budget
+    # - cron: '0 10 * * 1'  # Weekly on Monday at 10 AM UTC
 
 permissions:
   contents: read
