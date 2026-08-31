@@ -27,7 +27,7 @@
     "qrcode": "^1.5.4",
     "redis": "^5.11.0",
     "simple-git": "^3.36.0",
-    "uuid": "^14.0.0",
+    "uuid": "^14.0.2",
     "ws": "^8.20.1"
   },
   "devDependencies": {
